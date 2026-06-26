@@ -1,0 +1,5 @@
+numpy
+matplotlib
+pygame-ce
+numba
+scipy

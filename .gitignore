@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.nbc
+*.nbi
+
+# Numba and IDEs
+.numba/
+.vscode/
+.idea/
+
+# Ligo Output Data
+ligo_output/data_npy/
+ligo_output/plots/
+
+# Local settings (Optional, but usually a good idea to ignore)
+# astro_settings.ini
