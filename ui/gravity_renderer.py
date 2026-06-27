@@ -12,8 +12,11 @@ except ImportError:
     HAS_CV2 = False
 
 class GravityRenderer:
+    """Classe responsabile della generazione e del rendering delle heatmap del campo gravitazionale."""
+
     def __init__(self, width, height, resolution_div=1):
         """
+        Inizializza il renderer allocando il buffer dei pixel.
         resolution_div: 
           1 = Full HD (Pesante ma dettagliato)
           2 = Mezza risoluzione (Ottimo compromesso)
@@ -46,6 +49,7 @@ class GravityRenderer:
         self.sensitivity = self.calculate_auto_sensitivity()
 
     def render(self, screen, camera, mode="PHI", **kwargs): 
+            """Genera e disegna a schermo la heatmap selezionata (potenziale, onde, stress o Roche/Lagrange)."""
             # 1. SELEZIONE INDICI (Zero-Allocation Pointer)
             if mode in ("DPHI", "LAGRANGE_HUNTER", "ROCHE_DU", "TIDAL_STRESS"):
                 active_indices = data.ACTIVE_INDICES_ALL
@@ -175,7 +179,7 @@ class GravityRenderer:
                             vy_n = self.p_vel[t_local, 1] - self.p_vel[a_local, 1]
                             h_n = dx_n * vy_n - dy_n * vx_n
                             omega_sq_n = (h_n * h_n) / (r_n ** 4)
-                            q_n = m2_n / M_tot_n
+                            # (27.0 / 4.0) è il coefficiente analitico per normalizzare il lobo di Roche critico nei sistemi circolari
                             f_norm_candidate = (27.0 / 4.0) * q_n * (1.0 - q_n) * omega_sq_n * r_n
                             if f_norm_candidate > 1e-300:
                                 f_norm = f_norm_candidate
@@ -220,9 +224,9 @@ class GravityRenderer:
             # ---------------------------------------------------------
             if self.div > 1:
                 if HAS_CV2:
-                    # CV2.resize expects (target_width, target_height) which translates to (cols, rows).
-                    # Our pixel_buffer is (W, H, 3). CV2 interprets W as Rows and H as Cols.
-                    # To scale smoothly and get a (Target_W, Target_H, 3) back, we ask for cols=H, rows=W.
+                    # CV2.resize si aspetta (target_width, target_height) che corrisponde a (colonne, righe).
+                    # Il nostro pixel_buffer è (W, H, 3). CV2 interpreta W come righe e H come colonne.
+                    # Per scalare fluidamente e riottenere un (Target_W, Target_H, 3), impostiamo cols=H, rows=W.
                     resized_buffer = cv2.resize(self.pixel_buffer, (self.h, self.w), interpolation=cv2.INTER_LINEAR)
                     
                     if self.surface is None or self.surface.get_size() != (self.w, self.h):

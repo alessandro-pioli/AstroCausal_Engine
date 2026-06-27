@@ -3,7 +3,13 @@ from core import data
 
 
 class CelestialBody:
-    def __init__(self, index, mass, position, velocity,  radius=6371.0, color=(255, 255, 255), artificial_engine = [0.0 , 0.0], pre_existed=False , name = ""):
+    """Rappresentazione logica di un corpo celeste nel simulatore."""
+    
+    def __init__(self, index, mass, position, velocity,  
+                 radius=6371.0,           # Raggio di default in km (pari a quello terrestre)
+                 color=(255, 255, 255),   # Colore di default (bianco)
+                 artificial_engine = [0.0 , 0.0], 
+                 pre_existed=False , name = ""):
         """
         Interfaccia Python per manipolare i dati nel Kernel Numba.
         Adattata per il Multi-Buffer System (L0, L1, L2).
@@ -116,25 +122,39 @@ class CelestialBody:
 
     # --- PROPERTIES ---
     @property
-    def mass(self): return data.MASS[self.idx]
+    def mass(self): 
+        """Massa del corpo in kg."""
+        return data.MASS[self.idx]
     
     @property
-    def radius(self): return data.RAD[self.idx]
+    def radius(self): 
+        """Raggio fisico del corpo in km."""
+        return data.RAD[self.idx]
 
     @property
-    def pos(self): return data.POS[self.idx]
+    def pos(self): 
+        """Vettore posizione [x, y] in km."""
+        return data.POS[self.idx]
     
     @property
-    def vel(self): return data.VEL[self.idx]
+    def vel(self): 
+        """Vettore velocità [vx, vy] in km/s."""
+        return data.VEL[self.idx]
     
     @property
-    def acc(self): return data.ACC[self.idx]
+    def acc(self): 
+        """Vettore accelerazione [ax, ay] in km/s^2."""
+        return data.ACC[self.idx]
 
     @property
-    def art(self): return data.ART[self.idx]
+    def art(self): 
+        """Spinta artificiale attiva applicata al corpo."""
+        return data.ART[self.idx]
 
     @property
-    def active(self): return bool(data.FLAGS[self.idx] & data.FLAG_ALIVE)
+    def active(self): 
+        """Ritorna True se il corpo è attualmente attivo in simulazione."""
+        return bool(data.FLAGS[self.idx] & data.FLAG_ALIVE)
 
     @property
     def is_causally_dead(self):

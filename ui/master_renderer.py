@@ -10,7 +10,10 @@ from ui.renderers.hud_renderer import HudRenderer
 from ui.ui_state import ui_state
 
 class MasterRenderer:
+    """Classe orchestratrice per il rendering grafico di tutti i componenti della simulazione."""
+
     def __init__(self, font_top_left, font_tutorial, font_tutorial_title, font_console, overlay_renderer):
+        """Inizializza i renderer dei vari componenti dell'HUD, delle scie e dei corpi celesti."""
         self.font_top_left = font_top_left
         self.font_tutorial = font_tutorial
         self.font_tutorial_title = font_tutorial_title
@@ -19,6 +22,7 @@ class MasterRenderer:
         self.hud_renderer = HudRenderer(font_top_left, font_tutorial)
 
     def render_all(self, frame_count, ui_refresh_rate, clock):
+        """Disegna a schermo tutti gli elementi di gioco: campo gravitazionale, corpi celesti, scie e HUD."""
         screen = ui_state.screen
         gstate = ui_state.gstate
         camera = ui_state.camera

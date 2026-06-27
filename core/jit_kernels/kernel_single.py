@@ -27,7 +27,7 @@ def update_step_single_par(
 ):
     
     for step_idx in range(steps):
-        # --- FASE 1: UPDATE & WRITE ---
+        # --- FASE 1: AGGIORNAMENTO E SCRITTURA ---
         for i in range(n_bodies):
             if (flags_arr[i] & FLAG_ALIVE) == 0: continue 
 

@@ -134,7 +134,7 @@ class OverlayRenderer:
     def draw_help_overlay(self, screen, width, height):
         help_lines = [
             (UITheme.HIGHLIGHT_MAIN, "[Mouse Drag / WASD / Arrows] Pan Camera"),
-            (UITheme.HIGHLIGHT_MAIN, "[Mouse Wheel] Zoom"),
+            (UITheme.HIGHLIGHT_MAIN, "[Mouse Wheel / +/-] Zoom"),
             (UITheme.HIGHLIGHT_MAIN, "[Double Click] Lock to Body / Probe Void"),
             ((255, 200, 100), "[TAB] Lock to Next Body"),
             ((255, 200, 100), "[N] Spawn Random Body"),

@@ -40,9 +40,9 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
         collision_cooldown[0] -= 1
         return
 
-    # Floor abbassato 1.9 -> 1.0: l'instabilita' che impose l'1.9 veniva dal vecchio
-    # drag boostato (~1e10) e dall'estrapolazione del dead reckoning vicino al merger,
-    # entrambi rimossi. Con vis_r = r_s il contatto BH-BH avviene a orizzonti tangenti.
+    # A passo temporale ridotto (dt->0), BH_ACCRETION_MULT tende a 1.0 per orizzonti tangenti.
+    # Limita l'accrescimento del BH: 10.0 * dt è il tasso di accrescimento dinamico scalato sul passo dt,
+    # con un limite massimo fittizio di 100.0 per garantire stabilità numerica.
     BH_ACCRETION_MULT=max(1.0, min(10.0 * dt, 100.0))
     BH_THRESHOLD=0.001
 
@@ -52,6 +52,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
     # il corpo (cannone EMRI): assorbirlo prima e' una regolarizzazione-per-assorbimento.
     # Attivo solo col floor sotto 1.9 (DT piccolo); a DT grande il mult e' gia' >= 1.9 e
     # i BBH a massa comparabile restano a contatto fra orizzonti tangenti.
+    # Guardia per assorbimento preventivo a 1.9 volte rs (limite orizzonte allargato prima dell'ISCO)
     emri_guard = BH_ACCRETION_MULT < 1.9
     emri_delta = (1.9 - BH_ACCRETION_MULT)    # * massa_grande = raggio extra
 
@@ -75,6 +76,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
 
         if is_bh:
             expanded_rs=rs * BH_ACCRETION_MULT
+            # Limite massimo assoluto di 2.0e11 km per evitare che l'orizzonte di accrescimento di un SMBH esploda
             if expanded_rs > 2.0e11: expanded_rs=2.0e11
             real_r_cache[i]=expanded_rs
         else:
@@ -119,6 +121,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
             # rapporto estremo, espandi il raggio di cattura del BH grande PRIMA del filtro.
             if emri_guard:
                 m2j=mass_arr[j]
+                # Soglia di rapporto di massa 90.0 per classificare il sistema come EMRI (Extreme Mass Ratio Inspiral)
                 if is_bh1 and m1 > m2j * 90.0:
                     r_sum += r_sum*emri_delta
                 elif is_bh_cache[j] and m2j > m1 * 90.0:
@@ -186,6 +189,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
                 if is_bh1 and is_bh2:
                     # Scontro BH-BH: Nessun detrito fisico. La massa persa è energia pura irradiata (GW).
                     # GW150914 ha irradiato ~4.6% della massa totale. Fissiamo un tetto relativistico empirico.
+                    # Scontro BH-BH: 4.6% della massa totale convertita in energia gravitazionale (calibrato su GW150914)
                     loss_pct=0.046
                     m_new=m_tot * (1.0 - loss_pct)
                 else:
@@ -201,6 +205,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
                     if v_esc_sq > 0.0000001:
                         violence=v_imp_sq / v_esc_sq
 
+                    # Perdita di massa dinamica: 5% di base + 50% proporzionale alla violenza cinetica dell'impatto
                     loss_pct=0.05 + (0.50 * violence)
                     if loss_pct > 0.90: loss_pct=0.90
 
@@ -274,6 +279,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
         # inutilmente su coppie ancora lontane. Sotto dt~1.33s il clamp non morde (reach =
         # 0.75c*dt < 3e5) e la protezione resta piena a 0.75c (es. pulsar nel blank a dt=1).
         ccd_reach = 0.75 * 299792.458 * dt
+        # Limita il ccd_reach a 3.0e5 km (pari a 1 secondo-luce) per evitare controlli superflui a dt grandi
         if ccd_reach > 3.0e5: ccd_reach = 3.0e5
         ccd_cap = int(min_gap / ccd_reach)
         if ccd_cap < safe_ticks: safe_ticks = ccd_cap
@@ -340,10 +346,8 @@ def update_trail_logic(i, pos_x, pos_y, vel_x, vel_y, radius, trail_buf, trail_h
 @njit(inline='always', fastmath=True, cache=True)
 def solve_retarded_time(dx, dy, vx, vy, a_term):
     """
-    Versione HPC Friendly.
-    - Rimosso calcolo di 'a' (passato pre-calcolato)
-    - Formula ridotta (delta/4)
-    - Branching ridotto al minimo essenziale (limite fisico)
+    Risolve l'equazione del tempo di volo per la propagazione causale.
+    Ottimizzato per inlining JIT.
     """
     # 1. Prodotti scalari e quadrati
     dist_sq = dx*dx + dy*dy
@@ -354,28 +358,21 @@ def solve_retarded_time(dx, dy, vx, vy, a_term):
     # b = -2*(D.v)  --> half_b = -(D.v)
  
     
-    # 3. Delta Ridotto (Discriminante / 4)
-    # (b/2)^2 - a*c  --> (half_b)^2 + a*dist_sq (poiché c_eq = -dist_sq)
+    # 3. Delta Ridotto
     delta_reduced = d_dot_v*d_dot_v + a_term*dist_sq
     
-    # Check Causale (Mach Cone): Se delta < 0, siamo fuori dal cono
+    # Limite causale (cono di luce)
     if delta_reduced < 0.0: return -1.0
 
-    # 4. Soluzione
-    # Caso Singolarità (v ~ c, a ~ 0)
-    # Usiamo una soglia fissa per evitare division by zero.
-    # In questo scenario limite, T = dist_sq / (2 * -half_b)
-    # Nota: se a_term < 1e-4, siamo a 0.9999c. 
+    # 4. Soluzione dell'equazione causale
+    # Caso limite ultra-relativistico (a_term -> 0)
     if a_term < 1e-4:
-        # Caso lineare: T = -c_eq / b = dist_sq / (2 * -half_b)
-        # Se half_b >= 0 (cioè D.v <= 0), siamo davanti -> Impossibile
+        # Se l'oggetto si allontana, l'intersezione causale nel passato è impossibile
         if d_dot_v >= 0.0: return -1.0
         return dist_sq / (-2.0 * d_dot_v)
 
-    # Caso Standard (Quadratica Ridotta)
-    # T = (-half_b + sqrt(delta_reduced)) / a
-    # Usiamo sempre +sqrt perché c_eq è negativo, quindi le radici sono discordi
-    # e quella positiva è l'unica fisicamente sensata per il tempo passato.
+    # Caso standard (quadratica ridotta)
+    # Si sceglie la radice positiva per il tempo passato
     return (d_dot_v + math.sqrt(delta_reduced)) / a_term
 
 
@@ -384,6 +381,7 @@ def solve_retarded_time(dx, dy, vx, vy, a_term):
 # ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
 def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, src_vx, src_vy, src_ax, src_ay, src_mass, src_rad, src_px, src_py, mass_arr, inv_c, c_sq, g_const, rs_factor, m_chirp_mult, my_idx, tick_counter, dt):
+    """Calcola la forza gravitazionale relativistica integrando il potenziale di Paczynski-Wiita e la reazione di radiazione 2.5PN."""
     # 1. Dati Iniziali (Geometria Passata)
     dx_old = src_x - my_x
     dy_old = src_y - my_y
@@ -410,8 +408,7 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
     is_gw = (v_sq > threshold_gw) and (dist_visual < (r_s * 1000.0))
     
     if is_gw:
-        # Regime GW: posizione PRESENTE esatta della sorgente (pos_arr[j]), niente estrapolazione.
-        # Dead reckoning "perfetto": zero aberrazione, ne' indietro (causale) ne' avanti (overshoot modalita' C).
+        # Regime GW: si utilizza la posizione attuale per prevenire errori di aberrazione
         eff_x = src_px
         eff_y = src_py
     else:
@@ -422,9 +419,7 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
     dy = eff_y - my_y
 
     if is_gw:
-        # Modulo coerente con la direzione: distanza PRESENTE esatta.
-        # La stima "ritardata + correzione" lascia un errore radiale O((v/c)^2) (~2-4% vicino al merger)
-        # periodico col periodo orbitale: pompava eccentricita' spuria nell'inspiral.
+        # Distanza attuale per evitare eccentricità spuria causata da correzioni O((v/c)^2)
         dist = math.sqrt(dx * dx + dy * dy + SOFTENING_SQ)
     else:
         dot_v_r = dx_old * src_vx + dy_old * src_vy
@@ -517,6 +512,7 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
         # Calcolo del precursore di accoppiamento corretto (8/5)
         pref = (8.0 / 5.0) * (g_const * g_const) * M_pair * mu_pair * inv_c5 * (inv_sep / sep_sq)
         
+        # Coefficienti di espansione 2.5PN per la reazione di radiazione di Damour-Deruelle
         coeff_n = rdot * (18.0 * v_rel_sq + (2.0 / 3.0) * gm_over_r - 25.0 * rdot_sq)
         coeff_v = 6.0 * v_rel_sq - 2.0 * gm_over_r - 15.0 * rdot_sq
 
@@ -560,8 +556,7 @@ def calculate_potential_contribution(
     t_delay = 0.0
     if relativistic:
         a_term = c_sq - v_sq
-        # Nota: Qui usiamo la velocità attuale per il cono di luce. 
-        # È un'approssimazione accettabile per trovare t_delay, raffinabile con iterazioni ma costoso.
+        # Approssimazione del cono di luce basata sulla velocità attuale (non iterativa per prestazioni)
         t_delay = solve_retarded_time(dx_now, dy_now, vx, vy, a_term)
         if t_delay < 0.0: return 0.0
     else:
@@ -602,15 +597,11 @@ def calculate_potential_contribution(
     
     # --- DEEP SPACE CON MOTORE ARTIFICIALE ---
     else:
-        # CUTOFF RELATIVISTICO: Per velocità estreme (v >= 0.1c), tagliamo il deep space
-        # e ci affidiamo solo alla storia reale del buffer (L2). 
-        # Branch prediction gratuito per i preset normali (relativistic è sempre False).
+        # CUTOFF RELATIVISTICO: Per velocità estreme (v >= 0.1c), ci affidiamo solo alla storia reale del buffer (L2)
         if relativistic:
             return 0.0
             
-        # TRUCCO CAUSALE DEL RING BUFFER: Controlliamo la coda dell'ULTIMO buffer allocato.
-        # Se la coda è valida (> void_val), l'oggetto ha vissuto abbastanza da riempire
-        # la memoria e possiamo proiettarlo nel passato profondo.
+        # Verifica riempimento del buffer storico per l'estrapolazione lineare nel passato
         is_history_full = False
 
         if len_L2 > 0:
@@ -661,6 +652,7 @@ def calculate_dphi_contribution(
     i, 
     inv_c, inv_dt, void_val
 ):
+    """Calcola la variazione temporale del potenziale gravitazionale dPhi/dt indotta dal movimento del corpo."""
     # --- 1. PRIMA STIMA (basata sul presente) ---
     dx_now = target_x - px
     dy_now = target_y - py

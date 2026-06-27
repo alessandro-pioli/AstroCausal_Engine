@@ -33,11 +33,7 @@ def _loading_worker(preset_name, gstate, dt_val, progress_q, result_holder):
     my_thread_id     = threading.current_thread().ident
 
     def _thread_local_print(*args, **kwargs):
-        """
-        Intercetta SOLO i print del thread di loading.
-        I print degli altri thread (Tkinter incluso) passano all'originale.
-        Thread-safe: nessuna race condition.
-        """
+        """Intercetta in modo thread-safe i print del thread di caricamento."""
         if threading.current_thread().ident != my_thread_id:
             # Non siamo nel thread di loading → comportamento originale
             original_print(*args, **kwargs)
@@ -211,10 +207,6 @@ def show_splash_and_load(preset_name, gstate, dt_val):
 # ---------------------------------------------------------------------------
 
 def flush_deferred_prints(print_buffer):
-    """
-    Stampa i messaggi catturati durante il caricamento.
-    Va chiamato DOPO aver reindirizzato sys.stdout alla GameConsole,
-    così i log appaiono nella console in-game invece che sul terminale.
-    """
+    """Stampa i log catturati sulla GameConsole in-game."""
     for line in print_buffer:
         print(line)

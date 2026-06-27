@@ -1,14 +1,14 @@
 from core import data
 class Engine:
+    """Motore di calcolo che coordina l'esecuzione dei kernel fisici Numba."""
+    
     def __init__(self, celestial_bodies):
         """
-        Engine Polimorfico.
-        Gestisce il ciclo di simulazione delegando il calcolo pesante ai kernel Numba.
+        Inizializza l'Engine delegando il calcolo pesante ai kernel Numba.
         """
         self.bodies = celestial_bodies
         self.sim_time = 0.0
         
-        # Placeholder per il modulo kernel e la funzione tick
         self._kernel_module = None
         self.tick = None
         
@@ -59,6 +59,7 @@ class Engine:
     # Usano data.DT per garantire che la velocità sia quella attuale (Live).
 
     def _tick_single_wrapper_par(self, steps):
+        """Wrapper per il Single Buffer (L0 fa tutto) in parallelo."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -66,7 +67,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Single Buffer (L0 fa tutto). """
         self._kernel_module.update_step_single_par(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,
@@ -84,6 +84,7 @@ class Engine:
         self.sim_time += data.DT * steps
 
     def _tick_single_wrapper_seq(self, steps):
+        """Wrapper per il Single Buffer (L0 fa tutto) in sequenziale."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -91,7 +92,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Single Buffer (L0 fa tutto). """
         self._kernel_module.update_step_single_seq(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,
@@ -109,6 +109,7 @@ class Engine:
         self.sim_time += data.DT * steps
 
     def _tick_double_wrapper_par(self, steps):
+        """Wrapper per il Double Buffer (L0 + L1) in parallelo."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -116,7 +117,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Double Buffer (L0 + L1). """
         self._kernel_module.update_step_double_par(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,
@@ -138,6 +138,7 @@ class Engine:
         self.sim_time += data.DT * steps
 
     def _tick_double_wrapper_seq(self, steps):
+        """Wrapper per il Double Buffer (L0 + L1) in sequenziale."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -145,7 +146,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Double Buffer (L0 + L1). """
         self._kernel_module.update_step_double_seq(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,
@@ -167,7 +167,7 @@ class Engine:
         self.sim_time += data.DT * steps
 
     def _tick_triple_wrapper_par(self, steps):
-        # Prepare the active indices before physics
+        """Wrapper per il Triple Buffer (L0 + L1 + L2) in parallelo."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -175,7 +175,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Triple Buffer (L0 + L1 + L2). """
         self._kernel_module.update_step_triple_par(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,
@@ -196,6 +195,7 @@ class Engine:
         self.sim_time += data.DT * steps
     
     def _tick_triple_wrapper_seq(self, steps):
+        """Wrapper per il Triple Buffer (L0 + L1 + L2) in sequenziale."""
         num_active = 0
         for i in range(data.MAX_BODIES):
             f = data.FLAGS[i]
@@ -203,7 +203,6 @@ class Engine:
                 data.PHYS_ACTIVE_INDICES[num_active] = i
                 num_active += 1
 
-        """ Wrapper per il Triple Buffer (L0 + L1 + L2). """
         self._kernel_module.update_step_triple_seq(
             data.MAX_BODIES, data.POS, data.VEL, data.ACC, 
             data.MASS, data.RAD, data.FLAGS,    

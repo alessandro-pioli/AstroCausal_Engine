@@ -5,7 +5,6 @@ from core.data import AU_IN_KM
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, "astro_settings.ini")
 
-# Parser initialization
 parser = configparser.ConfigParser()
 
 def create_default_config():

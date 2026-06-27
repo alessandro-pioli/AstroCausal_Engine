@@ -4,6 +4,7 @@ import core.data as data
 from utils.orbital_math import get_lagrange_points, solve_lagrange_boot_velocity, solve_velocity_from_apocenter, solve_pw_circular_velocity, get_lagrange_points
 
 class OrbitalSpawner:
+    """Gestore dell'interfaccia di spawn per inserire dinamicamente nuovi corpi in orbita durante la simulazione."""
     def __init__(self):
         self.active = False
         self.state = 0 # 0: Inactive, 1: Choose Body, 2: Choose Orbit
@@ -131,15 +132,15 @@ class OrbitalSpawner:
             elif self.state == 2:
                 
                 
-                # Orbit choices:
-                # 1: Stationary
-                # Top Attractor
-                # 2: Circular Top
-                # 3: Eccentric Top
-                # 4: Plunge Top
-                # Closest Attractor (if valid)
-                # 6: Circular Closest
-                # 7: Eccentric Closest
+                # Scelte orbitali:
+                # 1: Stazionario
+                # Attrattore principale
+                # 2: Circolare principale
+                # 3: Eccentrico principale
+                # 4: Plunge principale
+                # Attrattore più vicino (se valido)
+                # 6: Circolare vicino
+                # 7: Eccentrico vicino
                 
                 tmpl = self.selected_template
                 if tmpl is None: return True
@@ -164,17 +165,17 @@ class OrbitalSpawner:
                     r = math.sqrt(dx**2 + dy**2)
                     if r == 0: return [0.0, 0.0]
                     
-                    # Normal vector for position
+                    # Vettore normale per la posizione
                     nx, ny = dx/r, dy/r
                     
-                    # Tangent vector for velocity (counter-clockwise)
+                    # Vettore tangente per la velocità (antiorario)
                     tx, ty = -ny, nx
                     
-                    if eccentricity == -1.0: # Plunge (radial drop with a bit of tangential speed)
-                        # We just want it to fall in, so low tangential speed
+                    if eccentricity == -1.0: # Plunge (caduta radiale con una minima velocità tangenziale)
+                        # Vogliamo solo che cada all'interno, quindi con una bassa velocità tangenziale
                         v_circ = solve_pw_circular_velocity(amass, r)
                         v_mag = v_circ * 0.2
-                        # Let's make it go slightly forward and heavily inwards
+                        # Spinta leggermente in avanti e fortemente verso l'interno
                         return [avx + tx*v_mag - nx*v_circ*0.5, avy + ty*v_mag - ny*v_circ*0.5]
                         
                     elif eccentricity == 0.0: # Circular
@@ -182,14 +183,14 @@ class OrbitalSpawner:
                         return [avx + tx * v_mag, avy + ty * v_mag]
                         
                     else: # Eccentric
-                        # Assume spawn point is apocenter, pericenter is much closer
+                        # Si assume che il punto di spawn sia l'apocentro, il pericentro è molto più vicino
                         r_peri = r * (1.0 - eccentricity) / (1.0 + eccentricity)
-                        if r_peri < amass * data.G * 2.0 / (data.C_SQ) * 5.0: # avoid singularity if too close to black hole
+                        if r_peri < amass * data.G * 2.0 / (data.C_SQ) * 5.0: # Evita la singolarità se si è troppo vicini al buco nero
                             r_peri = r * 0.5
                         v_mag = solve_velocity_from_apocenter(amass, r, r_peri)
                         return [avx + tx * v_mag, avy + ty * v_mag]
                 
-                # Processing choices
+                # Elaborazione scelte
                 valid_choice = False
                 
                 if event.key == pygame.K_1:
@@ -225,7 +226,7 @@ class OrbitalSpawner:
                         
                 if valid_choice:
                     self.deactivate()
-                    return new_params # Return parameters to trigger rebuild
+                    return new_params # Restituisce i parametri per attivare la ricostruzione
                     
             elif self.state == 3:
                 if event.key == pygame.K_TAB:

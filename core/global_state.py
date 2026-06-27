@@ -2,7 +2,7 @@ import config
 
 class GlobalState:
     def __init__(self):
-        # Time and Simulation States
+        # Stati di tempo e simulazione
         self.paused = False
         self.simulation_running = True
 
@@ -33,7 +33,7 @@ class GlobalState:
         self.draw_roche_orbit = False
         self.show_info_causality = True
         
-        # Ticks Tracking (maybe moving from locals in main)
+        # Tracciamento dei tick (spostato da variabili locali in main)
         self.render_counter = 0
 
     def toggle_pause(self):

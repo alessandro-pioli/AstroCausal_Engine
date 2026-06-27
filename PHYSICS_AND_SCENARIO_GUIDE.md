@@ -71,7 +71,15 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
    - 7.2 Variazione temporale dΦ/dt
    - 7.3 Stress di marea (e una nota sull'Hessiana)
    - 7.4 Topologia di Roche (il segno del determinante)
+     - 7.4.1 Il potenziale efficace nel sistema co-rotante
+     - 7.4.2 Mappatura cromatica (segno e intensità di D)
+     - 7.4.3 Overlay [M]: Orbita circolare ideale
+     - 7.4.4 Lettura combinata delle tre informazioni
+     - 7.4.5 Caso di studio: La missione Artemis II
+     - 7.4.6 Caso di studio: Mercurio al perielio
    - 7.5 Lagrange Hunter (determinante e Hessiana inversa)
+   - 7.6 Riepilogo: come ogni heatmap converte la fisica in colore
+   - 7.7 Il Pannello di Telemetria Orbitale (HUD)
 8. [L'analizzatore LIGO: dal proxy cinematico allo spettro](#8-lanalizzatore-ligo-dal-proxy-cinematico-allo-spettro)
    - 8.1 L'analogia con LIGO e Virgo sulla Terra
    - 8.2 Cos'è il momento di quadrupolo di massa? (Le due facce del quadrupolo)
@@ -270,7 +278,7 @@ Il meccanismo fisico è la **contrazione di Lorentz** del campo: il campo di una
 
 Le isolinee del pozzo di potenziale del Sole si contraggono e si schiacciano in direzione del moto.
 
-**Come si legge la heatmap del potenziale gravitazionale Φ ("phi").** Il colore mappa la profondità del pozzo gravitazionale punto per punto: blu profondo/nero significa "potenziale minimo o assente", giallo intenso significa "pozzo profondo". La scala è sempre tarata sul corpo più massiccio dello scenario, quindi il *bianco assoluto* compare in pratica solo dentro l'ISCO di un buco nero (entro $3R_s$ §6.1) o nelle coppie di stelle di neutroni molto strette: rappresenta un $\Phi$ vicino al massimo fisicamente possibile,
+**Come si legge la heatmap del potenziale gravitazionale Φ ("phi").** Il colore mappa la profondità del pozzo gravitazionale punto per punto: blu profondo/nero significa "potenziale minimo o assente", giallo intenso significa "pozzo profondo". La scala è sempre tarata sul raggio efficace minimo del corpo più massiccio dello scenario (regolato dal cinematic floor fittizio `eff_rad` per evitare che la dinamica esploda nei corpi compatti), quindi il *bianco assoluto* compare a ridosso di questa distanza di saturazione geometrica, che rappresenta un valore di $\Phi$ vicino al massimo teorico:
 
 $$\Phi_{\text{limite}} = -\tfrac{1}{2}c^2 \approx -4{,}49377 \times 10^{10}\ \text{km}^2/\text{s}^2$$
 
@@ -573,6 +581,8 @@ In alto a sinistra la luna gioviana **Europa**, immersa nel blu verso il ciano d
 
 ### 7.4 Topologia di Roche (il segno del determinante)
 
+#### 7.4.1 Il potenziale efficace nel sistema co-rotante
+
 È il passo successivo alla marea, e introduce un ingrediente nuovo: il **potenziale efficace nel sistema co-rotante**. Per capire perché serve, basta un esperimento mentale. Se ti metti su una giostra che ruota a velocità angolare $\omega$ e ne descrivi la fisica *dall'interno* (cioè nel sistema che ruota con te), avverti due forze: la gravità solita, e una **forza centrifuga** che ti spinge verso l'esterno. Quella forza non esiste in un sistema inerziale, è un effetto del riferimento rotante, ma per chi ci vive dentro è del tutto reale.
 
 Il **potenziale efficace co-rotante** somma esattamente queste due cose: il potenziale gravitazionale dei corpi più il potenziale centrifugo $-\tfrac{1}{2}\omega^2 d^2$ (dove $d$ è la distanza dal baricentro). La velocità angolare $\omega$ del sistema è ricavata cinematicamente dalla **coppia bloccata** (il corpo che l'utente blocca e il suo attrattore dominante), tramite il momento angolare specifico:
@@ -594,7 +604,9 @@ Ed è qui che il centrifugo è protagonista. La sola gravità, vicino a un corpo
 
 > **Una precisazione sulla terminologia.** Quando in questa sezione parliamo di *sella* o *cupola* non intendiamo punti critici isolati (con gradiente zero), ma la **forma locale** della superficie potenziale in *ogni pixel* della regione: tutto il rosso ha curvatura **iperbolica** (forma di sella), tutto il blu ha curvatura **ellittica** (forma di cupola). Il gradiente però è non-nullo quasi ovunque, e una particella lasciata ferma in quei pixel **cade o viene scagliata** lungo il gradiente. Solo nei 5 punti di Lagrange si combinano entrambe le proprietà -> gradiente zero **e** forma iperbolica o ellittica; ed è questa caratteristica a farne veri *punti critici* (trattati in §7.5).
 
-**Come il colore traduce il segno e l'intensità di $D$.** Ogni pixel codifica due informazioni distinte: la **tinta** dà il segno di $D$ (topologia: sella o estremo), la **saturazione lungo la rampa** dà la sua intensità adimensionalizzata. La normalizzazione naturale del frame co-rotante è $\omega^4$ (l'Hessiana ha unità $1/\text{tempo}^2$, quindi $D$ ha unità $1/\text{tempo}^4$, come $\omega^4$): la quantità mappata è dunque $\log_{10}(|D|/\omega^4)$, intervalla tra $[-3, +3]$. Vicino ai punti dolci di $D \approx 0$ si è all'estremo *cremisi/indaco* della rampa; vicino ai corpi, dove i termini $1/r^3$ dell'Hessiana esplodono, si arriva al *giallo neon/ciano* saturo. Le due rampe in dettaglio:
+#### 7.4.2 Mappatura cromatica (segno e intensità di $D$)
+
+Ogni pixel codifica due informazioni distinte: la **tinta** dà il segno di $D$ (topologia: sella o estremo), la **saturazione lungo la rampa** dà la sua intensità adimensionalizzata. La normalizzazione naturale del frame co-rotante è $\omega^4$ (l'Hessiana ha unità $1/\text{tempo}^2$, quindi $D$ ha unità $1/\text{tempo}^4$, come $\omega^4$): la quantità mappata è dunque $\log_{10}(|D|/\omega^4)$, intervalla tra $[-3, +3]$. Vicino ai punti dolci di $D \approx 0$ si è all'estremo *cremisi/indaco* della rampa; vicino ai corpi, dove i termini $1/r^3$ dell'Hessiana esplodono, si arriva al *giallo neon/ciano* saturo. Le due rampe in dettaglio:
 
 | $D$ | Topologia (forma locale) | Rampa di curvatura ($t = 0 \to 1$) |
 |---|---|---|
@@ -610,7 +622,7 @@ Una particella co-rotante in zona *rossa* cadrebbe verso l'attrattore; in zona *
 > [!NOTE]
 > **Punti di Lagrange in breve.** Sono i cinque punti del piano dove, nel sistema co-rotante della coppia, una particella di test resterebbe ferma: la gravità dei due corpi e la centrifuga si compensano esattamente. **L1, L2, L3** stanno sull'asse che congiunge i due corpi e sono *selle* (instabili: una piccola perturbazione li allontana). **L4 e L5** giacciono a 60° avanti e dietro il corpo minore, formano triangoli equilateri con i due corpi, e sono dinamicamente stabili grazie alla forza di Coriolis: lì vivono i Trojani di Giove. La loro individuazione numerica e visiva è il compito specifico del **Lagrange Hunter** (§7.5).
 
-#### Overlay [M]: Orbita circolare ideale (a $h$ costante)
+#### 7.4.3 Overlay [M]: Orbita circolare ideale
 
 Premendo `M` in modalità Topologia di Roche, sul campo viene sovrapposto un **anello continuo color lavanda** centrato sul baricentro: è il raggio a cui il target orbiterebbe **circolarmente** se chiudesse l'orbita con l'$h$ che possiede in quel momento. La formula è quella standard del problema dei due corpi:
 
@@ -642,30 +654,28 @@ Sistema Luna-Terra: la Luna è al suo afelio a più di 400.000 km dalla Terra, i
 
 L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quel $h$, risulta essere vicino al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale estremo che con ogni probabilità la farà a pezzi prima ancora di raggiungere l'atmosfera di Giove, in *plunge* diretto.
 
-#### Lettura interpretativa: tre informazioni in una mappa
+#### 7.4.4 Lettura combinata delle tre informazioni
 
 Questa è l'unica heatmap del simulatore che codifica **tre quantità fisiche distinte simultaneamente**, e merita una lettura combinata:
 1. **Topologia degli spazi efficaci** *(dal segno di $D$, dato dalla tinta rosso/blu)*. Nel frame corotante alla $\omega$ istantanea della coppia, il segno del determinante Hessiano partiziona lo spazio in due regioni complementari: le zone rosse (iperboliche, $D < 0$), dove il gradiente gravitazionale impone una curvatura differenziale (stiramento lungo una direzione, compressione lungo l'altra), e le zone blu (ellittiche, $D > 0$), dove la forza centrifuga domina uniformemente su entrambi gli assi, spingendo la materia verso l'esterno. Il confine $D = 0$ tra le due regioni traccia dinamicamente i **lobi di Roche**.
 In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il mare blu si espande sommergendo il sistema: la centrifuga vince sulla caduta e il corpo sta accelerando in uscita verso il proprio afelio. In questo oceano, lo spazio efficace del corpo minore sopravvive come una "nocciolina" rossa, una tasca in cui la sua autogravità locale sconfigge la centrifuga circostante. L'errore interpretativo da evitare è confondere spazio topologico e materia: un corpo conserva la propria integrità strutturale solo se la sua estensione fisica è interamente contenuta nella propria tasca rossa. Il linea di massima, all'interno della sacca di autogravità è importante giusto notare come dalla zona gialla in poi l'autogravità si faccia importante e determinante, un qualsiasi oggetto in quell'area con velocità angolari simili avrà il vettore forza (visibile nel simulatore) nella direzione del padrone dello spazio efficace.
 
-Dimostrazione spazi efficaci:
+#### 7.4.5 Caso di studio: La missione Artemis II
 
 <div align="center">
-    <video src="https://github.com/user-attachments/assets/e8045292-e039-4abd-8de2-4524b7b389a5" controls="controls" width="100%"></video>
+    <video src="https://github.com/user-attachments/assets/b34ef8c8-b535-48ce-9ff8-8cd3820a8612" controls="controls" width="100%"></video>
 </div>
 
-**Missione Artemis II (NASA, aprile 2026)**: lo scenario usa i dati di navigazione reali catturati in **piena fase di crociera translunare**, alle **2026-04-03T12:03:39 UTC**, circa 12 ore dopo il cutoff del *burn di Translunar Injection*. In questo istante la navicella **Orion** ha già superato la spinta terrestre ed è in moto **puramente inerziale** verso la Luna, a 134.376 km dalla Terra (~34% del tragitto Terra-Luna), a 283.833 km dalla Luna, con velocità di 2,037 km/s. Tutti i motori sono spenti, e mancano ~70 ore al *flyby* lunare del 6 aprile: è questa la fase di crociera passiva che la simulazione cattura, governata esclusivamente dalla gravità del sistema multicorpo con la topologia di Roche su corotazione Terra-Luna, quando Orion entra nello spazio efficace della Luna si può vedere come il vettore viola di forza passi dal puntare al Sole-Terra alla sola Luna quando entra nella sua zona "gialla".
+**Missione Artemis II (NASA, aprile 2026)**: lo scenario impiega i vettori orbitali reali della missione in **fase di crociera translunare**, catturati alle **2026-04-03T12:03:39 UTC** (circa 12 ore dopo il completamento della manovra di *Translunar Injection*). In questo istante la navicella **Orion** viaggia in volo inerziale non alimentato (motori spenti) a 134.376 km dalla Terra (~34% della distanza Terra-Luna) e a 283.833 km dalla Luna, a una velocità di 2,037 km/s rispetto alla Terra. La simulazione ne riproduce la traiettoria balistica passiva fino al *flyby* del 6 aprile. Nella visualizzazione della topologia di Roche (associata al sistema corotante Terra-Luna), si può osservare graficamente la transizione gravitazionale: quando Orion attraversa il lobo di transizione ed entra nello spazio efficace dominato dalla Luna (colorazione giallo/cremisi), il **vettore viola dell'accelerazione netta** devia progressivamente il suo orientamento dal baricentro terrestre a quello lunare.
 
-Inoltre la simulazione non è inerziale sulla Terra, in quanto è presente anche il Sole; la simulazione avviene mentre i tre protagonisti viaggiano a 30 km/s attorno al Sole come dimostra il "cruscotto di volo" che nel simulatore appare su ogni corpo evidenziato o facendo *doppio-click* su esso o premendo [TAB] scorrendo tra i corpi presenti nello scenario. Eccone un esempio dalle condizioni iniziali dello scenario trattato, da notare come la velocità assoluta sia nei confronti dello zero relativo della simulazione (coincide con il Sole in questo caso) mentre quella relativa in rapporto al suo attrattore principale (la Terra in questo caso):
+La simulazione opera in un sistema di riferimento eliocentrico inerziale (non vincolato geocentricamente); di conseguenza, l'intero sistema Terra-Luna e la navicella stessa orbitano solidalmente attorno al Sole a circa 30 km/s. Questo comportamento è monitorabile in tempo reale tramite il **Pannello di Telemetria Orbitale** (HUD), i cui parametri e funzionamento sono discussi in dettaglio nel paragrafo dedicato **[§7.7](#77-il-pannello-di-telemetria-orbitale-hud)**.
 
-<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media non trovato"></div>
-
-Per poter osservare l'intero scenario descritto si invita all'utilizzo del simulatore; qui nel video si mostra la fase prima e dopo il *flyby* lunare dove si possono osservare le transizioni di gravità efficaci.
+Per esplorare l'intero scenario dinamico si invita a utilizzare la simulazione interattiva; il video soprastante illustra i passaggi salienti prima e dopo il *flyby* lunare, rendendo visibili le transizioni dello spazio efficace.
 
 Le condizioni iniziali ($t_0$) per l'intero sistema (Terra, Luna, Orion) sono state estratte in modo programmatico e simultaneo tramite le API **JPL Horizons**. Per garantire un'integrazione rigorosa nel kernel $O(N^2)$, esente da forze fittizie o deriva del centro di massa, i vettori di stato cartesiani sono stati interrogati in un sistema di riferimento **eliocentrico inerziale** (origine al centro del Sole, `@10`), orientati sul piano dell'eclittica e successivamente proiettati sul piano $xy$. Senza alcuna spinta artificiale aggiunta, la traiettoria attraversa la mappa di Roche Terra-Luna, entra nel lobo gravitazionale lunare, e ne sfrutta l'influenza come fionda gravitazionale per il **flyby di *free-return***, il viaggio passivo di ritorno verso la Terra. 
 
 
-Dimostrazione fase centrifuga e stress mareale:
+#### 7.4.6 Caso di studio: Mercurio al perielio
 
 <div align="center"><img src="docs/img/mercury_Ueff.png" width="600" alt="Media non trovato"></div>
 
@@ -750,6 +760,38 @@ Le cinque heatmap del simulatore usano strategie di normalizzazione e mapping cr
 - **Il logaritmo compare ovunque tranne nel Lagrange Hunter**: è imposto dal range fisico in gioco, che attraversa decine di ordini di grandezza in tutte le mappe scalari (potenziale, derivata temporale, stress di marea, curvatura del potenziale efficace).
 - **La normalizzazione è quasi sempre "fisica"**, non puramente numerica: si appoggia su $\Phi_{\max}$, $\omega^4$, $f_{\text{norm}}$ o soglie meccaniche reali. L'unica scala assoluta (senza alcuna normalizzazione) è quella della Tidal, perché le sue fasce coincidono con la resistenza dei materiali misurata in laboratorio (silicati, ghiaccio, metalli).
 - **Le palette sono coerenti**: blu = avvicinamento/centrifugo/sicuro, rosso = allontanamento/gravitazionale/disgregante, giallo/ciano = saturazione estrema, nero = forza nulla o assenza di campo. Il lettore impara una sola convenzione per cinque mappe.
+
+### 7.7 Il Pannello di Telemetria Orbitale (HUD)
+
+Il simulatore non si limita a visualizzare qualitativamente la fisica tramite le heatmap, ma espone in tempo reale l'intero stato cinematico e dinamico di qualunque corpo selezionato. Questa interfaccia informativa è denominata **Pannello di Telemetria Orbitale** (indicato comunemente come *cruscotto di volo* o *HUD*).
+
+#### Attivazione e funzionamento
+L'HUD appare nella parte inferiore dello schermo e si attiva:
+* Effettuando un **doppio clic** su uno qualsiasi dei corpi presenti nello scenario.
+* Premendo il tasto **[TAB]** per scorrere ciclicamente tra tutti i corpi attivi.
+
+Una volta selezionato un corpo (denominato *target*), il motore calcola dinamicamente le sue grandezze fisiche sia in senso assoluto (riferite all'origine inerziale del motore) sia in senso relativo (riferite all'attrattore gravitazionale dominante in quel momento). La determinazione del corpo di riferimento avviene tramite il calcolo locale della forza di marea ($M/r^3$), identificando quale massa eserciti l'influenza gravitazionale prevalente sull'oggetto (la stessa logica utilizzata per definire la sfera di Hill).
+
+<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media non trovato"></div>
+
+#### Parametri e grandezze visualizzate
+Il pannello di telemetria è strutturato in colonne che organizzano i dati fisici calcolati dal risolutore:
+
+1. **Dati Anagrafici e di Riferimento** (Prima colonna):
+   * **TARGET**: Nome del corpo selezionato e colore identificativo dello scenario.
+   * **Mass**: Massa dell'oggetto in chilogrammi (espressa in notazione scientifica).
+   * **Dist**: Identificativo del corpo di riferimento dominante seguito dalla distanza istantanea espressa in formato scalato (chilometri o Unità Astronomiche) ed evidenziata in due modalità: **CC** (*Center-Center* / Centro-Centro, ossia la distanza geometrica tra i baricentri dei due corpi) e **SS** (*Surface-Surface* / Superficie-Superficie, ossia la distanza netta tra le rispettive superfici fisiche o orizzonti degli eventi, al netto dei loro raggi visivi). Viene inoltre indicata la conversione di tale distanza in pixel schermo.
+
+2. **Posizione Assoluta** (Seconda colonna):
+   * **PX, PY**: Coordinate cartesiane del target espresse in formato scalato (chilometri o Unità Astronomiche) rispetto all'origine (zero relativo) del sistema di coordinate dello scenario.
+
+3. **Velocità Lineare** (Terza e Quarta colonna):
+   * **VX, VY, V (Abs)** (Velocità Assoluta): Vettori e modulo della velocità dell'oggetto riferiti al sistema eliocentrico/inerziale di simulazione. Mostrano la velocità complessiva del corpo all'interno del sistema (es. i ~30 km/s dell'orbita terrestre attorno al Sole).
+   * **VX, VY, V (Rel)** (Velocità Relativa): Vettori e modulo della velocità calcolati rispetto all'attrattore principale (ad es. la velocità di allontanamento/avvicinamento di Orion rispetto alla Terra, pari a ~2,04 km/s).
+
+4. **Accelerazione Gravitazionale** (Quinta e Sesta colonna):
+   * **AX, AY, A (Abs)** (Accelerazione Assoluta): Vettori e modulo dell'accelerazione totale istantanea subita dal corpo, derivante dalla somma di tutte le attrazioni gravitazionali $O(N^2)$ (incluso l'influsso del Sole).
+   * **AX, AY, A (Rel)** (Accelerazione Relativa): Vettori e modulo dell'accelerazione calcolati al netto dell'accelerazione dell'attrattore dominante, evidenziando le forze differenziali e di marea.
 
 ---
 

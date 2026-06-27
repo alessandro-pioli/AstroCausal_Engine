@@ -103,11 +103,11 @@ def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
     lagrange_target_idx = -1
     lagrange_attr_idx = -1
     
-    # Gain Fader for DPHI and ROCHE modes (right side)
+    # Fader del Guadagno (Gain) per le modalità DPHI e ROCHE (lato destro)
     fader_dphi = VerticalFader(data.WIDTH - 50, data.HEIGHT // 2 - 75, 4, 150, min_val=-4.0, max_val=2.0, default_val=0.0)
     fader_roche = VerticalFader(data.WIDTH - 50, data.HEIGHT // 2 - 75, 4, 150, min_val=-8.0, max_val=8.0, default_val=0.0)
     
-    # Contrast Fader for ROCHE mode (left side)
+    # Fader del Contrasto per la modalità ROCHE (lato sinistro)
     fader_contrast = VerticalFader(50, data.HEIGHT // 2 - 75, 4, 150, min_val=0.0, max_val=100.0, default_val=15.0)
 
     perf_manager = PerformanceManager()

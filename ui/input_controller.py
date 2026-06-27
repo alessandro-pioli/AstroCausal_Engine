@@ -191,7 +191,7 @@ class InputController:
             wy = (my - cy) * c_scale + c_off_y
             active_indices = np.where(data.FLAGS & data.FLAG_ALIVE)[0].astype(np.int64)
  
-            # Array dummy: Numba richiede sempre tipo concreto float64[::3], mai None
+            # Array vuoto tipo-compatibile con i kernel Numba
             _dummy = np.zeros((1, 1, 5), dtype=np.float64)
             _h_L0 = data.HISTORY_L0 if data.HISTORY_L0 is not None else _dummy
             _h_L1 = data.HISTORY_L1 if data.HISTORY_L1 is not None else _dummy
@@ -268,7 +268,7 @@ class InputController:
                 mode_str = "CAUSALE (RELATIVISTICO)" if ui_state.gstate.show_info_causality else "NEWTONIANO (PURO)"
                 print(f"[REBUILD] Switch in corso alla modalità: {mode_str}")
                 
-                # trigger rebuild as we do in self._rebuild_dt with data.DT as dt parameter
+                # Innesca la ricostruzione come in self._rebuild_dt passando data.DT come parametro dt
                 self._rebuild_dt(data.DT, f"cambio modalità in {mode_str}")
                 
                 ui_state.causality_confirm_active = False

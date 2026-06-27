@@ -10,7 +10,7 @@ VOID_VAL = -64*AU_IN_KM* 1e10 * 0.9
 G = 6.67430e-20 # Costante universale in Km
 G_SI = 6.67430e-11
 C_LIGHT = 299792.458 # km/s
-# --- PRE-CALCOLO COSTANTI PER NUMBA ---
+# Costanti precalcolate
 INV_C_DT = 1.0 / (C_LIGHT * DT)
 INV_C = 1.0 / C_LIGHT
 INV_DT = 1.0 / DT
@@ -52,9 +52,6 @@ MASK_L1 = int(0)
 MASK_L2 = int(0)
 
 # Allocazione Memoria Reale
-# Nota: Allocare array di dimensione 0 è possibile in numpy ma inutile. 
-# Meglio allocare (MAX, 1, 4) come dummy o gestire None. 
-# Per semplicità Numba, meglio allocare la dimensione richiesta.
 
 HISTORY_L0 = np.zeros((MAX_BODIES, LEN_L0, 5), dtype=np.float64) if LEN_L0 > 0 else None
 HISTORY_L1 = np.zeros((MAX_BODIES, LEN_L1, 5), dtype=np.float64) if LEN_L1 > 0 else None
@@ -103,10 +100,10 @@ PHYS_ACTIVE_INDICES = np.zeros(MAX_BODIES, dtype=np.int32)
 PROBE_LEN = 2**21  
 PROBE_MASK = PROBE_LEN - 1
 
-# Il Tensorone circolare 1D che conterrà i valori DPHI crudi (Placeholder all'avvio)
+# Buffer circolare per i valori grezzi di DPHI
 PROBE_BUFFER = np.zeros(1, dtype=np.float64)
 
-# Strutture di controllo vettorizzabili per Numba (array di 1 elemento)
+# Array monoelemento per il controllo di stato in Numba
 PROBE_HEAD = np.zeros(1, dtype=np.int32)
 PROBE_POS = np.zeros(2, dtype=np.float64)
 PROBE_ACTIVE = np.zeros(1, dtype=np.bool_)

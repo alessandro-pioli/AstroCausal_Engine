@@ -7,7 +7,7 @@ def push_default_tutorials(manager):
             "Welcome to the Hardcore N-Body Simulation Engine.",
             "",
             "MOUSEDOWN / DRAG : Pan across the universe.",
-            "SCROLL WHEEL     : Zoom in and out.",
+            "SCROLL WHEEL / +/-: Zoom in and out.",
             "HINTS            : Observe events from macro or micro perspectives."
         ],
         UITheme.INFO

@@ -12,12 +12,7 @@ from utils.formatting import format_dt
 # ---------------------------------------------------------------------------
 
 def _show_oom_error(total_mb: float, n_bodies: int) -> None:
-    """
-    Mostra una finestra di dialogo che spiega l'errore OOM (Out Of Memory)
-    e i passi per ridurre l'utilizzo di RAM. Poi termina il processo in modo
-    sicuro con os._exit(1), che funziona correttamente da qualsiasi thread
-    (a differenza di sys.exit che termina solo il thread corrente).
-    """
+    """Mostra una finestra di errore OOM e termina il processo in modo sicuro."""
     import os
     import tkinter as tk
     from tkinter import messagebox
@@ -140,11 +135,15 @@ def _calculate_universal_gw_boost(m1, m2):
     Calcola il moltiplicatore universale 2.5PN basato sulla Massa Chirp.
     Nuovo paradigma calibrato empiricamente su GW170817 (15.000s) e GW150914.
     """
+    # Questo è deadcode addormentato, in futuro potrebbe tornare in qualche forma.
+    if True:
+        return 1
+
     M_SUN = 1.98847e30
 
     # --- I NUOVI PILASTRI (Il Paradigma Definitivo) ---
     M_CHIRP_REF = 1.188          # Massa Chirp GW170817 (Nuovo Punto Zero)
-    B_REF = 1.0                # 2.9226e10 <-vecchia-> Costante perfetta (Calibrata a 15.000s esatti)
+    B_REF = 1.0
     # precalcolato K_EXP = math.log(B_BH / B_NS) / math.log(M_CHIRP_BH / M_CHIRP_NS)
     K_EXP = 0.3226               # Esponente di curvatura inter-scalare
 
@@ -695,11 +694,9 @@ def _update_lod_and_indices(n_bodies: int) -> None:
 
 def _run_relativistic_radar() -> None:
     """
-    Fase 7 — Auto-taratura 2.5PN (RADAR Relativistico).
-    Individua la prima coppia di corpi in regime relativistico e calcola
-    il boost universale M_CHIRP_MULT per la corretta dissipazione di quadrupolo.
-    Si interrompe alla prima coppia trovata (fix: il precedente `found_extreme_pair`
-    non veniva mai impostato a True, rendendo il break dead code).
+    Fase 7 — RADAR Relativistico.
+    Individua coppie di corpi in regime relativistico estremo per il monitoraggio.
+    Nota: L'auto-taratura della massa chirp è disattivata (boost fisso a 1.0).
     """
     data.M_CHIRP_MULT[0] = 1.0  # Reset al default
 

@@ -46,3 +46,22 @@ class Camera:
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]: self.offset_x += pan_speed
         if keys[pygame.K_UP] or keys[pygame.K_w]: self.offset_y -= pan_speed
         if keys[pygame.K_DOWN] or keys[pygame.K_s]: self.offset_y += pan_speed
+
+        # Zoom fluido da tastiera (+ / -) da tastierino numerico o tastiera standard
+        zoom_in = False
+        zoom_out = False
+
+        if keys[pygame.K_KP_PLUS]: zoom_in = True
+        if hasattr(pygame, 'K_PLUS') and keys[pygame.K_PLUS]: zoom_in = True
+        if hasattr(pygame, 'K_EQUALS') and keys[pygame.K_EQUALS]: zoom_in = True
+
+        if keys[pygame.K_KP_MINUS]: zoom_out = True
+        if hasattr(pygame, 'K_MINUS') and keys[pygame.K_MINUS]: zoom_out = True
+
+        if zoom_in:
+            self.scale /= 1.02
+        if zoom_out:
+            self.scale *= 1.02
+
+        # Mantiene il limite minimo di zoom (1 px = 1 km)
+        self.scale = max(1.0, self.scale)

@@ -20,8 +20,8 @@ class LagrangeRenderer:
                                   data.MASS[lagrange_target_idx], data.POS[lagrange_target_idx],
                                   data.VEL[lagrange_attr_idx], data.VEL[lagrange_target_idx])
         if pts:
-            # We only need L2, L3 coordinates for drawing the bounding line,
-            # plus positions for attractor (p) and target (s)
+            # Servono solo le coordinate di L2 e L3 per disegnare la linea di confine,
+            # oltre alle posizioni dell'attrattore (p) e del target (s)
             sx_l2, sy_l2 = camera.world_to_screen(pts[1])
             sx_l3, sy_l3 = camera.world_to_screen(pts[2])
             sx_p, sy_p = camera.world_to_screen(data.POS[lagrange_attr_idx])
@@ -29,16 +29,16 @@ class LagrangeRenderer:
             
             line_col = UITheme.SUCCESS
             
-            # Draws a reference axis through the main points (L3 to L2 passing through M1 and M2)
+            # Disegna un asse di riferimento attraverso i punti principali (da L3 a L2 passando per M1 e M2)
             pygame.draw.line(screen, line_col, (sx_l3, sy_l3), (sx_l2, sy_l2), 2)
             
-            # Draw projection lines for L4 and L5 to the two main bodies
+            # Disegna le linee di proiezione da L4 e L5 verso i due corpi principali
             for pt_idx in [3, 4]:
                 px, py = camera.world_to_screen(pts[pt_idx])
                 pygame.draw.line(screen, line_col, (sx_p, sy_p), (px, py), 2)
                 pygame.draw.line(screen, line_col, (sx_s, sy_s), (px, py), 2)
                 
-            # Draw all 5 points and labels
+            # Disegna tutti e 5 i punti e le relative etichette
             for i, pt in enumerate(pts):
                 mx, my = camera.world_to_screen(pt)
                 pygame.draw.circle(screen, line_col, (int(mx), int(my)), 4)
@@ -94,7 +94,10 @@ class LagrangeRenderer:
         vy = data.VEL[target_idx, 1] - data.VEL[attr_idx, 1]
         h = dx * vy - dy * vx  # momento angolare specifico relativo
 
+        # Calcola la separazione circolare ideale D_g equivalente dal momento angolare specifico relativo h:
+        # v_t^2 = G * M_tot / D_g  =>  (h/D_g)^2 = G * M_tot / D_g  =>  D_g = h^2 / (G * M_tot)
         D_g = (h * h) / (data.G * M_tot)
+        # Raggio dell'orbita del corpo secondario (target) rispetto al baricentro del sistema
         r_g = D_g * (m1 / M_tot)
 
         c_wx = (m1 * p1x + m2 * p2x) / M_tot

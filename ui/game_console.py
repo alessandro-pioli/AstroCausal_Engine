@@ -24,7 +24,7 @@ class GameConsole:
                 if line:
                     if hasattr(self, 'current_sim_time') and self.current_sim_time is not None:
                         time_str = f"[{format_time(self.current_sim_time)}] "
-                        # Prevent double-prefixing if already added manually
+                        # Evita il doppio prefisso se già aggiunto manualmente
                         if not line.startswith("[TIME:"):
                             line = time_str + line
                     self.messages.append({"text": line, "time": time.time()})

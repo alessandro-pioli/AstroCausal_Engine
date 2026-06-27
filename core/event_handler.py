@@ -49,10 +49,7 @@ class EventHandler:
                 del self._callbacks[event_type]
 
     def handle_events(self) -> None:
-        """
-        Svuota la coda degli eventi di Pygame e chiama le funzioni registrate.
-        Questa funzione deve essere chiamata una volta per frame nel main loop.
-        """
+        """Elabora e smista la coda degli eventi di Pygame."""
         for event in pygame.event.get():
             if event.type in (pygame.KEYDOWN, pygame.KEYUP):
                 if hasattr(event, 'key'):

@@ -17,7 +17,7 @@ class GCWorker:
         self._thread.start()
         
     def _run(self):
-        # Quick check for dying objects
+        # Controllo rapido per gli oggetti in fase di rimozione
         if not np.any(data.FLAGS[:data.MAX_BODIES] & 2):
             return
             
@@ -39,7 +39,7 @@ class GCWorker:
                     if data.HISTORY_L0[idx, tail_ptr, 0] <= data.VOID_VAL * 0.9:
                         tail_is_void = True
                 else:
-                    tail_is_void = True # Fallback if no history exists
+                    tail_is_void = True # Ripristino (fallback) se lo storico non esiste
 
                 if tail_is_void:
                     dead_indices.append(idx)

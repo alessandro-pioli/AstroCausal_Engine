@@ -641,13 +641,13 @@ def render_roche_lagrange_filter_kernel(
             D = (Phi_xx * Phi_yy) - (Phi_xy * Phi_xy)
             trace = Phi_xx + Phi_yy
             
-            # Newton-Raphson distance estimator: r_est = |H^-1 * grad Phi|
+            # Stimatore di distanza Newton-Raphson: r_est = |H^-1 * grad Phi|
             inv_D = 1.0 / (abs(D) + 1e-30)
             dx_est = (Phi_yy * Phi_x - Phi_xy * Phi_y) * inv_D
             dy_est = (-Phi_xy * Phi_x + Phi_xx * Phi_y) * inv_D
             r_est = math.sqrt(dx_est*dx_est + dy_est*dy_est)
             
-            # Distance in screen pixels
+            # Distanza in pixel dello schermo
             pixel_dist = r_est / cam_scale
             
             # F_net normalizzata sulla scala L4/L5: fader=0 -> max_F=1 -> L4/L5 al default
@@ -663,7 +663,7 @@ def render_roche_lagrange_filter_kernel(
             # max_F~1 al default, margine 1e6 per non tagliare mai L4/L5 al centro
             F_thresh = max_F * 1e6
 
-            # The core filter (su forza normalizzata):
+            # Il filtro principale (su forza normalizzata):
             if pixel_dist < dot_radius and F_net_norm < F_thresh:
                 # Applichiamo una curva a campana per disegnare il punto luminoso netto
                 intensity = math.exp(-2.0 * (pixel_dist / dot_radius)**2)

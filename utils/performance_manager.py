@@ -1,7 +1,7 @@
 class PerformanceManager:
     def __init__(self):
-        self.FPS_LOW_LIMIT = 30   # Sotto i 30 FPS l'esperienza degrada davvero: solo qui si scala marcia. Sopra resta fluido e si privilegia la risoluzione heatmap.
-        self.FPS_HIGH_LIMIT = 58  # Vicino al cap di 60: c'e' headroom per alzare la risoluzione.
+        self.FPS_LOW_LIMIT = 30   # Soglia di FPS minimi per l'adattamento della risoluzione
+        self.FPS_HIGH_LIMIT = 58  # Soglia di FPS alti per incrementare la risoluzione
         self.COOLDOWN_MS = 5000
         
         self.stability_streak = 0

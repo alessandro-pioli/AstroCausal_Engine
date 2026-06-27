@@ -92,7 +92,7 @@ def solve_pair_circular_velocity(m1, m2, r):
     """
     if m1 <= 0 or m2 <= 0 or r <= 0:
         return 0.0
-    SOFTENING_SQ = 100.0  # identico a kernel_helper_inline
+    SOFTENING_SQ = 100.0
     d = math.sqrt(r * r + SOFTENING_SQ)
     rs1 = 2.0 * G * m1 / (C_LIGHT ** 2)
     rs2 = 2.0 * G * m2 / (C_LIGHT ** 2)

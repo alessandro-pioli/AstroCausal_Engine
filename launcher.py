@@ -20,10 +20,7 @@ def format_unit(val):
 # TOOLTIP CLASS
 # ==============================================================================
 class ToolTip(object):
-    """
-    Classe helper per mostrare un fumetto esplicativo quando il cursore 
-    sosta sopra un widget.
-    """
+    """Classe helper per mostrare tooltip esplicativi sui widget."""
     def __init__(self, widget, text='widget info'):
         self.waittime = 500     # millisecondi prima del popup
         self.wraplength = 180   # pixel prima di andare a capo

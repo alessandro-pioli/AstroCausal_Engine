@@ -18,7 +18,7 @@ RED = (255, 50, 50)
 
 
 # =====================================================================
-# --- ASTRO MATH HELPERS (solver in forma chiusa) ---
+# --- Helper matematici orbitali ---
 # =====================================================================
 
 from utils.orbital_math import solve_pw_circular_velocity, solve_pair_circular_velocity, solve_velocity_from_apocenter, solve_velocity_from_pericenter, solve_escape_velocity
@@ -297,7 +297,7 @@ def _make_solar_system():
         m_r_apo = m_a * (1.0 + m_e)
         v_peri_rel = solve_velocity_from_pericenter(planet_state["Neptune"]["mass"] + mass, m_r_peri, m_r_apo)
         
-        # Triton orbit is retrograde
+        # L'orbita di Tritone è retrograda
         direction = -1 if name == "Triton" else 1
 
         ang = float(idx_counter) * 1.4
@@ -702,10 +702,7 @@ def _make_GW170817_merger():
     # Raggio fisico tipico di una NS
     rad_visual = 12.0 
     
-    # Velocita' circolare ESATTA contro la forza reale del kernel (PW per-sorgente
-    # + softening). Il vecchio calcolo con l'rs della massa totale sovrastimava la
-    # forza di ~3.5% -> ~1.8% di velocita' in eccesso -> eccentricita' spuria e~3%
-    # al lancio (l'oscillazione residua vista nel tracker deep).
+    # Calcolo della velocità orbitale coerente con il potenziale reale di Paczyński-Wiita (+ softening)
     v_rel = solve_pair_circular_velocity(m1, m2, dist_total)
     
     # Le singole velocità scalano inversamente alla massa per conservare il momento
@@ -860,9 +857,7 @@ def _make_GW150914_merger():
     r_A = dist_total * (mass_B / mass_tot)
     r_B = dist_total * (mass_A / mass_tot)
 
-    # 3. Velocita' circolare ESATTA contro la forza reale del kernel (PW per-sorgente
-    # + softening). Il vecchio lancio Kepleriano puro sottostimava la forza PW di ~5%
-    # -> ~2.5% di velocita' in difetto -> eccentricita' spuria al lancio.
+    # 3. Calcolo della velocità circolare coerente con lo pseudo-potenziale di Paczyński-Wiita
     v_base = solve_pair_circular_velocity(mass_A, mass_B, dist_total)
     v_A = v_base * (mass_B / mass_tot)
     v_B = v_base * (mass_A / mass_tot)

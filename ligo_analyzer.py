@@ -20,7 +20,7 @@ M_SUN  = 1.989e30    # Solar mass [kg]
 # SIGNAL PROCESSING & PHYSICAL MODELS
 # ==============================================================================
 def apply_high_pass_filter(data, fs, cutoff=5.0, order=4):
-    """Applies a Butterworth high-pass filter to isolate the relativistic strain."""
+    """Applica un filtro passa-alto Butterworth per isolare lo strain relativistico."""
     nyquist = 0.5 * fs
     normal_cutoff = cutoff / nyquist
     if normal_cutoff >= 1.0 or normal_cutoff <= 0.0:
@@ -30,11 +30,7 @@ def apply_high_pass_filter(data, fs, cutoff=5.0, order=4):
 
 
 def peters_frequency(t_to_merger, m_chirp_kg):
-    """
-    Computes the theoretical instantaneous frequency of a gravitational wave 
-    before the merger using Peters' formula:
-    f(t) = (1/pi) * (5/256)^(3/8) * (c^3 / (G * M_chirp))^(5/8) * (t_merger - t)^(-3/8)
-    """
+    """Calcola la frequenza istantanea teorica di un'onda gravitazionale prima del merger tramite la formula di Peters."""
     t_to_merger = np.asarray(t_to_merger, dtype=np.float64)
     t_to_merger = np.where(t_to_merger > 0, t_to_merger, np.nan)
     factor_const = (5.0 / 256.0) ** (3.0 / 8.0)
@@ -43,11 +39,7 @@ def peters_frequency(t_to_merger, m_chirp_kg):
 
 
 def peters_chirp_mass_from_rate(f_hz, dfdt_hz_per_s):
-    """
-    Inversion of Peters' formula to estimate the chirp mass from the 
-    measured frequency (f) and its rate of change (df/dt):
-    M_chirp = (c^3/G) * (5/(96*pi^(8/3)) * df/dt / f^(11/3))^(3/5)
-    """
+    """Inverte la formula di Peters per stimare la massa chirp dalla frequenza e dalla sua derivata temporale."""
     if f_hz <= 0 or dfdt_hz_per_s <= 0:
         return None
     ratio = (5.0 / (96.0 * np.pi**(8.0/3.0))) * dfdt_hz_per_s / (f_hz**(11.0/3.0))
@@ -73,7 +65,7 @@ def peters_chirp_mass_from_freq(f_hz, tau_s):
 # TELEMETRY POPUP WINDOW & SCONTRINO (RECEIPT)
 # ==============================================================================
 class LigoTelemetryReportWindow(tk.Toplevel):
-    """Displays analysis results in a clean, terminal-like telemetry report window (scaled up for readability)."""
+    """Mostra i risultati dell'analisi in una finestra di telemetria in stile terminale."""
     def __init__(self, parent, results, raw_logs):
         super().__init__(parent)
         self.title("LIGO SIGNAL ANALYSIS — TELEMETRY REPORT")
@@ -81,7 +73,7 @@ class LigoTelemetryReportWindow(tk.Toplevel):
         self.configure(bg="#0B0F19")
         self.resizable(True, True)
         
-        # Center the window relative to the parent
+        # Centra la finestra rispetto alla finestra principale (parent)
         try:
             self.update_idletasks()
             w, h = 710, 870
@@ -95,7 +87,7 @@ class LigoTelemetryReportWindow(tk.Toplevel):
         self._build_ui(results)
 
     def _build_ui(self, results):
-        # Helper to add rows to grids with scaled up fonts
+        # Funzione di utilità per aggiungere righe alle griglie con font ingranditi
         def add_row(parent, label, value, row, font=('Segoe UI', 11, 'bold'), fg="#9CA3AF", val_font=('Consolas', 11), val_fg="#E5E7EB"):
             tk.Label(parent, text=label, font=font, fg=fg, bg="#0B0F19").grid(row=row, column=0, sticky='w', padx=12, pady=5)
             tk.Label(parent, text=str(value), font=val_font, fg=val_fg, bg="#0B0F19").grid(row=row, column=1, sticky='w', padx=12, pady=5)
@@ -281,11 +273,7 @@ class LigoTelemetryReportWindow(tk.Toplevel):
 # MAIN ANALYSIS PIPELINE
 # ==============================================================================
 def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None):
-    """
-    Main signal analysis pipeline for LIGO.
-    Detects/filters chirp signals, calculates spectrograms, tracks inst freq via Hilbert,
-    and estimates physical parameters (chirp mass) with Peters' equations.
-    """
+    """Pipeline di analisi del segnale LIGO: filtraggio, spettrogrammi, tracciamento Hilbert della frequenza e stima della massa chirp."""
     base_name = os.path.basename(filename)
     dt_str = base_name.split('DT_')[1].replace('.npy', '').split('_')[0]
     dt = float(dt_str)
@@ -299,7 +287,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     log(f"\n[ANALISI INIZIATA - MODALITÀ: {system_type}]")
     log(f"File: {base_name} | DT: {dt} | FS: {fs} Hz")
 
-    # Load data and strip early zeros
+    # Carica i dati e rimuove gli zeri iniziali
     data = np.load(filename)
     first_valid = np.argmax(data != 0.0)
     if first_valid > 0 or data[0] != 0.0:
@@ -410,7 +398,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         log("[RENDER] Generating Strain + Radiated Energy map (RADIOMETRIC)...")
         fig, (ax1, ax_energy) = plt.subplots(2, 1, figsize=(14, 7), gridspec_kw={'height_ratios': [2, 1]})
 
-    # Panel 1: Strain (Common to both modes)
+    # Pannello 1: Strain (Comune a entrambe le modalità)
     ax1.plot(time_axis, data, color='cyan', linewidth=0.8)
     title_suffix = "High-pass filtered > 5 Hz" if system_type == 'SPECTRAL' else "Unfiltered RAW"
     ax1.set_title(f"Strain Gravitazionale ($h_+$) — {title_suffix}", color='white')
@@ -438,7 +426,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         ax_energy.grid(True, alpha=0.2)
         ax_energy.axvline(vline_idx, color='#ff003c', linestyle='--', linewidth=1.2, alpha=0.8)
 
-        # Map 50% and 90% cumulative energy times
+        # Mappa i tempi cumulativi di energia al 50% e 90%
         for frac, label in [(0.5, '50%'), (0.9, '90%')]:
             idx_frac = np.searchsorted(energy_cumulative, frac)
             if idx_frac < len(time_axis):
@@ -531,7 +519,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         log("[CHIRP TRACKER V4] Analisi completata.")
         log("-" * 50)
 
-        # Autoscale spectrogram frequency axis based on signal peak
+        # Ridimensionamento automatico dell'asse delle frequenze dello spettrogramma in base al picco del segnale
         vmax = np.max(Sxx_dB)
         vmin = vmax - 18
         col_start = np.argmin(np.abs(times_spec_relative - (-0.10)))
@@ -598,7 +586,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     plt.savefig(output_png, facecolor=fig.get_facecolor(), edgecolor='none')
     log(f"[SUCCESSO] Analisi {system_type} salvata in {output_png}\n")
     
-    # Spawn the telemetry receipt GUI window
+    # Genera la finestra GUI per il resoconto di telemetria
     try:
         raw_logs_text = "\n".join(log_lines)
         if tk._default_root is not None:
@@ -615,7 +603,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
 # ENTRY POINT & LAUNCHER APPLICATION
 # ==============================================================================
 class LigoLauncherApp(tk.Tk):
-    """Launcher app to select LIGO dump file, analysis mode and run the pipeline."""
+    """Applicazione launcher per selezionare il dump LIGO, la modalità di analisi e avviare la pipeline."""
     def __init__(self):
         super().__init__()
         self.title("LIGO Analyzer - Kernel Interface")
@@ -687,7 +675,7 @@ class LigoLauncherApp(tk.Tk):
         self.chirp_entry = tk.Entry(overlay_frame, textvariable=self.chirp_var, bg="#2D2D2D", fg="#FFFFFF", font=('Segoe UI', 10), justify='right')
         self.chirp_entry.pack(side=tk.RIGHT, ipadx=5, ipady=3)
         
-        # Run Button
+        # Pulsante Esegui
         ttk.Button(main_frame, text="ESEGUI ANALISI LIGO", style='Launch.TButton', command=self.on_launch).pack(fill=tk.X, ipady=15)
         
     def on_launch(self):
