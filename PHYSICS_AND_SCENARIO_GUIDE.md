@@ -294,7 +294,9 @@ Un dettaglio che torna a breve: a destra del Sole (in direzione del moto) il cam
 **Esempio 2 : Approccio a c (ART), $0{,}999c \to c$.**
 Lo stesso scenario, ma ravvicinato ed estremamente più lento, per cogliere gli istanti asintotici prima del limite causale.
 
-<div align="center"><img src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" width="100%" alt="Media non trovato"></div>
+<div align="center">
+    <video src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" controls="controls" width="100%"></video>
+</div>
 
 Il pan qui è di **~0,8 × 0,3 AU**. A $0{,}999c$ (≈ 299.493 km/s) il Sole sta letteralmente **cavalcando il fronte dell'informazione che lui stesso ha emesso**: la sua posizione e i suoi fronti d'onda gravitazionali viaggiano a velocità praticamente coincidenti.
 
@@ -636,7 +638,7 @@ In un'orbita pulita e isolata, invece, l'anello resta immobile mentre la soglia 
 
 Sistema Luna-Terra: la Luna è al suo afelio a più di 400.000 km dalla Terra, infatti ha superato l'anello dell'orbita circolare ideale. Gli altri dettagli che emergono verranno discussi nel capitolo successivo.
 
-<div align="center">![gif](docs/gif/earth_swap_jupiter.gif)</div>
+<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="100%" alt="Media non trovato"></div>
 
 L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quel $h$, risulta essere vicino al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale estremo che con ogni probabilità la farà a pezzi prima ancora di raggiungere l'atmosfera di Giove, in *plunge* diretto.
 
@@ -648,7 +650,9 @@ In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il
 
 Dimostrazione spazi efficaci:
 
-<div align="center"><img src="https://github.com/user-attachments/assets/e8045292-e039-4abd-8de2-4524b7b389a5" width="100%" alt="Media non trovato"></div>
+<div align="center">
+    <video src="https://github.com/user-attachments/assets/e8045292-e039-4abd-8de2-4524b7b389a5" controls="controls" width="100%"></video>
+</div>
 
 **Missione Artemis II (NASA, aprile 2026)**: lo scenario usa i dati di navigazione reali catturati in **piena fase di crociera translunare**, alle **2026-04-03T12:03:39 UTC**, circa 12 ore dopo il cutoff del *burn di Translunar Injection*. In questo istante la navicella **Orion** ha già superato la spinta terrestre ed è in moto **puramente inerziale** verso la Luna, a 134.376 km dalla Terra (~34% del tragitto Terra-Luna), a 283.833 km dalla Luna, con velocità di 2,037 km/s. Tutti i motori sono spenti, e mancano ~70 ore al *flyby* lunare del 6 aprile: è questa la fase di crociera passiva che la simulazione cattura, governata esclusivamente dalla gravità del sistema multicorpo con la topologia di Roche su corotazione Terra-Luna, quando Orion entra nello spazio efficace della Luna si può vedere come il vettore viola di forza passi dal puntare al Sole-Terra alla sola Luna quando entra nella sua zona "gialla".
 
