@@ -283,7 +283,7 @@ Il Sole viene spinto da un'accelerazione artificiale (ART) costante da $0{,}7c$ 
 
 Moto della seguente dimostrazione: +x, ovvero da sinistra verso destra.
 
-<video src="docs/vid/07_to_c_fast.mp4" controls width="700"></video>
+<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media non trovato"></div>
 
 Il pan è di circa **180 × 120 AU** (decine di miliardi di km per lato). A $0{,}7c$ (≈ 209.855 km/s) è già visibile l'effetto **Liénard-Wiechert**: il pozzo gravitazionale comincia a deformarsi rispetto alla simmetria sferica. Salendo verso $c$ (299.792,458 km/s) lo schiacciamento cresce in modo non lineare, finché (fittiziamente, oltre $c$), comincia a formarsi il **cono di Mach causale** descritto in §2.1.
 
@@ -294,7 +294,7 @@ Un dettaglio che torna a breve: a destra del Sole (in direzione del moto) il cam
 **Esempio 2 : Approccio a c (ART), $0{,}999c \to c$.**
 Lo stesso scenario, ma ravvicinato ed estremamente più lento, per cogliere gli istanti asintotici prima del limite causale.
 
-<video src="docs/vid/0999_to_c_slow.mp4" controls width="700"></video>
+<div align="center"><img src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" width="100%" alt="Media non trovato"></div>
 
 Il pan qui è di **~0,8 × 0,3 AU**. A $0{,}999c$ (≈ 299.493 km/s) il Sole sta letteralmente **cavalcando il fronte dell'informazione che lui stesso ha emesso**: la sua posizione e i suoi fronti d'onda gravitazionali viaggiano a velocità praticamente coincidenti.
 
@@ -504,7 +504,7 @@ Sono i due pattern visivi che la $d\Phi/dt$ mostra più chiaramente, e affiancar
 
 | Dipolo del corpo singolo in moto | Spirali della coppia binaria |
 |:---:|:---:|
-| <video src="docs/vid/dphi_dipolo_giove.mp4" autoplay loop muted playsinline width="380"></video> | <video src="docs/vid/dphi_spirale_binaria.mp4" autoplay loop muted playsinline width="380"></video> |
+| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media non trovato"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media non trovato"> |
 | Il pozzo trasla con la sorgente: il lato in avvicinamento al pixel diventa blu, quello in allontanamento rosso. È il **monopolo che si sposta**, non radiazione. Nell'esempio Giove orbita a velocità stabile (≈ 13 km/s) e il suo dipolo accompagna il moto, ruotando con esso; attorno, in ordine le lune: Amaltea, Io, Europa, Ganimede, Callisto. Ogni corpo mostra un dipolo proporzionato a massa e velocità orbitale. La sensibilità è tarata sulla massa massima dello scenario (il Sole in questo caso), e un selettore (fader) permette all'utente di scalare questo rapporto a piacimento, estendendo e riducendo luminosità ed estensione dei dipoli in modo proporzionato. | Scenario: *Stelle di Neutroni Binarie, Orbita Stabile*, velocità orbitale: 1580 km/s, pan camera $\approx$ 2 AU $\times$ 2 AU, velocità simulazione: 40 s/s. Due stelle di neutroni mediamente massicce (1,5 masse solari) orbitano ad una distanza di sicurezza di 40.000 km (nessun merger imminente), generando il pattern a spirale discusso in modo pienamente emergente, grazie alla causalità. |
 
 > [!NOTE]
@@ -636,7 +636,7 @@ In un'orbita pulita e isolata, invece, l'anello resta immobile mentre la soglia 
 
 Sistema Luna-Terra: la Luna è al suo afelio a più di 400.000 km dalla Terra, infatti ha superato l'anello dell'orbita circolare ideale. Gli altri dettagli che emergono verranno discussi nel capitolo successivo.
 
-<div align="center"><video src="docs/vid/earth_swap_jupiter.mp4" autoplay loop muted playsinline width="600"></video></div>
+<div align="center">![gif](docs/gif/earth_swap_jupiter.gif)</div>
 
 L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quel $h$, risulta essere vicino al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale estremo che con ogni probabilità la farà a pezzi prima ancora di raggiungere l'atmosfera di Giove, in *plunge* diretto.
 
@@ -648,7 +648,7 @@ In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il
 
 Dimostrazione spazi efficaci:
 
-<div align="center"><video src="docs/vid/artemis2flyby.mp4" autoplay loop muted playsinline width="600"></video></div>
+<div align="center">![gif](docs/gif/artemis2flyby.gif)</div>
 
 **Missione Artemis II (NASA, aprile 2026)**: lo scenario usa i dati di navigazione reali catturati in **piena fase di crociera translunare**, alle **2026-04-03T12:03:39 UTC**, circa 12 ore dopo il cutoff del *burn di Translunar Injection*. In questo istante la navicella **Orion** ha già superato la spinta terrestre ed è in moto **puramente inerziale** verso la Luna, a 134.376 km dalla Terra (~34% del tragitto Terra-Luna), a 283.833 km dalla Luna, con velocità di 2,037 km/s. Tutti i motori sono spenti, e mancano ~70 ore al *flyby* lunare del 6 aprile: è questa la fase di crociera passiva che la simulazione cattura, governata esclusivamente dalla gravità del sistema multicorpo con la topologia di Roche su corotazione Terra-Luna, quando Orion entra nello spazio efficace della Luna si può vedere come il vettore viola di forza passi dal puntare al Sole-Terra alla sola Luna quando entra nella sua zona "gialla".
 
