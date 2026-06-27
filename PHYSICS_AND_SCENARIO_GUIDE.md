@@ -648,7 +648,7 @@ In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il
 
 Dimostrazione spazi efficaci:
 
-<div align="center">![gif](docs/gif/artemis2flyby.gif)</div>
+<div align="center"><img src="https://github.com/user-attachments/assets/e8045292-e039-4abd-8de2-4524b7b389a5" width="100%" alt="Media non trovato"></div>
 
 **Missione Artemis II (NASA, aprile 2026)**: lo scenario usa i dati di navigazione reali catturati in **piena fase di crociera translunare**, alle **2026-04-03T12:03:39 UTC**, circa 12 ore dopo il cutoff del *burn di Translunar Injection*. In questo istante la navicella **Orion** ha già superato la spinta terrestre ed è in moto **puramente inerziale** verso la Luna, a 134.376 km dalla Terra (~34% del tragitto Terra-Luna), a 283.833 km dalla Luna, con velocità di 2,037 km/s. Tutti i motori sono spenti, e mancano ~70 ore al *flyby* lunare del 6 aprile: è questa la fase di crociera passiva che la simulazione cattura, governata esclusivamente dalla gravità del sistema multicorpo con la topologia di Roche su corotazione Terra-Luna, quando Orion entra nello spazio efficace della Luna si può vedere come il vettore viola di forza passi dal puntare al Sole-Terra alla sola Luna quando entra nella sua zona "gialla".
 
