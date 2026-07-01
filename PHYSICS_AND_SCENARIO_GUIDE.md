@@ -277,7 +277,7 @@ ed è questa frequenza a stabilire se il chirp potrà *emergere* dallo spettrogr
 **
 $$f_s > 2\,f_{max}$$
 
-Nei merger di stelle di neutroni (es. GW170817) la frequenza dell'onda analoga, pari al **doppio** di quella orbitale, raggiunge $\sim 1-2\ \text{kHz}$ poco prima del contatto. Per catturarla pulita serve $f_s > 4\ \text{kHz}$, cioè $\Delta t < 2{,}5 \times 10^{-4}\ \text{s}$. Il simulatore usa $\Delta t = 1\ \mu\text{s}$ ($f_s = 1\ \text{MHz}$), un margine enorme: **è questo che permette al chirp di emergere** nello spettrogramma invece di collassare in rumore di aliasing. In altre parole, con un $\Delta t$ troppo grande l'evento fisico avverrebbe lo stesso, ma non sarebbe **osservabile**: la sonda non avrebbe abbastanza campioni per ricostruire la rampa finale di frequenza.
+Nei merger di stelle di neutroni (es. GW170817) la frequenza dell'onda analoga, pari al **doppio** di quella orbitale, raggiunge $\sim 1\text{–}2\ \text{kHz}$ poco prima del contatto. Per catturarla pulita serve $f_s > 4\ \text{kHz}$, cioè $\Delta t < 2{,}5 \times 10^{-4}\ \text{s}$. Il simulatore usa $\Delta t = 1\ \mu\text{s}$ ($f_s = 1\ \text{MHz}$), un margine enorme: **è questo che permette al chirp di emergere** nello spettrogramma invece di collassare in rumore di aliasing. In altre parole, con un $\Delta t$ troppo grande l'evento fisico avverrebbe lo stesso, ma non sarebbe **osservabile**: la sonda non avrebbe abbastanza campioni per ricostruire la rampa finale di frequenza.
 
 > **Nota dell'autore.** Nyquist-Shannon non lo conoscevo per nome: ci ero arrivato per logica (per tenere stabili le orbite serve già campionare il periodo molte volte, quindi a maggior ragione per *vedere* il chirp serve campionare ben oltre la sua frequenza). Solo dopo, con l'aiuto di un LLM, ho scoperto che quel ragionamento ha un nome formale, "*il teorema di campionamento*", e da lì la giustificazione rigorosa qui sopra. pertanto faccio presente che visto che il DT è calibrato a monte a seconda dello scenario impostato ma l'utente ha la possibilità di cambiarlo in tempo reale: in tal caso, molto prima di vedere gli effetti di aliasing descritti sopra si ha un effetto per cui l'errore di trocamento distrugge le orbite. Il teorema rimane utile come regola inviolabile per la pulizia del sengale e come indizio sul corretto intervallo di impostazione della simulazione .
 
@@ -466,7 +466,7 @@ Questi punti rossi sono sovrapposti alla trasformata Q (la mappa energetica temp
 - **corretto il bug della prima accelerazione**: il primo half-kick del Verlet partiva da un'accelerazione non inizializzata, introducendo un transiente all'avvio di ogni rebuild; la correzione è il *warm-start* delle accelerazioni iniziali (dettaglio in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md));
 - **corretta la stima della massa chirp** lato analizzatore (dalla regressione lineare di $\dot{f}$ al fit della legge di potenza $f(\tau)\propto\tau^{-3/8}$, §8.8), eliminando un errore di metodo non fisico.
 
-Il risultato finale, con i punti che aderiscono alla curva, è in §6.6. Resta un limite noto: lo scenario BBH (GW150914) mostra ancora una sovra-dissipazione di fattore $2\text{-}3\times$ rispetto al tempo di coalescenza atteso dalla formula di Peters, segno che la struttura del termine dissipativo all'ordine dominante (termini PN superiori, dipendenze in $r$/$v$) non è sufficiente nel regime a masse elevate. Il confronto dettagliato con la relatività numerica del catalogo SXS è documentato in §6.6.1, ed è il confine dichiarato del progetto: oltre questo limite servirebbe la collaborazione di un esperto di relatività (vedi Roadmap nel README).
+Il risultato finale, con i punti che aderiscono alla curva, è in §6.6. Lo scenario BBH (GW150914) è documentato in §6.6.1 con confronto diretto contro la relatività numerica del catalogo SXS (waveform SXS:BBH:0305): l'errore medio del simulatore sull'intero inspiral è dell'**1,27%** rispetto alla NR, contro il **7,48%** della formula di Peters all'ordine dominante, e la coalescenza avviene in **52,034 s** contro i $\approx 55$ s attesi. Resta un confine non valicato negli ultimi $\sim 10$ ms prima del merger, dove la dinamica entra nel regime non perturbativo e nessuna formulazione PN classica converge: per descriverla servirebbero tecniche di relatività numerica vera (excision dell'orizzonte, gauge BSSN o Z4) o modelli surrogati calibrati sulla NR (famiglia EOB/Phenom). È il confine dichiarato del progetto, e il punto in cui servirebbe la collaborazione di un esperto di relatività (vedi Roadmap nel README).
 
 ### 6.6 Le prove: confronto col dato reale
 
@@ -493,16 +493,13 @@ A differenza di GW170817 (§6.6), dove il confronto era contro lo strain reale d
 
 <img src="docs/img/confronto_sxs_gw150914.png" width="700" alt="Confronto GW150914: simulatore vs NR SXS:BBH:0305 vs Peters">
 
-**Figura — vista globale dell'ultimo secondo di inspiral.** I punti rossi del simulatore sono visivamente sovrapposti alla curva verde della NR (SXS:BBH:0305) per quasi tutta la traccia; la curva grigia tratteggiata di Peters è sistematicamente sopra entrambe, perché trascura i contributi di ordine superiore che NR include e il simulatore cattura implicitamente attraverso la combinazione di 2.5PN + Paczyński-Wiita + freno relativistico + bypass causale.
+**Figura, vista globale dell'ultimo secondo di inspiral.** I punti rossi del simulatore sono visivamente sovrapposti alla curva verde della NR (SXS:BBH:0305) per quasi tutta la traccia; la curva grigia tratteggiata di Peters è sistematicamente sopra entrambe, perché trascura i contributi di ordine superiore che NR include e il simulatore cattura implicitamente attraverso la combinazione di 2.5PN + Paczyński-Wiita + freno relativistico + bypass causale.
 
 <img src="docs/img/confronto_sxs_gw150914_zoom.png" width="700" alt="Zoom sull'ultimo segmento di inspiral di GW150914">
 
-**Figura — zoom sull'ultimo segmento dell'inspiral.** Nel dettaglio si vede il punto di massimo scostamento del simulatore dalla NR: gli ultimi $\sim 10$ ms prima del merger, dove l'errore percentuale del simulatore inizia a salire rapidamente (da $\sim 2{,}5\%$ a oltre $50\%$ nell'ultimo millisecondo). Quella zona è il confine teorico del modello PN: anche la NR stessa è il regime in cui converge solo grazie a tecniche numeriche dedicate (excisione dell'orizzonte, gauge specifico), e nessuna formulazione analitica al leading order è in grado di seguirla. L'esplosione finale dell'errore è quindi il limite *strutturale* del proxy, non un suo difetto di calibrazione.
+**Figura, zoom sull'ultimo segmento dell'inspiral.** Nel dettaglio si vede il punto di massimo scostamento del simulatore dalla NR: gli ultimi $\sim 10$ ms prima del merger, dove l'errore percentuale del simulatore inizia a salire rapidamente (da $\sim 2{,}5\%$ a oltre $50\%$ nell'ultimo millisecondo). Quella zona è il confine teorico del modello PN: anche la NR stessa è il regime in cui converge solo grazie a tecniche numeriche dedicate (excisione dell'orizzonte, gauge specifico), e nessuna formulazione analitica al leading order è in grado di seguirla. L'esplosione finale dell'errore è quindi il limite *strutturale* del proxy, non un suo difetto di calibrazione.
 
 **Il limite residuo: l'ultimo millisecondo.** L'aderenza del simulatore alla NR è strutturalmente buona ($1{,}27\%$ in media) per tutto l'inspiral, e il modello cattura non solo l'ordine dominante di Peters ma anche, implicitamente, una porzione significativa dei contributi di ordine superiore (termini *tail* a 3.5PN, effetti dell'ISCO di Paczyński-Wiita, accoppiamento causale-cinetico). Resta un confine non valicato negli ultimi $\sim 10$ ms prima del merger, dove la dinamica entra nel regime non perturbativo: qui nessuna combinazione PN classica converge, e per descriverla servono tecniche di relatività numerica vera (excision dell'orizzonte, gauge BSSN o Z4) o modelli surrogati calibrati sulla NR (famiglia EOB/Phenom). È il confine dichiarato del progetto, e il punto in cui servirebbe la collaborazione di un esperto di relatività (vedi Roadmap nel README).
-
-[GIFPLACEHOLDER]
-**Showcase: GW170817 / GW150914** *(GIF in arrivo)*: l'inspiral finale delle due stelle di neutroni, il merger con accrescimento e lo spettrogramma risultante catturato dall'analizzatore.
 
 ---
 
@@ -554,7 +551,7 @@ cioè la **curvatura locale** del campo. I termini diagonali $\Phi_{xx}, \Phi_{y
 |---|---|---|---|
 | **Stress di marea** | gravità pura, istantanea (niente rotazione) | differenza dei suoi **autovalori** | mappa continua di *shear/taglio* |
 | **Topologia di Roche** ([§7.4](#74-topologia-di-roche-il-segno-del-determinante)) | efficace co-rotante | il **segno del determinante** $D$ (ribaltato dal centrifugo) | **lobi continui** |
-| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)) | efficace co-rotante | la sua **inversa** $H^{-1}\nabla\Phi$ | **5 punti isolati** L1-L5 |
+| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)) | efficace co-rotante | la sua **inversa** $H^{-1}\nabla\Phi$ | **5 punti isolati** L1–L5 |
 
 Procediamo per grado di complessità crescente. Cominciamo dalla più semplice, la marea.
 
@@ -597,7 +594,8 @@ In alto a sinistra la luna gioviana **Europa**, immersa nel blu verso il ciano d
 >
 > Cosa accade nell'equivalente 3D non mi sbilancio: l'ipotesi naturale è che corrisponda a essere *"tagliati" in tutte le direzioni del piano trasverso* invece che lungo un asse preferenziale, e quindi a uno stress isotropo intenso anziché nullo, ma è un punto che meriterebbe la conferma di un esperto.
 
-> [!NOTE] è giusto ricordare che nel simulatore l'utente può confermare quantitativamente ottenere i dati delle heatmap nel pixel nello spazio puntato con un semplice *doppio-click*
+> [!NOTE]
+> **Lettura quantitativa in-simulazione.** Le heatmap non sono solo una visualizzazione: sono ispezionabili puntualmente. Un *doppio-click* su un qualsiasi pixel dello schermo restituisce il valore numerico del campo in quel punto dello spazio simulato (potenziale, sua derivata temporale, autovalori del tensore di marea, strain proiettato, a seconda della modalità attiva). Il simulatore è anche uno strumento di misura, non serve estrarre i dati e rielaborarli fuori.
 
 ### 7.4 Topologia di Roche (il segno del determinante)
 
@@ -811,7 +809,7 @@ Questa scomposizione geometrica proietta l'esatta simmetria angolare di quadrupo
 #### 7.6.2 Causalità e disallineamento dei nodi: la scomparsa dell'asse nodale rigido
 Nelle rappresentazioni divulgative o nelle approssimazioni analitiche standard, lo strain viene calcolato valutando il quadrupolo globale del sistema riferito al centro di massa comune, applicando un unico tempo di ritardo \(t_{\text{ret}} = t - R_{\text{COM}}/c\). Il risultato è la familiare immagine delle due spirali nodali perfette (linee nere a valore nullo) che ruotano rigidamente, separate da un asse simmetrico.
 
-**Quello che il simulatore mostra è diverso, ed è frutto del doppio recupero per-corpo descritto in apertura di [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica).** Inizialmente il motore era fermo al solo primer recupero (la stima basata sulle posizioni istantanee, prima della seconda lettura nello storico): in quella fase l'asse nodale ruotante si formava nitido, identico alle illustrazioni classiche. Da quando ho implementato il vero recupero causale (la seconda lettura, basata sulla posizione ritardata effettiva), **l'asse nodale è sparito**: la transizione fra le polarità dello strain (positivo/ciano e negativo/rosso) avviene in modo continuo, e ciò che resta è una singola spirale fluida senza più una linea di separazione rigida.
+**Quello che il simulatore mostra è diverso, ed è frutto del doppio recupero per-corpo descritto in apertura di [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica).** Inizialmente il motore era fermo al solo primo recupero (la stima basata sulle posizioni istantanee, prima della seconda lettura nello storico): in quella fase l'asse nodale ruotante si formava nitido, identico alle illustrazioni classiche. Da quando è stato implementato il vero recupero causale (la seconda lettura, basata sulla posizione ritardata effettiva), **l'asse nodale è sparito**: la transizione fra le polarità dello strain (positivo/ciano e negativo/rosso) avviene in modo continuo, e ciò che resta è una singola spirale fluida senza più una linea di separazione rigida.
 
 L'interpretazione che mi sento di proporre è semplice: l'asse nodale rigido era un sottoprodotto sistematico dell'approssimazione *single-step*. Una volta che ciascuna sorgente viene letta dal suo proprio istante di emissione, con tempi e versori di proiezione distinti (\(t - r_A/c \neq t - r_B/c\) e \(\hat{n}_A \neq \hat{n}_B\)), gli zeri dei contributi dei singoli corpi non si allineano più lungo curve regolari, e l'asse separatorio si dissolve nelle interferenze locali fra le due sorgenti. Resta in vista, fra le due masse, un caratteristico pattern di interferenza ravvicinato, visivamente una "forma a seme" rossa che pulsa col chirp.
 
@@ -839,6 +837,9 @@ Per mantenere ed osservare la spirale in espansione anche *dopo* la coalescenza,
 
 Da quanto sopra discende anche una conseguenza pratica sulla **visibilità** del pattern. Il proxy è quadratico nella velocità relativa, \(|h_{proj}| \propto |v_{rel}|^2\), e questa proporzionalità coincide qualitativamente con la dipendenza della potenza radiativa GW reale dalle alte potenze di \(v/c\). Significa che la croce diventa percettibile **solo per coppie compatte in orbita stretta** (NS, BH, ultimi cicli di inspiral, dove \(|v_{rel}|\) è una frazione apprezzabile di \(c\)); per i sistemi planetari ordinari, anche con il fader di sensibilità al massimo, l'ampiezza resta sotto il floor del rendering, esattamente come nella realtà fisica le coppie planetarie non sono rilevabili dagli interferometri terrestri.
 
+> [!NOTE]
+> **L'artefatto del fantasma del campo.** Lo stesso meccanismo di persistenza si osserva anche nelle altre heatmap che dipendono da una coppia o dallo storico causale (Lagrange Hunter, Roche, e in misura più debole $d\Phi/dt$): quando un corpo compagno viene rimosso, oppure muore per accrescimento o merger, la heatmap continua a mostrare il "fantasma del suo campo" per un tempo pari al limite causale corrente. La ragione è che ogni pixel legge dallo storico ritardato: finché il fronte dell'informazione di scomparsa non ha raggiunto quel pixel (a velocità $c$), il calcolo continua a usare l'ultimo campione valido del corpo defunto. Superato il limite causale dello scenario, il contributo viene eliminato del tutto e la heatmap si aggiorna al nuovo stato del sistema. Non è un bug del rendering ma la conseguenza diretta e coerente della causalità ritardata: il campo di un corpo scomparso continua a esistere fisicamente fintanto che la sua "notizia di scomparsa" non ha propagato oltre il volume visibile.
+
 #### 7.6.4 Caso di studio: Il quadrupolo dinamico nell'EMRI all'afelio
 Un comportamento particolarmente affascinante ed emergente si osserva nello scenario **EMRI** (Extreme Mass Ratio Inspiral). Per facilitare la visualizzazione geometrica di questo tipo di orbita fortemente eccentrica, riproponiamo qui in piccolo la sua traiettoria caratteristica (già discussa in precedenza):
 
@@ -864,7 +865,7 @@ Quando l'oggetto compatto leggero percorre la sua orbita fortemente eccentrica a
 | Vista macro: Early Inspiral (decine di AU) | Vista macro: Late Inspiral (decine di AU) |
 |:---:|:---:|
 | <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Orbita rosetta early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Orbita rosetta late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern late inspiral"> |
-| **Il ritmo dei *sassi* sul cono di luce**: Nelle prime fasi dell'inspiral, l'emissione avviene per impulsi discreti. Ad ogni passaggio al pericentro, il corpo scaglia una perturbazione nello spaziotempo, un *sasso* i cui effetti viaggiano sul cono di luce a velocità \(c\) in un guscio isolato. Poiché il periodo orbitale è lungo, i fronti d'onda rimangono separati da ampie regioni di silenzio, propagandosi come anelli concentrici ben spaziati. | **La transizione a spirale continua**: Negli ultimi stadi prima della cattura (regime di chirp), la frequenza orbitale cresce vertiginosamente e l'emissione diventa un flusso continuo. I *sassi* gravitazionali vengono rilasciati senza sosta: i singoli fronti d'onda sferici perdono la propria individualità e si fondono, tessendo una spirale densa che riempie omogeneamente lo spaziotempo circostante. |
+| **Il ritmo dei *sassi* sul cono di luce**: Nelle prime fasi dell'inspiral, l'emissione avviene per impulsi discreti. Ad ogni passaggio al pericentro, il corpo scaglia una perturbazione nello spaziotempo — un *sasso* i cui effetti viaggiano sul cono di luce a velocità \(c\) in un guscio isolato. Poiché il periodo orbitale è lungo, i fronti d'onda rimangono separati da ampie regioni di silenzio, propagandosi come anelli concentrici ben spaziati. | **La transizione a spirale continua**: Negli ultimi stadi prima della cattura (regime di chirp), la frequenza orbitale cresce vertiginosamente e l'emissione diventa un flusso continuo. I *sassi* gravitazionali vengono rilasciati senza sosta: i singoli fronti d'onda sferici perdono la propria individualità e si fondono, tessendo una spirale densa che riempie omogeneamente lo spaziotempo circostante. |
 
 
 
@@ -1099,9 +1100,9 @@ Il segnale grezzo è sporco e va ripulito (è dominato da una lenta deriva di fo
 
 *(Tutte le funzioni citate sono nella documentazione ufficiale di [`scipy.signal`](https://docs.scipy.org/doc/scipy/reference/signal.html) e [`scipy.optimize`](https://docs.scipy.org/doc/scipy/reference/optimize.html).)*
 
-<img src="docs/img/GW150914_STFT_STRAIN.png">
+<img src="docs/img/GW150914_STFT_STRAIN.png" width="700" alt="STFT dello strain di GW150914 con overlay della curva di chirp simulata e di Peters">
 
-**Showcase — Spettrogramma di GW150914.** STFT (Short-Time Fourier Transform) dello strain del rivelatore con la curva di chirp simulata sovrapposta alla teorica di Peters: la traccia simulata segue il *ridge* spettrale dell'evento reale lungo l'intera salita di frequenza, dai $\sim 30$ Hz iniziali fino al picco di $\sim 250$ Hz al merger.
+**Showcase, Spettrogramma di GW150914.** STFT (Short-Time Fourier Transform) dello strain del rivelatore con la curva di chirp simulata sovrapposta alla teorica di Peters: la traccia simulata segue il *ridge* spettrale dell'evento reale lungo l'intera salita di frequenza, dai $\sim 30$ Hz iniziali fino al picco di $\sim 250$ Hz al merger.
 
 ---
 
