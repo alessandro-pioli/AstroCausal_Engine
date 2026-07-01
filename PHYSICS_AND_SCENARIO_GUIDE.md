@@ -100,7 +100,7 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
 ### 1.1 Cosa risolve davvero il motore
 Il simulatore non risolve le equazioni di campo di Einstein. Al suo cuore integra una **gravità newtoniana scalare ($GM/r^2$) resa interamente causale**, operante su uno sfondo euclideo piatto 2D. 
 
-La caratteristica distintiva e fondante del motore è che **l'informazione in tutto lo spazio viaggia rigorosamente alla velocità della luce $c$**: ogni corpo risente dell'influenza gravitazionale degli altri leggendone la posizione e lo stato all'istante di emissione passato (\([t_{ret} = t - r/c](#2-propagazione-causale-e-istante-di-emissione)\)), calcolato individualmente in base al tempo di volo dell'interazione. Questo significa che ogni mutuo accoppiamento dinamico risente di un ritardo temporale finito, ed è intrinsecamente reciproco e non-locale nel tempo. Per rendere sostenibile a livello computazionale questa complessa dinamica a ritardo, il simulatore si appoggia a un'architettura basata su **buffer storici a livelli di dettaglio (LOD)** (descritta in dettaglio in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**), che consente lookup e interpolazioni temporali a costo costante $O(1)$, compilati al volo in codice macchina nativo altamente ottimizzato (tramite **Numba / LLVM**).
+La caratteristica distintiva e fondante del motore è che **l'informazione in tutto lo spazio viaggia rigorosamente alla velocità della luce $c$**: ogni corpo risente dell'influenza gravitazionale degli altri leggendone la posizione e lo stato all'istante di emissione passato ($[t_{\text{ret}} = t - r/c](#2-propagazione-causale-e-istante-di-emissione)$), calcolato individualmente in base al tempo di volo dell'interazione. Questo significa che ogni mutuo accoppiamento dinamico risente di un ritardo temporale finito, ed è intrinsecamente reciproco e non-locale nel tempo. Per rendere sostenibile a livello computazionale questa complessa dinamica a ritardo, il simulatore si appoggia a un'architettura basata su **buffer storici a livelli di dettaglio (LOD)** (descritta in dettaglio in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**), che consente lookup e interpolazioni temporali a costo costante $O(1)$, compilati al volo in codice macchina nativo altamente ottimizzato (tramite **Numba / LLVM**).
 
 Al di sopra di questo nucleo causale, in regimi relativistici specifici il motore innesta logiche di ordine superiore, dissipative o fenomenologiche: lo **[pseudo-potenziale di Paczyński-Wiita (§6.1)](#61-lo-pseudo-potenziale-di-paczy%C3%B9ki-wiita)** per i buchi neri, che riproduce orizzonte e ISCO senza risolvere la metrica; la **[correzione di Liénard-Wiechert](#5-deformazione-di-li%C3%A9nard-wiechert)** che comprime il campo delle sorgenti rapide vicino a $c$ (lo stesso effetto della **[contrazione di Lorentz](#5-deformazione-di-li%C3%A9nard-wiechert)** sul campo di una carica in moto); la **[reazione di radiazione 2.5PN (§6)](#6-gravit%C3%A0-estrema-paczy%C3%B9ki-wiita-25pn-e-massa-chirp)** che fa decadere le orbite compatte; e il **[freno d'inerzia relativistico (§3.4)](#34-compressione-relativistica-dellaccelerazione)** che rende $c$ un asintoto inavvicinabile.
 
@@ -110,29 +110,29 @@ Tra le soluzioni determinanti per garantire la stabilità orbitale a lungo termi
 
 | Heatmap dΦ/dt | Heatmap GW Strain |
 |:---:|:---:|
-| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" autoplay loop muted playsinline controls width="100%"></video> |
-| **Variazione temporale del potenziale scalare (\(d\Phi/dt\)):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato. I fronti a spirale visibili indicano la propagazione a velocità finita \(c\) dei dipoli di accelerazione. Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
+| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" autoplay loop muted playsinline width="100%"></video> |
+| **Variazione temporale del potenziale scalare ($d\Phi/dt$):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato. I fronti a spirale visibili indicano la propagazione a velocità finita $c$ dei dipoli di accelerazione. Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
 
 **Dove si vedono queste onde, e cosa sono realmente.** 
 Il simulatore non risolve le equazioni tensoriali complete della relatività generale nello spazio-tempo per calcolare le heatmap. Esso offre due distinti livelli di astrazione visiva per rappresentare l'irraggiamento energetico del sistema:
 
-1. **L'analogo scalare (\(d\Phi/dt\)):** Emerge spontaneamente dalla sola propagazione causale del potenziale. Non calcola il quadrupolo, ma mostra l'onda di fase generata dallo spostamento dei singoli pozzi gravitazionali, ossia i dipoli di moto, condividendo con la fisica reale la sola frequenza orbitale e il phenomenon del chirp spettrale.
+1. **L'analogo scalare ($d\Phi/dt$):** Emerge spontaneamente dalla sola propagazione causale del potenziale. Non calcola il quadrupolo, ma mostra l'onda di fase generata dallo spostamento dei singoli pozzi gravitazionali, ossia i dipoli di moto, condividendo con la fisica reale la sola frequenza orbitale e il phenomenon del chirp spettrale.
 2. **Lo strain quadrupolare proiettato:** Calcola esplicitamente la proiezione del quadrupolo delle velocità ritardate sul piano dell'osservatore. Questo layer riproduce fedelmente la simmetria angolare di quadrupolo dello spin-2 reale, eliminando gli effetti dipolari spuri e offrendo un quadro geometricamente coerente della radiazione gravitazionale.
 
 La tabella seguente riassume schematicamente le differenze fisiche e geometriche tra le onde reali e le due visualizzazioni del simulatore:
 
-| Caratteristica | Onde reali (Relatività Generale) | Analogo scalare \(d\Phi/dt\) | Strain simulato (GW Strain) |
+| Caratteristica | Onde reali (Relatività Generale) | Analogo scalare $d\Phi/dt$ | Strain simulato (GW Strain) |
 |---|---|---|---|
-| **Natura del campo** | Campo tensoriale di **spin-2** (\(h_{\mu\nu}\)) | Campo **scalare** (\(\Phi\)) | Campo tensoriale proiettato lungo la visuale |
-| **Polarizzazioni** | Due polarizzazioni indipendenti (\(h_+\) e \(h_\times\)) sfasate di 45° | Nessuna polarizzazione (variazione scalare pura) | Singola polarizzazione proiettata (\(h_+\) efficace) |
-| **Sorgente fisica** | Variazione temporale del quadrupolo di massa (\(\ddot{Q}_{ij}\)) | Moto e variazione temporale del monopolo (\(\partial\Phi/\partial t\)) | Proiezione cinetica del quadrupolo di ciascuna massa |
-| **Simmetria angolare** | Quadrupolare (quattro lobi alternati a 90°) | Dipolare attorno al singolo corpo in moto | Quadrupolare pura (\(\ell=2\) con quattro lobi alternati) |
-| **Propagazione** | Radiazione ondulatoria tensoriale alla velocità della luce \(c\) | Onde di fase del potenziale ritardato a velocità \(c\) | Fronte d'onda causale ritardato a velocità \(c\) |
+| **Natura del campo** | Campo tensoriale di **spin-2** ($h_{\mu\nu}$) | Campo **scalare** ($\Phi$) | Campo tensoriale proiettato lungo la visuale |
+| **Polarizzazioni** | Due polarizzazioni indipendenti ($h_+$ e $h_\times$) sfasate di 45° | Nessuna polarizzazione (variazione scalare pura) | Singola polarizzazione proiettata ($h_+$ efficace) |
+| **Sorgente fisica** | Variazione temporale del quadrupolo di massa ($\ddot{Q}_{ij}$) | Moto e variazione temporale del monopolo ($\partial\Phi/\partial t$) | Proiezione cinetica del quadrupolo di ciascuna massa |
+| **Simmetria angolare** | Quadrupolare (quattro lobi alternati a 90°) | Dipolare attorno al singolo corpo in moto | Quadrupolare pura ($\ell=2$ con quattro lobi alternati) |
+| **Propagazione** | Radiazione ondulatoria tensoriale alla velocità della luce $c$ | Onde di fase del potenziale ritardato a velocità $c$ | Fronte d'onda causale ritardato a velocità $c$ |
 | **Accoppiamento** | Generato da accelerazioni asimmetriche nel COM* | Generato anche da moto uniforme traslatorio del corpo | Si annulla per moti uniformi di COM* (sottratto dal codice) |
 
 \* COM (*Center of Mass* / Centro di Massa): il baricentro gravitazionale del sistema binario, utile a sottrarre la velocità di traslazione globale della coppia.
 
-In sintesi, mentre la modalità \(d\Phi/dt\) funge da semplice indicatore qualitativo di moto ondulatorio, lo strain quadrupolare proietta la reale impronta geometrica dell'onda gravitazionale. Questo permette di esplorare i lobi e le spirali di fase in modo fisicamente coerente, senza dover ricorrere a complesse simulazioni di relatività numerica.
+In sintesi, mentre la modalità $d\Phi/dt$ funge da semplice indicatore qualitativo di moto ondulatorio, lo strain quadrupolare proietta la reale impronta geometrica dell'onda gravitazionale. Questo permette di esplorare i lobi e le spirali di fase in modo fisicamente coerente, senza dover ricorrere a complesse simulazioni di relatività numerica.
 
 ---
 
@@ -194,14 +194,14 @@ Se la gravità punta verso la posizione **ritardata** della sorgente, in un'orbi
   <tr>
     <td valign="top" width="60%">
       <p>Il <em>dead reckoning</em> è il metodo con cui un navigatore stima la posizione attuale di un oggetto dalla sua ultima posizione nota, più velocità e tempo trascorso, senza vederlo direttamente. Qui fa l'equivalente per la gravità: stima dove la sorgente <em>è ora</em> a partire da dove <em>era</em> all'istante di emissione. Ha anche un corrispettivo fisico diretto: in elettrodinamica e in gravità linearizzata i termini di velocità del campo fanno sì che la forza di una sorgente in <strong>moto uniforme</strong> punti alla sua posizione <em>presente</em>, non a quella di emissione (l'aberrazione si cancella). Il dead reckoning del motore riproduce numericamente proprio questa cancellazione.</p>
-      <p>Il motore non usa la posizione di emissione grezza, ma la <strong>estrapola in avanti</strong> verso l'istante presente, riducendo l'aberrazione. Sviluppo di Taylor della posizione della sorgente sul tempo di volo \(\Delta t_{flight}\):</p>
+      <p>Il motore non usa la posizione di emissione grezza, ma la <strong>estrapola in avanti</strong> verso l'istante presente, riducendo l'aberrazione. Sviluppo di Taylor della posizione della sorgente sul tempo di volo $\Delta t_{flight}$:</p>
       <ul>
         <li><strong>2° ordine (regime ordinario):</strong>
-          \[\vec{x}_{eff} = \vec{x}_{ret} + \vec{v}_{ret}\,\Delta t_{flight} + \tfrac{1}{2}\vec{a}_{ret}\,\Delta t_{flight}^2\]
+          $$\vec{x}_{eff} = \vec{x}_{ret} + \vec{v}_{ret}\,\Delta t_{flight} + \tfrac{1}{2}\vec{a}_{ret}\,\Delta t_{flight}^2$$
         </li>
         <li><strong>Bypass nel regime GW (vicino al merger):</strong> in regime relativistico estremo l'estrapolazione lineare non basta più e lascia un errore radiale periodico che si traduce in eccentricità spuria. Il motore allora <strong>abbandona del tutto il dead reckoning</strong> e usa la <strong>posizione presente esatta</strong> della sorgente, sia per la direzione sia per la distanza, azzerando all'origine quell'aberrazione residua (dettaglio ingegneristico in <a href="ARCHITECTURE_DEEP_DIVE.md">ARCHITECTURE_DEEP_DIVE.md</a>, §2).</li>
       </ul>
-      <p>L'accelerazione storica \(\vec{a}_{ret}\) non è memorizzata: è ricostruita al volo per <strong>differenze finite</strong> tra velocità consecutive.</p>
+      <p>L'accelerazione storica $\vec{a}_{ret}$ non è memorizzata: è ricostruita al volo per <strong>differenze finite</strong> tra velocità consecutive.</p>
     </td>
     <td valign="top" align="center" width="40%">
       <img src="docs/gif/sagA_orbit.gif" width="320" alt="Media non trovato">
@@ -280,7 +280,7 @@ $$f_s > 2\,f_{max}$$
 Nei merger di stelle di neutroni (es. GW170817) la frequenza dell'onda analoga, pari al **doppio** di quella orbitale, raggiunge $\sim 1\text{–}2\ \text{kHz}$ poco prima del contatto. Per catturarla pulita serve $f_s > 4\ \text{kHz}$, cioè $\Delta t < 2{,}5 \times 10^{-4}\ \text{s}$. Il simulatore usa $\Delta t = 1\ \mu\text{s}$ ($f_s = 1\ \text{MHz}$), un margine enorme: **è questo che permette al chirp di emergere** nello spettrogramma invece di collassare in rumore di aliasing. In altre parole, con un $\Delta t$ troppo grande l'evento fisico avverrebbe lo stesso, ma non sarebbe **osservabile**: la sonda non avrebbe abbastanza campioni per ricostruire la rampa finale di frequenza.
  
 
-> **Nota metodologica.** La connessione formale con il teorema di Nyquist-Shannon è stata analizzata a posteriori, durante la fase di formalizzazione teorica dello spettrogramma. All'atto pratico della simulazione, l'integrazione numerica delle orbite (regolata dall'errore di troncamento locale, che scala quadraticamente con il passo temporale) impone già vincoli di stabilità estremamente severi, costringendo a un campionamento molto più fitto di quello strettamente richiesto per evitare l'aliasing del segnale. Se l'utente aumenta manualmente il \(dt\) in tempo reale, la distruzione fisica dell'orbita per instabilità numerica si manifesterà molto prima degli effetti di aliasing descritti sopra. Il teorema di Nyquist-Shannon rimane tuttavia lo strumento teorico d'elezione per validare formalmente la pulizia dello strain ricostruito e per definire i limiti fisici di osservabilità della rampa di chirp.
+> **Nota metodologica.** La connessione formale con il teorema di Nyquist-Shannon è stata analizzata a posteriori, durante la fase di formalizzazione teorica dello spettrogramma. All'atto pratico della simulazione, l'integrazione numerica delle orbite (regolata dall'errore di troncamento locale, che scala quadraticamente con il passo temporale) impone già vincoli di stabilità estremamente severi, costringendo a un campionamento molto più fitto di quello strettamente richiesto per evitare l'aliasing del segnale. Se l'utente aumenta manualmente il $dt$ in tempo reale, la distruzione fisica dell'orbita per instabilità numerica si manifesterà molto prima degli effetti di aliasing descritti sopra. Il teorema di Nyquist-Shannon rimane tuttavia lo strumento teorico d'elezione per validare formalmente la pulizia dello strain ricostruito e per definire i limiti fisici di osservabilità della rampa di chirp.
 
 ### 4.4 Una nota sul LOD dei buffer
 
@@ -544,7 +544,7 @@ Sono i due pattern visivi che la $d\Phi/dt$ mostra più chiaramente, e affiancar
 
 Le due heatmap basate sulla curvatura del campo (questa e la topologia di Roche) usano l'**Hessiana** del potenziale. Intuitivamente potremmo dire che se il gradiente $\nabla\Phi$ dice *in che direzione e quanto forte* tira la gravità in un punto, l'Hessiana dice *come cambia quel tiro* spostandosi di poco: è la matrice delle derivate seconde
 
-$$H = \begin{pmatrix} \Phi_{xx} & \Phi_{xy} \\ \Phi_{xy} & \Phi_{yy} \end{pmatrix}$$
+$$H = \left( \begin{matrix} \Phi_{xx} & \Phi_{xy} \\ \Phi_{xy} & \Phi_{yy} \end{matrix} \right)$$
 
 cioè la **curvatura locale** del campo. I termini diagonali $\Phi_{xx}, \Phi_{yy}$ dicono quanto **rapidamente** cambia il tiro spostandosi lungo $x$ o lungo $y$; l'incrociato $\Phi_{xy}$ quanto le due direzioni sono accoppiate (spostarsi in $y$ modifica anche il tiro in $x$). Da questi stessi tre numeri le tre heatmap basate sulla curvatura estraggono grandezze diverse:
 
@@ -732,7 +732,7 @@ $$r_{est} = \left|H^{-1}\,\nabla\Phi_{eff}\right|$$
 
 Per l'Hessiana 2×2 l'inversa è esplicita e dipende dal **determinante** $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$:
 
-$$H^{-1} = \frac{1}{D}\begin{pmatrix} \Phi_{yy} & -\Phi_{xy} \\ -\Phi_{xy} & \Phi_{xx} \end{pmatrix}$$
+$$H^{-1} = \frac{1}{D}\left( \begin{matrix} \Phi_{yy} & -\Phi_{xy} \\ -\Phi_{xy} & \Phi_{xx} \end{matrix} \right)$$
 
 Quindi $r_{est}$ contiene un fattore $1/D$ (l'**inverso del determinante**): più ci si avvicina a un punto di Lagrange, più $r_{est} \to 0$ e più il pixel viene illuminato. È un "compasso" che misura quanto si è vicini all'equilibrio.
 
@@ -776,52 +776,52 @@ Questa heatmap, denominata **GW Strain (Quadrupole)** nell'interfaccia utente, r
 #### 7.6.1 Formulazione matematica e proiezione
 La formulazione matematica usata dal motore per calcolare lo strain in ogni pixel condivide la stessa identica logica fisica e le medesime semplificazioni numeriche della sonda virtuale LIGO descritta nel capitolo successivo. 
 
-In particolare, per escludere il forte rumore numerico indotto dalle accelerazioni nel regime discreto (\(dt\)) a ridosso del merger, si adotta una **regolarizzazione cinetica** (spiegata in dettaglio in [§8.5](#85-il-problema-numerico-dellaccelerazione-e-la-regolarizzazione-cinetica)), scartando il termine delle forze a favore del solo proxy basato sulle velocità relative. Questo approccio si basa sull'equivalenza esatta tra i due contributi nel caso limite di orbite circolari (discussa in [§8.3](#83-la-formula-3d-camuffata-e-la-proiezione-ortogonale-al-piano)).
+In particolare, per escludere il forte rumore numerico indotto dalle accelerazioni nel regime discreto ($dt$) a ridosso del merger, si adotta una **regolarizzazione cinetica** (spiegata in dettaglio in [§8.5](#85-il-problema-numerico-dellaccelerazione-e-la-regolarizzazione-cinetica)), scartando il termine delle forze a favore del solo proxy basato sulle velocità relative. Questo approccio si basa sull'equivalenza esatta tra i due contributi nel caso limite di orbite circolari (discussa in [§8.3](#83-la-formula-3d-camuffata-e-la-proiezione-ortogonale-al-piano)).
 
-Mentre la sonda virtuale LIGO si limita a registrare lo strain in un unico punto dello schermo ipotizzando una direzione di vista fissa (equivalente a calcolare la sola componente \(h_+\) lungo gli assi cardinali, §8.4), la heatmap deve determinare lo strain in ogni pixel dello schermo. Per farlo, essa calcola la proiezione della velocità del corpo lungo la direzione variabile pixel-sorgente.
+Mentre la sonda virtuale LIGO si limita a registrare lo strain in un unico punto dello schermo ipotizzando una direzione di vista fissa (equivalente a calcolare la sola componente $h_+$ lungo gli assi cardinali, §8.4), la heatmap deve determinare lo strain in ogni pixel dello schermo. Per farlo, essa calcola la proiezione della velocità del corpo lungo la direzione variabile pixel-sorgente.
 
-Per ciascun pixel di coordinate \((x_{px}, y_{px})\), calcoliamo la distanza lungo l'asse \(x\) e l'asse \(y\) rispetto alla posizione causale ritardata del corpo, \(\vec{r}_{\text{ret}, k} = (x_{\text{ret}, k}, y_{\text{ret}, k})\):
-\[d_x = x_{px} - x_{\text{ret}, k}, \qquad d_y = y_{px} - y_{\text{ret}, k}\]
+Per ciascun pixel di coordinate $(x_{px}, y_{px})$, calcoliamo la distanza lungo l'asse $x$ e l'asse $y$ rispetto alla posizione causale ritardata del corpo, $\vec{r}_{\text{ret}, k} = (x_{\text{ret}, k}, y_{\text{ret}, k})$:
+$$d_x = x_{px} - x_{\text{ret}, k}, \qquad d_y = y_{px} - y_{\text{ret}, k}$$
 
-La distanza geometrica effettiva \(r\) (la lunghezza del vettore distanza \(\vec{d}\)) si calcola con il classico teorema di Pitagora:
-\[r = \sqrt{d_x^2 + d_y^2}\]
+La distanza geometrica effettiva $r$ (la lunghezza del vettore distanza $\vec{d}$) si calcola con il classico teorema di Pitagora:
+$$r = \sqrt{d_x^2 + d_y^2}$$
 
-Per conoscere la direzione che unisce il corpo al pixel, definiamo un **versore di direzione** (un vettore di lunghezza pari a 1, indicato solitamente con il simbolo \(\hat{n}\)) dividendo le distanze parziali per la distanza totale \(r\):
-\[n_x = \frac{d_x}{r}, \qquad n_y = \frac{d_y}{r}\]
+Per conoscere la direzione che unisce il corpo al pixel, definiamo un **versore di direzione** (un vettore di lunghezza pari a 1, indicato solitamente con il simbolo $\hat{n}$) dividendo le distanze parziali per la distanza totale $r$:
+$$n_x = \frac{d_x}{r}, \qquad n_y = \frac{d_y}{r}$$
 
-Allo stesso modo, definiamo una direzione trasversale (ortogonale) \(\hat{t} = (t_x, t_y)\) ruotata di 90 gradi:
-\[t_x = -n_y, \qquad t_y = n_x\]
+Allo stesso modo, definiamo una direzione trasversale (ortogonale) $\hat{t} = (t_x, t_y)$ ruotata di 90 gradi:
+$$t_x = -n_y, \qquad t_y = n_x$$
 
-Definita la velocità del corpo \(k\) al tempo ritardato sottratta del moto del centro di massa comune (COM\*) della coppia binaria per isolare il solo moto orbitale interno, \(\vec{v}_{\text{rel}} = (v_{\text{rel}, x}, v_{\text{rel}, y})\), le due proiezioni della velocità rispetto alle direzioni del pixel sono espresse in modo algebrico semplice come:
-- **Velocità radiale** (proiettata lungo la direzione del pixel): \(v_r = v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y\)
-- **Velocità tangenziale** (proiettata lungo la direzione trasversale): \(v_t = v_{\text{rel}, x} t_x + v_{\text{rel}, y} t_y = -v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x\)
+Definita la velocità del corpo $k$ al tempo ritardato sottratta del moto del centro di massa comune (COM\*) della coppia binaria per isolare il solo moto orbitale interno, $\vec{v}_{\text{rel}} = (v_{\text{rel}, x}, v_{\text{rel}, y})$, le due proiezioni della velocità rispetto alle direzioni del pixel sono espresse in modo algebrico semplice come:
+- **Velocità radiale** (proiettata lungo la direzione del pixel): $v_r = v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y$
+- **Velocità tangenziale** (proiettata lungo la direzione trasversale): $v_t = v_{\text{rel}, x} t_x + v_{\text{rel}, y} t_y = -v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x$
 
 Lo strain proiettato sul pixel è la differenza quadratica tra queste due componenti di velocità:
-\[h_{\text{proj}, k} = v_r^2 - v_t^2\]
+$$h_{\text{proj}, k} = v_r^2 - v_t^2$$
 
 Sviluppando algebricamente i quadrati delle due componenti, si ottiene la formula finale implementata nel kernel di rendering:
-\[h_{\text{proj}, k} = (v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y)^2 - (-v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x)^2 = (v_{\text{rel}, x}^2 - v_{\text{rel}, y}^2)(n_x^2 - n_y^2) + 4\,v_{\text{rel}, x}\,v_{\text{rel}, y}\,n_x\,n_y\]
+$$h_{\text{proj}, k} = (v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y)^2 - (-v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x)^2 = (v_{\text{rel}, x}^2 - v_{\text{rel}, y}^2)(n_x^2 - n_y^2) + 4\,v_{\text{rel}, x}\,v_{\text{rel}, y}\,n_x\,n_y$$
 
-La grandezza totale visualizzata sullo schermo è la somma dei contributi dei singoli corpi, pesata sulla loro massa e attenuata con la distanza (decadimento geometrico \(1/r\) tipico della radiazione di campo lontano):
-\[h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}\]
+La grandezza totale visualizzata sullo schermo è la somma dei contributi dei singoli corpi, pesata sulla loro massa e attenuata con la distanza (decadimento geometrico $1/r$ tipico della radiazione di campo lontano):
+$$h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}$$
 
-Questa scomposizione geometrica proietta l'esatta simmetria angolare di quadrupolo (\(\ell=2\), con pattern a quattro lobi alternati ciano/rosso) sul pixel osservante, impedendo che la heatmap collassi in un semplice gradiente radiale simile alla mappa potenziale \(\Phi\). In questo modo, l'analizzatore spaziale della heatmap e l'analizzatore puntuale di LIGO (§8) sono resi matematicamente e concettualmente equivalenti.
+Questa scomposizione geometrica proietta l'esatta simmetria angolare di quadrupolo ($\ell=2$, con pattern a quattro lobi alternati ciano/rosso) sul pixel osservante, impedendo che la heatmap collassi in un semplice gradiente radiale simile alla mappa potenziale $\Phi$. In questo modo, l'analizzatore spaziale della heatmap e l'analizzatore puntuale di LIGO (§8) sono resi matematicamente e concettualmente equivalenti.
 
 #### 7.6.2 Causalità e disallineamento dei nodi: la scomparsa dell'asse nodale rigido
-Nelle rappresentazioni divulgative o nelle approssimazioni analitiche standard, lo strain viene calcolato valutando il quadrupolo globale del sistema riferito al centro di massa comune, applicando un unico tempo di ritardo \(t_{\text{ret}} = t - R_{\text{COM}}/c\). Il risultato è la familiare immagine delle due spirali nodali perfette (linee nere a valore nullo) che ruotano rigidamente, separate da un asse simmetrico.
+Nelle rappresentazioni divulgative o nelle approssimazioni analitiche standard, lo strain viene calcolato valutando il quadrupolo globale del sistema riferito al centro di massa comune, applicando un unico tempo di ritardo $t_{\text{ret}} = t - R_{\text{COM}}/c$. Il risultato è la familiare immagine delle due spirali nodali perfette (linee nere a valore nullo) che ruotano rigidamente, separate da un asse simmetrico.
 
 **Quello che il simulatore mostra è diverso, ed è frutto del doppio recupero per-corpo descritto in apertura di [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica).** Inizialmente il motore era fermo al solo primo recupero (la stima basata sulle posizioni istantanee, prima della seconda lettura nello storico): in quella fase l'asse nodale ruotante si formava nitido, identico alle illustrazioni classiche. Da quando è stato implementato il vero recupero causale (la seconda lettura, basata sulla posizione ritardata effettiva), **l'asse nodale è sparito**: la transizione fra le polarità dello strain (positivo/ciano e negativo/rosso) avviene in modo continuo, e ciò che resta è una singola spirale fluida senza più una linea di separazione rigida.
 
-L'interpretazione che mi sento di proporre è semplice: l'asse nodale rigido era un sottoprodotto sistematico dell'approssimazione *single-step*. Una volta che ciascuna sorgente viene letta dal suo proprio istante di emissione, con tempi e versori di proiezione distinti (\(t - r_A/c \neq t - r_B/c\) e \(\hat{n}_A \neq \hat{n}_B\)), gli zeri dei contributi dei singoli corpi non si allineano più lungo curve regolari, e l'asse separatorio si dissolve nelle interferenze locali fra le due sorgenti. Resta in vista, fra le due masse, un caratteristico pattern di interferenza ravvicinato, visivamente una "forma a seme" rossa che pulsa col chirp.
+L'interpretazione che mi sento di proporre è semplice: l'asse nodale rigido era un sottoprodotto sistematico dell'approssimazione *single-step*. Una volta che ciascuna sorgente viene letta dal suo proprio istante di emissione, con tempi e versori di proiezione distinti ($t - r_A/c \neq t - r_B/c$ e $\hat{n}_A \neq \hat{n}_B$), gli zeri dei contributi dei singoli corpi non si allineano più lungo curve regolari, e l'asse separatorio si dissolve nelle interferenze locali fra le due sorgenti. Resta in vista, fra le due masse, un caratteristico pattern di interferenza ravvicinato, visivamente una "forma a seme" rossa che pulsa col chirp.
 
-<video src="https://github.com/user-attachments/assets/aee7fd2d-70f0-4d1d-9767-315d6bae5d28" autoplay loop muted playsinline controls width="700"></video>
+<video src="https://github.com/user-attachments/assets/aee7fd2d-70f0-4d1d-9767-315d6bae5d28" autoplay loop muted playsinline width="700"></video>
 
 *Loop di una coalescenza di buchi neri binari renderizzata in modalità GW Strain. La sequenza alterna due punti di vista: una vista ravvicinata sulla regione fra i due corpi, dove si forma e pulsa col chirp la "forma a seme" rossa di interferenza ravvicinata fra i due contributi quadrupolari, e una vista panoramica dezoommata, in cui si vedono le macro-spirali radiative propagarsi verso l'esterno a velocità $c$. Da notare l'assenza dell'asse nodale rigido descritto sopra: la transizione fra polarità ciano e rossa avviene in modo continuo, senza linee dritte di separazione.*
 
 #### 7.6.3 La coalescenza e l'artefatto del quadrupolo nudo
 La heatmap GW Strain è un proxy progettato per descrivere una **coppia di corpi** e si basa sul calcolo cinetico relativo al baricentro. Al momento della coalescenza, uno dei due corpi viene assorbito dall'altro. L'universo, tuttavia, non si aggiorna istantaneamente: il corpo morente persiste nello storico finché l'onda causale di "morte" (il tempo di volo che segnala la sua scomparsa) non raggiunge i bordi imposti della simulazione causale. 
 
-Poiché il raggio di questa simulazione è impostato a **3 AU**, il tempo di volo corrispondente è di circa **24 minuti** di tempo simulato (\(3\text{ AU} / c \approx 1500\text{ s}\)). Eseguendo il calcolo a un passo temporale di \(dt = 1\,\mu\text{s}\) (dove la velocità di simulazione reale dell'engine è al massimo di circa \(600\text{ ms}\) simulati al secondo), questo transitorio dura in realtà moltissimo tempo reale di elaborazione (oltre 40 minuti), occupando gran parte della sessione utile di simulazione.
+Poiché il raggio di questa simulazione è impostato a **3 AU**, il tempo di volo corrispondente è di circa **24 minuti** di tempo simulato ($3\text{ AU} / c \approx 1500\text{ s}$). Eseguendo il calcolo a un passo temporale di $dt = 1\,\mu\text{s}$ (dove la velocità di simulazione reale dell'engine è al massimo di circa $600\text{ ms}$ simulati al secondo), questo transitorio dura in realtà moltissimo tempo reale di elaborazione (oltre 40 minuti), occupando gran parte della sessione utile di simulazione.
 
 Durante questa lunga finestra transitoria, il sistema di rendering dello strain si **rompe**:
 * Perdendo la relazione di baricentro con il compagno assorbito, il motore riscrive anche il passato delle spirali in espansione.
@@ -829,14 +829,14 @@ Durante questa lunga finestra transitoria, il sistema di rendering dello strain 
 
 Il risultato è un **artefatto visivo**, che ha però la rara utilità di mostrare a nudo il quadrupolo statico, singolo e non rotante del corpo superstite. Si tratta di una firma geometrica **rara** da osservare in condizioni ordinarie, poiché richiede velocità relative molto elevate (come discusso nel caso studio §7.6.4).
 
-Per mantenere ed osservare la spirale in espansione anche *dopo* la coalescenza, è necessario passare alla heatmap **\(d\Phi/dt\)**. Nonostante l'oscillazione in questo caso sia dipolare e non quadrupolare, la forma delle onde si conserva in modo morfologicamente molto simile. Le onde in \(d\Phi/dt\) reggono l'impatto della coalescenza senza rompersi perché calcolano un campo scalare universale: non dipendono da una coppia selezionata come lo strain, ma si propagano autonomamente nello spazio anche dopo che il sistema si è fuso in un singolo oggetto.
+Per mantenere ed osservare la spirale in espansione anche *dopo* la coalescenza, è necessario passare alla heatmap **$d\Phi/dt$**. Nonostante l'oscillazione in questo caso sia dipolare e non quadrupolare, la forma delle onde si conserva in modo morfologicamente molto simile. Le onde in $d\Phi/dt$ reggono l'impatto della coalescenza senza rompersi perché calcolano un campo scalare universale: non dipendono da una coppia selezionata come lo strain, ma si propagano autonomamente nello spazio anche dopo che il sistema si è fuso in un singolo oggetto.
 
 | GW Strain: rottura post-coalescenza | dΦ/dt: conservazione post-coalescenza |
 |:---:|:---:|
 | <img src="docs/img/GWHEATMAP_post_merge.png" width="100%" alt="Artefatto del quadrupolo nudo in GW Strain"> | <img src="docs/img/DPHI_post_merge.png" width="100%" alt="Onde in dΦ/dt post-coalescenza"> |
 | La scomparsa del partner interrompe il calcolo del baricentro, congelando le spirali storiche in una croce rigida e non rotante. | Trattandosi di un campo scalare universale non vincolato alla coppia, le spirali continuano a propagarsi regolarmente all'indietro anche dopo la fusione. |
 
-Da quanto sopra discende anche una conseguenza pratica sulla **visibilità** del pattern. Il proxy è quadratico nella velocità relativa, \(|h_{proj}| \propto |v_{rel}|^2\), e questa proporzionalità coincide qualitativamente con la dipendenza della potenza radiativa GW reale dalle alte potenze di \(v/c\). Significa che la croce diventa percettibile **solo per coppie compatte in orbita stretta** (NS, BH, ultimi cicli di inspiral, dove \(|v_{rel}|\) è una frazione apprezzabile di \(c\)); per i sistemi planetari ordinari, anche con il fader di sensibilità al massimo, l'ampiezza resta sotto il floor del rendering, esattamente come nella realtà fisica le coppie planetarie non sono rilevabili dagli interferometri terrestri.
+Da quanto sopra discende anche una conseguenza pratica sulla **visibilità** del pattern. Il proxy è quadratico nella velocità relativa, $|h_{proj}| \propto |v_{rel}|^2$, e questa proporzionalità coincide qualitativamente con la dipendenza della potenza radiativa GW reale dalle alte potenze di $v/c$. Significa che la croce diventa percettibile **solo per coppie compatte in orbita stretta** (NS, BH, ultimi cicli di inspiral, dove $|v_{rel}|$ è una frazione apprezzabile di $c$); per i sistemi planetari ordinari, anche con il fader di sensibilità al massimo, l'ampiezza resta sotto il floor del rendering, esattamente come nella realtà fisica le coppie planetarie non sono rilevabili dagli interferometri terrestri.
 
 > [!NOTE]
 > **L'artefatto del fantasma del campo.** Lo stesso meccanismo di persistenza si osserva anche nelle altre heatmap che dipendono da una coppia o dallo storico causale (Lagrange Hunter, Roche, e in misura più debole $d\Phi/dt$): quando un corpo compagno viene rimosso, oppure muore per accrescimento o merger, la heatmap continua a mostrare il "fantasma del suo campo" per un tempo pari al limite causale corrente. La ragione è che ogni pixel legge dallo storico ritardato: finché il fronte dell'informazione di scomparsa non ha raggiunto quel pixel (a velocità $c$), il calcolo continua a usare l'ultimo campione valido del corpo defunto. Superato il limite causale dello scenario, il contributo viene eliminato del tutto e la heatmap si aggiorna al nuovo stato del sistema. Non è un bug del rendering ma la conseguenza diretta e coerente della causalità ritardata: il campo di un corpo scomparso continua a esistere fisicamente fintanto che la sua "notizia di scomparsa" non ha propagato oltre il volume visibile.
@@ -859,14 +859,14 @@ Quando l'oggetto compatto leggero percorre la sua orbita fortemente eccentrica a
   
   *Il quadrupolo statico nudo all'afelio: una inquadratura molto ravvicinata (zoomata) e con guadagno (gain) aumentato rende visibile la caratteristica croce quadrilobata dello strain (ciano/rosso alternato) del corpo leggero, altrimenti invisibile per via del rallentamento cinetico.*
  
-<video src="https://github.com/user-attachments/assets/8d30ed55-33fe-4897-b678-e1e165158f21" autoplay loop muted playsinline controls width="700"></video>
+<video src="https://github.com/user-attachments/assets/8d30ed55-33fe-4897-b678-e1e165158f21" autoplay loop muted playsinline width="700"></video>
 
 *Ciclo orbitale completo dell'EMRI (afelio -> pericentro -> afelio) renderizzato in modalità GW Strain. Il video mostra chiaramente la transizione dinamica tra l'emissione stazionaria e debole all'apocentro (in cui spicca il quadrupolo nudo del corpo leggero orientato lungo l'asse orbitale) e la violenta scarica ondulatoria concentrica rilasciata durante il passaggio ravvicinato al pericentro, che si propaga nello spazio.*
 
 | Vista macro: Early Inspiral (decine di AU) | Vista macro: Late Inspiral (decine di AU) |
 |:---:|:---:|
 | <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Orbita rosetta early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Orbita rosetta late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern late inspiral"> |
-| **Il ritmo dei *sassi* sul cono di luce**: Nelle prime fasi dell'inspiral, l'emissione avviene per impulsi discreti. Ad ogni passaggio al pericentro, il corpo scaglia una perturbazione nello spaziotempo — un *sasso* i cui effetti viaggiano sul cono di luce a velocità \(c\) in un guscio isolato. Poiché il periodo orbitale è lungo, i fronti d'onda rimangono separati da ampie regioni di silenzio, propagandosi come anelli concentrici ben spaziati. | **La transizione a spirale continua**: Negli ultimi stadi prima della cattura (regime di chirp), la frequenza orbitale cresce vertiginosamente e l'emissione diventa un flusso continuo. I *sassi* gravitazionali vengono rilasciati senza sosta: i singoli fronti d'onda sferici perdono la propria individualità e si fondono, tessendo una spirale densa che riempie omogeneamente lo spaziotempo circostante. |
+| **Il ritmo dei *sassi* sul cono di luce**: Nelle prime fasi dell'inspiral, l'emissione avviene per impulsi discreti. Ad ogni passaggio al pericentro, il corpo scaglia una perturbazione nello spaziotempo — un *sasso* i cui effetti viaggiano sul cono di luce a velocità $c$ in un guscio isolato. Poiché il periodo orbitale è lungo, i fronti d'onda rimangono separati da ampie regioni di silenzio, propagandosi come anelli concentrici ben spaziati. | **La transizione a spirale continua**: Negli ultimi stadi prima della cattura (regime di chirp), la frequenza orbitale cresce vertiginosamente e l'emissione diventa un flusso continuo. I *sassi* gravitazionali vengono rilasciati senza sosta: i singoli fronti d'onda sferici perdono la propria individualità e si fondono, tessendo una spirale densa che riempie omogeneamente lo spaziotempo circostante. |
 
 
 
@@ -879,18 +879,18 @@ Le sei heatmap del simulatore usano strategie di normalizzazione e mapping croma
 
 | Heatmap | Grandezza misurata | Normalizzazione | Scala | Mapping cromatico | Fader utente |
 |---|---|---|---|---|---|
-| **Φ** (§7.1) | \(\Phi = \sum_k GM_k/r_k\) (causale) | dinamica per-frame su \(\Phi_{\max}\) (massa più grande / raggio effettivo) | **log₁₀**, intervallo di 6 ordini di grandezza | rampa a 3 stop sequenziali: blu profondo → indaco → arancio → bianco | nessuno |
-| **dΦ/dt** (§7.2) | \(\partial\Phi/\partial t = \sum_k GM_k v_{rad,k}/r_k^2\) (causale) | gain calibrato su scala interna, modulato dal fader | \(\tanh(\text{val})\) (compressione asintotica a \(\pm 1\), niente saturazione netta) | divergente: blu/ciano per avvicinamento (\(+\)), rosso per allontanamento (\(-\)) | sì (**GAIN**, \(\pm\), default \(0\) in scala log₁₀) |
-| **Tidal Stress** (§7.3) | \(\sigma = \sqrt{(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2}\) (autovalori discordi) | nessuna (la scala è assoluta in \(\text{s}^{-2} \equiv (\text{m/s}^2)/\text{m}\)) | **log₁₀** + Offset utente | 6 fasce calibrate su soglie fisiche reali (resistenza dei materiali), interpolate linearmente all'interno di ciascuna; legenda apribile con `M` | via astro_settings.ini |
-| **Topologia di Roche** (§7.4) | due quantità sovrapposte: segno di \(D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2\) + modulo \(\|\nabla\Phi_{\text{eff}}\|\) | \(D\) adimensionalizzato su \(\omega^4\) (scala naturale del frame corotante); forza normalizzata su \(f_{\text{norm}} = \tfrac{27}{4}q(1-q)\omega^2 r\) (scala caratteristica L4/L5) | **log₁₀** clampato \([-3,+3]\) per la tinta; **log₁₀** lineare per la luminosità | tinta dal segno di \(D\): rampa cremisi → giallo neon (\(D<0\)) o indaco → ciano (\(D>0\)); luminosità = forza, nucleo nero nei punti di stallo | sì (**sensibilità** + **contrasto**) |
-| **Lagrange Hunter** (§7.5) | \(r_{\text{est}} = \|H^{-1}\nabla\Phi_{\text{eff}}\|\) (stimatore di distanza Newton-Raphson) | conversione \(r_{\text{est}}/\text{scala camera}\) → distanza in pixel | lineare (nessuna log: la stima è già una distanza) | gaussiana \(\exp\!\big(-2(d/r_{\text{soglia}})^2\big)\) centrata sullo zero del gradiente; tinta dal segno di \(D\): rosso (\(D<0\), L1/L2/L3) o blu (\(D>0\), L4/L5) | sì (**sensibilità** → raggio \(r_{\text{soglia}}\) della gaussiana) |
-| **GW Strain** (§7.6) | \(h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}\) (causale) | gain calibrato internamente, modulato dal fader | \(\text{asinh}(h \cdot \text{sensitivity})\) (compressione a \(\pm 1\)) | divergente: ciano per strain positivo (\(+\)), rosso per strain negativo (\(-\)) | sì (sensibilità via fader Roche) |
+| **Φ** (§7.1) | $\Phi = \sum_k GM_k/r_k$ (causale) | dinamica per-frame su $\Phi_{\max}$ (massa più grande / raggio effettivo) | **log₁₀**, intervallo di 6 ordini di grandezza | rampa a 3 stop sequenziali: blu profondo → indaco → arancio → bianco | nessuno |
+| **dΦ/dt** (§7.2) | $\partial\Phi/\partial t = \sum_k GM_k v_{rad,k}/r_k^2$ (causale) | gain calibrato su scala interna, modulato dal fader | $\tanh(\text{val})$ (compressione asintotica a $\pm 1$, niente saturazione netta) | divergente: blu/ciano per avvicinamento ($+$), rosso per allontanamento ($-$) | sì (**GAIN**, $\pm$, default $0$ in scala log₁₀) |
+| **Tidal Stress** (§7.3) | $\sigma = \sqrt{(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2}$ (autovalori discordi) | nessuna (la scala è assoluta in $\text{s}^{-2} \equiv (\text{m/s}^2)/\text{m}$) | **log₁₀** + Offset utente | 6 fasce calibrate su soglie fisiche reali (resistenza dei materiali), interpolate linearmente all'interno di ciascuna; legenda apribile con `M` | via astro_settings.ini |
+| **Topologia di Roche** (§7.4) | due quantità sovrapposte: segno di $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ + modulo $\|\nabla\Phi_{\text{eff}}\|$ | $D$ adimensionalizzato su $\omega^4$ (scala naturale del frame corotante); forza normalizzata su $f_{\text{norm}} = \tfrac{27}{4}q(1-q)\omega^2 r$ (scala caratteristica L4/L5) | **log₁₀** clampato $[-3,+3]$ per la tinta; **log₁₀** lineare per la luminosità | tinta dal segno di $D$: rampa cremisi → giallo neon ($D<0$) o indaco → ciano ($D>0$); luminosità = forza, nucleo nero nei punti di stallo | sì (**sensibilità** + **contrasto**) |
+| **Lagrange Hunter** (§7.5) | $r_{\text{est}} = \|H^{-1}\nabla\Phi_{\text{eff}}\|$ (stimatore di distanza Newton-Raphson) | conversione $r_{\text{est}}/\text{scala camera}$ → distanza in pixel | lineare (nessuna log: la stima è già una distanza) | gaussiana $\exp\!\big(-2(d/r_{\text{soglia}})^2\big)$ centrata sullo zero del gradiente; tinta dal segno di $D$: rosso ($D<0$, L1/L2/L3) o blu ($D>0$, L4/L5) | sì (**sensibilità** → raggio $r_{\text{soglia}}$ della gaussiana) |
+| **GW Strain** (§7.6) | $h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}$ (causale) | gain calibrato internamente, modulato dal fader | $\text{asinh}(h \cdot \text{sensitivity})$ (compressione a $\pm 1$) | divergente: ciano per strain positivo ($+$), rosso per strain negativo ($-$) | sì (sensibilità via fader Roche) |
 
 > [!TIP]
-> **Analogia acustica: Compressione dinamica (\(\text{asinh}\)) vs Hard Clipping (\(\tanh\)).**
-> La scelta tra la compressione dello strain via \(\text{asinh}\) e quella del potenziale via \(\tanh\) equivale esattamente alla differenza tra due trattamenti del segnale acustico:
-> - La **\(\tanh\)** si comporta come un **hard clipper** (distorsore): mappa i valori in un intervallo rigido tagliando asintoticamente le creste del segnale oltre una soglia bassa. Questo è ideale in \(d\Phi/dt\) per dare contorni netti, definiti e contrastati alle onde di fase, ma appiattisce la dinamica interna saturando rapidamente al massimo di intensità.
-> - La **\(\text{asinh}\)** si comporta come un **compressore dinamico da mastering**: attenua logaritmicamente i picchi monumentali nel vicino campo (near-field) impedendo che si brucino in un blocco di colore solido, lasciando al contempo i segnali deboli in periferia (far-field) lineari, leggibili e liberi di sfumare con naturalezza nel nero del vuoto cosmico.
+> **Analogia acustica: Compressione dinamica ($\text{asinh}$) vs Hard Clipping ($\tanh$).**
+> La scelta tra la compressione dello strain via $\text{asinh}$ e quella del potenziale via $\tanh$ equivale esattamente alla differenza tra due trattamenti del segnale acustico:
+> - La **$\tanh$** si comporta come un **hard clipper** (distorsore): mappa i valori in un intervallo rigido tagliando asintoticamente le creste del segnale oltre una soglia bassa. Questo è ideale in $d\Phi/dt$ per dare contorni netti, definiti e contrastati alle onde di fase, ma appiattisce la dinamica interna saturando rapidamente al massimo di intensità.
+> - La **$\text{asinh}$** si comporta come un **compressore dinamico da mastering**: attenua logaritmicamente i picchi monumentali nel vicino campo (near-field) impedendo che si brucino in un blocco di colore solido, lasciando al contempo i segnali deboli in periferia (far-field) lineari, leggibili e liberi di sfumare con naturalezza nel nero del vuoto cosmico.
 
 **Pattern comuni**
 - **Tre heatmap sono causali a tempo ritardato** (Φ, dΦ/dt e GW Strain): leggono lo stato delle sorgenti dai ring buffer L0/L1/L2 al tempo ritardato $r/c$, e mostrano come l'informazione gravitazionale (rispettivamente: il pozzo monopolare, la sua variazione temporale, la proiezione del quadrupolo) si propaga nello spazio a velocità finita. Le altre tre (Tidal, Roche, Lagrange) sono **istantanee**: usano posizioni e velocità presenti, perché interpretano la geometria locale del campo, non la sua propagazione.
@@ -1147,9 +1147,9 @@ Le posizioni teoriche dei 5 punti di Lagrange per una coppia binaria di masse $m
 ### 9.5 Velocità co-rotante sui punti di Lagrange
 Quando un satellite viene generato in un punto di Lagrange (o in un punto corotante qualsiasi), esso deve possedere la velocità di rotazione del sistema di riferimento solidale alla coppia binaria per non essere immediatamente scagliato via. Questa velocità di trascinamento viene calcolata come segue:
 1. Si calcola la velocità angolare istantanea del sistema binario:
-   $$\omega = \frac{(\vec{r}_{2} - \vec{r}_{1}) \times (\vec{v}_{2} - \vec{v}_{1})}{|\vec{r}_{2} - \vec{r}_{1}|^2}$$
-2. Si ricava la velocità corotante sommando alla velocità del baricentro del sistema ($\vec{v}_{bary}$) la velocità angolare applicata al raggio rispetto al baricentro stesso ($\vec{R} = \vec{r}_{spawn} - \vec{r}_{bary}$):
-   $$\vec{v}_{corot} = \vec{v}_{bary} + \vec{\omega} \times \vec{R}$$
+$$\omega = \frac{(\vec{r}_2 - \vec{r}_1) \times (\vec{v}_2 - \vec{v}_1)}{|\vec{r}_2 - \vec{r}_1|^2}$$
+2. Si ricava la velocità corotante sommando alla velocità del baricentro del sistema ($\vec{v}_{\text{bary}}$) la velocità angolare applicata al raggio rispetto al baricentro stesso ($\vec{R} = \vec{r}_{\text{spawn}} - \vec{r}_{\text{bary}}$):
+$$\vec{v}_{\text{corot}} = \vec{v}_{\text{bary}} + \vec{\omega} \times \vec{R}$$
 
 ### 9.6 Perché coesistono l'overlay teorico e la heatmap dinamica?
 Nel simulatore, i punti di Lagrange vengono visualizzati su schermo in due modalità sovrapposte: tramite marcatori geometrici precisi (**overlay teorico**, ricavato in §9.4) e tramite una mappa spettrale continua (**heatmap dinamica**, basata sull'inversa dell'Hessiana descritta in **[§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)**). Questa coesistenza risponde a importanti esigenze fisiche e di interazione:
