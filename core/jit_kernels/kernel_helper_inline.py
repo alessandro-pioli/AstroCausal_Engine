@@ -289,7 +289,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
 # HELPER: SCIE ADATTIVE (Zero Divisioni)
 # ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
-def update_trail_logic(i, pos_x, pos_y, vel_x, vel_y, radius, trail_buf, trail_heads, trail_last_pos):
+def update_trail_logic(i, pos_x, pos_y, vel_x, vel_y, radius, trail_buf, trail_heads, trail_last_pos, force_write):
     """
     LOGICA MATRICE 2x2 (RAGGIO vs VELOCITÀ)
     """
@@ -303,29 +303,32 @@ def update_trail_logic(i, pos_x, pos_y, vel_x, vel_y, radius, trail_buf, trail_h
     dist_sq = dx*dx + dy*dy
     
     # 3. MATRICE DECISIONALE
-    v_sq = vel_x*vel_x + vel_y*vel_y
-    is_huge = radius > RAD_HUGE
-    is_fast = v_sq > VEL_FAST_SQ
-    
-    thresh_dist = 0.0
-    
-    if is_huge:
-        if is_fast:
-            # Enorme e Veloce (Stella Binaria) -> Tratta come orbita
-            thresh_dist = STEP_ORBIT_SQ
-        else:
-            # Enorme e Lento (SOLE!) -> Dettaglio massimo per cuspidi
-            thresh_dist = STEP_SUN_SQ
+    n_bodies = trail_buf.shape[0]
+    if n_bodies < 5:
+        # Se i corpi sono meno di 5, dettaglio massimo per tutti i corpi
+        thresh_dist = STEP_SUN_SQ
     else:
-        if is_fast:
-            # Piccolo e Veloce (Pianeta) -> Tratta come orbita (per avere storia)
-            thresh_dist = STEP_ORBIT_SQ
+        v_sq = vel_x*vel_x + vel_y*vel_y
+        is_huge = radius > RAD_HUGE
+        is_fast = v_sq > VEL_FAST_SQ
+        
+        if is_huge:
+            if is_fast:
+                # Enorme e Veloce (Stella Binaria) -> Tratta come orbita
+                thresh_dist = STEP_ORBIT_SQ
+            else:
+                # Enorme e Lento (SOLE!) -> Dettaglio massimo per cuspidi
+                thresh_dist = STEP_SUN_SQ
         else:
-            # Piccolo e Lento (Asteroide) -> Risparmio
-            thresh_dist = STEP_DRIFT_SQ
+            if is_fast:
+                # Piccolo e Veloce (Pianeta) -> Tratta come orbita (per avere storia)
+                thresh_dist = STEP_ORBIT_SQ
+            else:
+                # Piccolo e Lento (Asteroide) -> Risparmio
+                thresh_dist = STEP_DRIFT_SQ
 
     # 4. Confronto e Scrittura
-    if dist_sq > thresh_dist:
+    if force_write or dist_sq > thresh_dist:
         
         head = trail_heads[i]
         cap = trail_buf.shape[1]
@@ -825,3 +828,124 @@ def update_ligo_probe_step(n_bodies, pos_arr, vel_arr, mass_arr, flags_arr,
     head = probe_head[0]
     probe_buf[head] = strain_totale
     probe_head[0] = (head + 1) & probe_mask
+
+
+@njit(inline='always', fastmath=True, cache=True)
+def calculate_gw_contribution(
+    target_x, target_y,
+    px, py, mass, rad,
+    h_L0, heads_L0, mask_L0, len_L0,
+    h_L1, heads_L1, mask_L1, len_L1,
+    h_L2, heads_L2, mask_L2, len_L2,
+    i, 
+    inv_c, inv_dt, void_val,
+    vcom_x, vcom_y
+):
+    """
+    Calcola la deformazione causale proiettata (GW strain) indotta dal moto
+    del corpo k nel frame inerziale della binaria (con V_COM sottratta).
+    """
+    # --- 1. PRIMA STIMA (basata sul presente) ---
+    dx_now = target_x - px
+    dy_now = target_y - py
+    dist_sq_now = dx_now*dx_now + dy_now*dy_now
+    
+    if dist_sq_now < (rad*rad): 
+        return 0.0
+
+    dist_now = math.sqrt(dist_sq_now)
+    t_delay_est = dist_now * inv_c
+    ticks_est = int(t_delay_est * inv_dt)
+    
+    ret_x, ret_y = 0.0, 0.0
+    ret_mass = mass
+    valid_est = False
+    
+    if ticks_est < len_L0:
+        ptr = (heads_L0[i] - ticks_est) & mask_L0
+        if h_L0[i, ptr, 0] > void_val:
+            ret_x, ret_y = h_L0[i, ptr, 0], h_L0[i, ptr, 1]
+            ret_mass = h_L0[i, ptr, 4]
+            valid_est = True
+    elif ticks_est < (len_L1 << 5):
+        ptr = (heads_L1[i] - (ticks_est >> 5)) & mask_L1
+        if h_L1[i, ptr, 0] > void_val:
+            ret_x, ret_y = h_L1[i, ptr, 0], h_L1[i, ptr, 1]
+            ret_mass = h_L1[i, ptr, 4]
+            valid_est = True
+    elif ticks_est < (len_L2 << 8):
+        ptr = (heads_L2[i] - (ticks_est >> 8)) & mask_L2
+        if h_L2[i, ptr, 0] > void_val:
+            ret_x, ret_y = h_L2[i, ptr, 0], h_L2[i, ptr, 1]
+            ret_mass = h_L2[i, ptr, 4]
+            valid_est = True
+    else:
+        is_history_full = False
+        if len_L2 > 0:
+            ptr_tail = (heads_L2[i] + 1) & mask_L2
+            if h_L2[i, ptr_tail, 0] > void_val: is_history_full = True
+        elif len_L1 > 0:
+            ptr_tail = (heads_L1[i] + 1) & mask_L1
+            if h_L1[i, ptr_tail, 0] > void_val: is_history_full = True
+        elif len_L0 > 0:
+            ptr_tail = (heads_L0[i] + 1) & mask_L0
+            if h_L0[i, ptr_tail, 0] > void_val: is_history_full = True
+
+        if is_history_full:
+            ret_x = px
+            ret_y = py
+            valid_est = True
+
+    if not valid_est: 
+        return 0.0
+
+    # --- 2. RICALCOLO CAUSALE (Il centro del compasso diventa il passato) ---
+    dx_true = target_x - ret_x
+    dy_true = target_y - ret_y
+    dist_true = math.sqrt(dx_true*dx_true + dy_true*dy_true)
+    if dist_true < rad:
+        return 0.0
+    
+    true_ticks = int(dist_true * inv_c * inv_dt)
+    
+    ret_vx, ret_vy = 0.0, 0.0
+    
+    if true_ticks < len_L0:
+        ptr = (heads_L0[i] - true_ticks) & mask_L0
+        ret_vx, ret_vy = h_L0[i, ptr, 2], h_L0[i, ptr, 3]
+        ret_x, ret_y = h_L0[i, ptr, 0], h_L0[i, ptr, 1]
+        ret_mass = h_L0[i, ptr, 4]
+    elif true_ticks < (len_L1 << 5):
+        ptr = (heads_L1[i] - (true_ticks >> 5)) & mask_L1
+        ret_vx, ret_vy = h_L1[i, ptr, 2], h_L1[i, ptr, 3]
+        ret_x, ret_y = h_L1[i, ptr, 0], h_L1[i, ptr, 1]
+        ret_mass = h_L1[i, ptr, 4]
+    elif true_ticks < (len_L2 << 8):
+        ptr = (heads_L2[i] - (true_ticks >> 8)) & mask_L2
+        ret_vx, ret_vy = h_L2[i, ptr, 2], h_L2[i, ptr, 3]
+        ret_x, ret_y = h_L2[i, ptr, 0], h_L2[i, ptr, 1]
+        ret_mass = h_L2[i, ptr, 4]
+    else:
+        if len_L0 > 0:
+            last_ptr = (heads_L0[i] - 1) & mask_L0
+            ret_vx, ret_vy = h_L0[i, last_ptr, 2], h_L0[i, last_ptr, 3]
+
+    dx_final = target_x - ret_x
+    dy_final = target_y - ret_y
+    r_geom = math.sqrt(dx_final*dx_final + dy_final*dy_final)
+    if r_geom < rad:
+        r_geom = rad
+    if r_geom < 1.0:
+        r_geom = 1.0
+
+    # Sottrazione del moto di COM
+    vx_rel = ret_vx - vcom_x
+    vy_rel = ret_vy - vcom_y
+
+    # Proiezione del quadrupolo
+    nx = dx_final / r_geom
+    ny = dy_final / r_geom
+    h_plus_proj = (vx_rel*vx_rel - vy_rel*vy_rel) * (nx*nx - ny*ny) + 4.0 * (vx_rel * vy_rel) * (nx * ny)
+
+    # Radiazione Far-Field (1/R)
+    return (ret_mass * h_plus_proj) / r_geom

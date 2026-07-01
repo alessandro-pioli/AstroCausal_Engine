@@ -812,3 +812,161 @@ def probe_tidal_stress_at_point(
     log_stress = math.log10(tidal_stress + 1e-30) + log_offset
     return tidal_stress, log_stress
 
+
+@njit(parallel=True, fastmath=True, cache=True)
+def render_gw_strain_kernel(
+    output_img, width, height, cam_scale, cam_off_x, cam_off_y,
+    p_pos, p_vel, p_mass, p_rad, 
+    p_idx, num_active,
+    h_L0, heads_L0, mask_L0, len_L0,
+    h_L1, heads_L1, mask_L1, len_L1,
+    h_L2, heads_L2, mask_L2, len_L2,
+    c_sq, void_val, inv_c, inv_dt,
+    target_idx, attr_idx,
+    sensitivity 
+):
+    cx = width >> 1
+    cy = height >> 1
+
+    # 1. Calcolo del centro di massa (V_COM) per la coppia binaria nel presente
+    vcom_x = 0.0
+    vcom_y = 0.0
+    if target_idx >= 0 and attr_idx >= 0 and target_idx < num_active and attr_idx < num_active:
+        m1 = p_mass[attr_idx]
+        m2 = p_mass[target_idx]
+        M_tot = m1 + m2
+        if M_tot > 0.0:
+            vcom_x = (m1 * p_vel[attr_idx, 0] + m2 * p_vel[target_idx, 0]) / M_tot
+            vcom_y = (m1 * p_vel[attr_idx, 1] + m2 * p_vel[target_idx, 1]) / M_tot
+
+    for x in prange(width):
+        w_x = (x - cx) * cam_scale + cam_off_x
+        for y in range(height):
+            w_y = (y - cy) * cam_scale + cam_off_y
+            
+            gw_total = 0.0
+            
+            # Se la coppia è attiva, calcoliamo il contributo di ciascun membro
+            if target_idx >= 0 and attr_idx >= 0 and target_idx < num_active and attr_idx < num_active:
+                # Contribuisce l'attore primario (attrattore)
+                i_attr = p_idx[attr_idx]
+                px_attr = p_pos[attr_idx, 0]
+                py_attr = p_pos[attr_idx, 1]
+                m_attr = p_mass[attr_idx]
+                r_attr = p_rad[attr_idx]
+                
+                contrib_attr = kernel_helper_inline.calculate_gw_contribution(
+                    w_x, w_y,
+                    px_attr, py_attr, m_attr, r_attr,
+                    h_L0, heads_L0, mask_L0, len_L0,
+                    h_L1, heads_L1, mask_L1, len_L1,
+                    h_L2, heads_L2, mask_L2, len_L2,
+                    i_attr,
+                    inv_c, inv_dt, void_val,
+                    vcom_x, vcom_y
+                )
+                gw_total += contrib_attr
+
+                # Contribuisce l'attore secondario (target)
+                i_tgt = p_idx[target_idx]
+                px_tgt = p_pos[target_idx, 0]
+                py_tgt = p_pos[target_idx, 1]
+                m_tgt = p_mass[target_idx]
+                r_tgt = p_rad[target_idx]
+                
+                contrib_tgt = kernel_helper_inline.calculate_gw_contribution(
+                    w_x, w_y,
+                    px_tgt, py_tgt, m_tgt, r_tgt,
+                    h_L0, heads_L0, mask_L0, len_L0,
+                    h_L1, heads_L1, mask_L1, len_L1,
+                    h_L2, heads_L2, mask_L2, len_L2,
+                    i_tgt,
+                    inv_c, inv_dt, void_val,
+                    vcom_x, vcom_y
+                )
+                gw_total += contrib_tgt
+
+            # Colorazione con asinh e crest/trough map
+            val = gw_total * sensitivity
+            norm = math.asinh(val)
+            
+            if norm > 1.0: norm = 1.0
+            elif norm < -1.0: norm = -1.0
+            
+            r, g, b = 0, 0, 0
+            if norm > 0.0:
+                g = int(norm * 180)
+                b = int(norm * 255)
+            else:
+                v = -norm
+                r = int(v * 255)
+                g = int(v * 60)
+            
+            output_img[x, y, 0] = np.uint8(r)
+            output_img[x, y, 1] = np.uint8(g)
+            output_img[x, y, 2] = np.uint8(b)
+
+
+@njit(fastmath=True, cache=True)
+def probe_gw_strain_at_point(
+    probe_x, probe_y,
+    p_pos, p_vel, p_mass, p_rad, 
+    p_idx, num_active,
+    h_L0, heads_L0, mask_L0, len_L0,
+    h_L1, heads_L1, mask_L1, len_L1,
+    h_L2, heads_L2, mask_L2, len_L2,
+    inv_c, inv_dt, void_val,
+    target_idx, attr_idx
+):
+    """
+    Rileva il valore esatto di GW strain in un punto dello spazio (Sonda).
+    """
+    if target_idx < 0 or attr_idx < 0 or target_idx >= num_active or attr_idx >= num_active:
+        return 0.0
+        
+    m1 = p_mass[attr_idx]
+    m2 = p_mass[target_idx]
+    M_tot = m1 + m2
+    if M_tot <= 0.0:
+        return 0.0
+        
+    vcom_x = (m1 * p_vel[attr_idx, 0] + m2 * p_vel[target_idx, 0]) / M_tot
+    vcom_y = (m1 * p_vel[attr_idx, 1] + m2 * p_vel[target_idx, 1]) / M_tot
+    
+    gw_total = 0.0
+    
+    # Contribuzione primario
+    i_attr = p_idx[attr_idx]
+    px_attr = p_pos[attr_idx, 0]
+    py_attr = p_pos[attr_idx, 1]
+    contrib_attr = kernel_helper_inline.calculate_gw_contribution(
+        probe_x, probe_y,
+        px_attr, py_attr, m1, p_rad[attr_idx],
+        h_L0, heads_L0, mask_L0, len_L0,
+        h_L1, heads_L1, mask_L1, len_L1,
+        h_L2, heads_L2, mask_L2, len_L2,
+        i_attr,
+        inv_c, inv_dt, void_val,
+        vcom_x, vcom_y
+    )
+    gw_total += contrib_attr
+    
+    # Contribuzione secondario
+    i_tgt = p_idx[target_idx]
+    px_tgt = p_pos[target_idx, 0]
+    py_tgt = p_pos[target_idx, 1]
+    contrib_tgt = kernel_helper_inline.calculate_gw_contribution(
+        probe_x, probe_y,
+        px_tgt, py_tgt, m2, p_rad[target_idx],
+        h_L0, heads_L0, mask_L0, len_L0,
+        h_L1, heads_L1, mask_L1, len_L1,
+        h_L2, heads_L2, mask_L2, len_L2,
+        i_tgt,
+        inv_c, inv_dt, void_val,
+        vcom_x, vcom_y
+    )
+    gw_total += contrib_tgt
+    
+    return gw_total
+
+

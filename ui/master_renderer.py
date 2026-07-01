@@ -61,6 +61,8 @@ class MasterRenderer:
             renderer.render(screen, camera, mode="ROCHE_DU", lagrange_tgt=lagrange_target_idx, lagrange_attr=lagrange_attr_idx)
         elif gstate.view_mode == 5:
             renderer.render(screen, camera, mode="TIDAL_STRESS")
+        elif gstate.view_mode == 6:
+            renderer.render(screen, camera, mode="GW_STRAIN", lagrange_tgt=lagrange_target_idx, lagrange_attr=lagrange_attr_idx)
 
         # 2. Scie
         if gstate.show_paths:
@@ -105,11 +107,9 @@ class MasterRenderer:
         
         if gstate.view_mode == 2:
             fader_dphi.draw(screen)
-        elif gstate.view_mode in (3, 4):
+        elif gstate.view_mode in (3, 4, 6):
             fader_roche.draw(screen)
-            debug_text = f"SENSITIVITY: 10^{config.ROCHE_SENSITIVITY_MAG:.2f} = {10.0**config.ROCHE_SENSITIVITY_MAG:.2e}"
-            debug_surface = self.font_top_left.render(debug_text, True, UITheme.DANGER)
-            screen.blit(debug_surface, (WIDTH - debug_surface.get_width() - 80, HEIGHT // 2 - debug_surface.get_height()//2))
+            
             
             if gstate.view_mode == 4:
                 fader_contrast.draw(screen)

@@ -112,6 +112,10 @@ PRESETS_DB = {
         "desc": "Versione ultra-alleggerita dello scenario relativistico. Partendo da 0.7c, permette di apprezzare la transizione dinamica da un campo gravitazionale sferico ad un disco piatto di Lambert man mano che v si approssima a c. Richiede solo 5 GB di RAM di picco in fase di costruzione (2.5 GB operativi) coprendo ben 8710 anni luce di storia causale con DT=16.0. SOLO la heatmap Phi gestisce questo ramo relativistico.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
         "dt": "16.0"
     },
+    "Stelle di Neutroni Binarie \u2014 Eccentricità Estrema": {
+        "desc": "Due stelle di neutroni gemelle (~1.5 M\u2609) in orbite estremamente eccentriche attorno al comune baricentro. Il baricentro orbitale corrisponde esattamente alla metà della loro separazione al pericentro (200 km), con le orbite che si intrecciano velocemente.\nConsigliato: DPHI per osservare l'onda quadrupolare impulsiva al pericentro.",
+        "dt": "0.000001"
+    },
     "Stelle di Neutroni Binarie \u2014 Orbita Stabile": {
         "desc": "Due stelle di neutroni (~1.5 M\u2609) in orbita circolare stabile a 40.000 km. Stato di riferimento pre-inspiral. L'irraggiamento di onde gravitazionali a questa distanza produce un decadimento orbitale reale ma lento, con fusione prevista su scala di secoli.\nConsigliato: DPHI per l'onda quadrupolare pura del sistema binario.",
         "dt": "0.001"

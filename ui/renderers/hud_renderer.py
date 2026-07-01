@@ -32,7 +32,7 @@ class HudRenderer:
             else:
                 lock_str = "FREE CAM"
                 
-            mode_names = ["OFF", "PHI", "WAVES (dPhi/dT)", "LAGRANGE HUNTER", "ROCHE TOPOLOGY", "TIDAL STRESS"]
+            mode_names = ["OFF", "PHI", "WAVES (dPhi/dT)", "LAGRANGE HUNTER", "ROCHE TOPOLOGY", "TIDAL STRESS", "GW STRAIN (QUADRUPOLE)"]
             field_status = mode_names[gstate.view_mode] if 0 <= gstate.view_mode < len(mode_names) else f"UNKNOWN ({gstate.view_mode})"
             
             fov_w_km = WIDTH * camera.scale

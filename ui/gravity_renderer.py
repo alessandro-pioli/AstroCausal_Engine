@@ -51,7 +51,7 @@ class GravityRenderer:
     def render(self, screen, camera, mode="PHI", **kwargs): 
             """Genera e disegna a schermo la heatmap selezionata (potenziale, onde, stress o Roche/Lagrange)."""
             # 1. SELEZIONE INDICI (Zero-Allocation Pointer)
-            if mode in ("DPHI", "LAGRANGE_HUNTER", "ROCHE_DU", "TIDAL_STRESS"):
+            if mode in ("DPHI", "LAGRANGE_HUNTER", "ROCHE_DU", "TIDAL_STRESS", "GW_STRAIN"):
                 active_indices = data.ACTIVE_INDICES_ALL
             else:
                 active_indices = data.ACTIVE_INDICES_LOD
@@ -180,7 +180,7 @@ class GravityRenderer:
                             h_n = dx_n * vy_n - dy_n * vx_n
                             omega_sq_n = (h_n * h_n) / (r_n ** 4)
                             # (27.0 / 4.0) è il coefficiente analitico per normalizzare il lobo di Roche critico nei sistemi circolari
-                            f_norm_candidate = (27.0 / 4.0) * q_n * (1.0 - q_n) * omega_sq_n * r_n
+                            f_norm_candidate = (27.0 / 4.0) * r_n * (1.0 - r_n) * omega_sq_n * r_n
                             if f_norm_candidate > 1e-300:
                                 f_norm = f_norm_candidate
 
@@ -207,6 +207,31 @@ class GravityRenderer:
                         t_local, a_local,
                         data.G, max_F, 1.0 / f_norm, config.ROCHE_CONTRAST
                     )
+                
+            elif mode == "GW_STRAIN":
+                t_local = -1
+                a_local = -1
+                lagrange_tgt = kwargs.get('lagrange_tgt', -1)
+                lagrange_attr = kwargs.get('lagrange_attr', -1)
+                for i in range(num_active):
+                    if self.p_idx[i] == lagrange_tgt: t_local = i
+                    if self.p_idx[i] == lagrange_attr: a_local = i
+                
+                final_sensitivity = (10.0 ** config.ROCHE_SENSITIVITY_MAG) * 1e-36
+                graphics_kernel.render_gw_strain_kernel(
+                    self.pixel_buffer,
+                    self.render_w, self.render_h,
+                    camera.scale * self.div, 
+                    camera.offset_x, camera.offset_y,
+                    self.p_pos, self.p_vel, self.p_mass, self.p_rad, 
+                    self.p_idx, num_active,
+                    data.HISTORY_L0, data.HEADS_L0, data.MASK_L0, data.LEN_L0,
+                    h_L1, heads_L1, data.MASK_L1, len_L1,
+                    h_L2, heads_L2, data.MASK_L2, len_L2,
+                    data.C_SQ, data.VOID_VAL, data.INV_C, data.INV_DT,
+                    t_local, a_local,
+                    final_sensitivity
+                )
                 
             elif mode == "TIDAL_STRESS":
                 log_offset = kwargs.get('log_offset', 0.0)

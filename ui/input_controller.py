@@ -85,7 +85,7 @@ class InputController:
         if ui_state.gstate.view_mode == 2 and ui_state.fader_dphi.handle_event(event):
             config.USER_SENSITIVITY_MAG = ui_state.fader_dphi.get_value()
             return True
-        elif ui_state.gstate.view_mode in (3, 4) and ui_state.fader_roche.handle_event(event):
+        elif ui_state.gstate.view_mode in (3, 4, 6) and ui_state.fader_roche.handle_event(event):
             config.ROCHE_SENSITIVITY_MAG = ui_state.fader_roche.get_value()
             return True
         elif ui_state.gstate.view_mode == 4 and ui_state.fader_contrast.handle_event(event):
@@ -220,6 +220,23 @@ class InputController:
             print(f"        Phi  : {phi_val:.6e} km²/s²")
             print(f"        DPhi : {dphi_val * 1e3:.6e} kW/kg  (km²/s³)")
             print(f"        Tidal: {tidal_str:.4e} s^-2  (log10: {log_str:.2f})")
+            if ui_state.lagrange_target_idx != -1:
+                t_local = -1
+                a_local = -1
+                for idx_pos, idx_val in enumerate(active_indices):
+                    if idx_val == ui_state.lagrange_target_idx: t_local = idx_pos
+                    if idx_val == ui_state.lagrange_attr_idx: a_local = idx_pos
+                gw_val = graphics_kernel.probe_gw_strain_at_point(
+                    wx, wy,
+                    data.POS, data.VEL, data.MASS, data.RAD,
+                    active_indices, len(active_indices),
+                    _h_L0, data.HEADS_L0, data.MASK_L0, data.LEN_L0,
+                    _h_L1, data.HEADS_L1, data.MASK_L1, data.LEN_L1,
+                    _h_L2, data.HEADS_L2, data.MASK_L2, data.LEN_L2,
+                    data.INV_C, data.INV_DT, data.VOID_VAL,
+                    t_local, a_local
+                )
+                print(f"        GW   : {gw_val:.6e} strain")
  
 
     def on_key_down(self, event):
@@ -283,7 +300,7 @@ class InputController:
 
         # --- TASTI PRINCIPALI ---
         if event.key == pygame.K_TAB:
-            if ui_state.gstate.view_mode in (3, 4):
+            if ui_state.gstate.view_mode in (3, 4, 6):
                 active_b = [i for i in range(data.MAX_BODIES)
                             if (data.FLAGS[i] & data.FLAG_ALIVE) and not (data.FLAGS[i] & data.FLAG_DYING)
                             and data.TOP_ATTRACTOR[i] != -1]
@@ -377,6 +394,9 @@ class InputController:
                 ui_state.gstate.view_mode = 4
                 print("FIELD: ROCHE DU (GRADIENT)")
             elif ui_state.gstate.view_mode == 4:
+                ui_state.gstate.view_mode = 6
+                print("FIELD: GW STRAIN (QUADRUPOLE)")
+            elif ui_state.gstate.view_mode == 6:
                 ui_state.gstate.view_mode = 1
                 print("FIELD: PHI (STANDARD)")
             else:
@@ -410,7 +430,7 @@ class InputController:
                         else:
                             print("L-SYSTEM: Cannot activate. No body with mass >= 1.0e18 kg and valid attractor found.")
                 else:
-                    if ui_state.gstate.view_mode in (3, 4):
+                    if ui_state.gstate.view_mode in (3, 4, 6):
                         ui_state.gstate.view_mode = 1
                         print("FIELD: PHI (STANDARD)")
  

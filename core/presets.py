@@ -55,6 +55,8 @@ def get_preset(name="Sistema Solare Completo"):
         return _make_Rspeed_test_ultralight()
     elif name == "Stelle di Neutroni Binarie — Orbita Stabile":
         return _make_binary_neutron_stars_stable()
+    elif name == "Stelle di Neutroni Binarie — Eccentricità Estrema":
+        return _make_extreme_eccentric_binary_ns()
     elif name == "Stelle di Neutroni Binarie — Pre-Collisione":
         return _make_binary_neutron_stars_pre_collision()
     elif name == "GW170817 — Merger Stelle di Neutroni":
@@ -589,6 +591,37 @@ def _make_jovian_system():
     ideal_dt = 60.0
     ideal_sim_radius = AU_IN_KM
     ideal_step = DEFAULT_STEP
+    return bodies, ideal_dt, ideal_sim_radius, ideal_step
+
+def _make_extreme_eccentric_binary_ns():
+    """
+    Stelle di Neutroni Binarie — Eccentricità Estrema.
+
+    Due stelle di neutroni gemelle (~1.5 M_sol ciascuna) in orbite altamente
+    eccentriche attorno al comune baricentro. Il baricentro corrisponde alla
+    metà della distanza R che le separa al loro pericentro (200 km).
+    """
+    bodies = []
+    
+    mass = 3.0e30 
+    m_tot = mass * 2.0
+    
+    dist_peri = 200.0
+    dist_apo = 4000.0
+    
+    v_rel_apo = solve_velocity_from_apocenter(m_tot, dist_apo, dist_peri)
+    v_orb = v_rel_apo / 2.0
+    
+    r_bary = dist_apo / 2.0  
+    rad_visual = 12.0 
+
+    bodies.append(CelestialBody(0, mass, [-r_bary, 0.0], [0.0, -v_orb], rad_visual, (0, 255, 255), pre_existed=False, name="NS Alpha"))
+    bodies.append(CelestialBody(1, mass, [r_bary, 0.0], [0.0, v_orb], rad_visual, (255, 0, 255), pre_existed=False, name="NS Beta"))
+
+    ideal_dt = 0.000001
+    ideal_sim_radius = 3.0 * AU_IN_KM 
+    ideal_step = 1000
+    
     return bodies, ideal_dt, ideal_sim_radius, ideal_step
 
 def _make_binary_neutron_stars_stable():

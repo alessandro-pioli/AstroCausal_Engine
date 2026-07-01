@@ -30,6 +30,16 @@ def update_step_double_par(
 ):
     
     for step_idx in range(steps):
+        force_trail_write = False
+        if n_bodies == 2:
+            if (flags_arr[0] & FLAG_ALIVE) != 0 and (flags_arr[1] & FLAG_ALIVE) != 0:
+                dx = pos_arr[0, 0] - pos_arr[1, 0]
+                dy = pos_arr[0, 1] - pos_arr[1, 1]
+                if dx*dx + dy*dy < 2500000000.0:  # 50,000 km squared
+                    current_tick = int(round(sim_time / dt)) + step_idx
+                    if (current_tick & 1023) == 0:
+                        force_trail_write = True
+
         # --- FASE 1: AGGIORNAMENTO E SCRITTURA ---
         for i in range(n_bodies):
             if (flags_arr[i] & FLAG_ALIVE) == 0: continue 
@@ -212,7 +222,8 @@ def update_step_double_par(
                 i, pos_arr[i, 0], pos_arr[i, 1], 
                 vel_arr[i, 0], vel_arr[i, 1], 
                 rad_arr[i],
-                trail_buf, trail_heads, trail_last_pos
+                trail_buf, trail_heads, trail_last_pos,
+                force_trail_write
             )
             
         # =========================================================================
@@ -238,6 +249,16 @@ def update_step_double_seq(
 ):
     # Logica Sequenziale (copia esatta della parallela senza prange)
     for step_idx in range(steps):
+        force_trail_write = False
+        if n_bodies == 2:
+            if (flags_arr[0] & FLAG_ALIVE) != 0 and (flags_arr[1] & FLAG_ALIVE) != 0:
+                dx = pos_arr[0, 0] - pos_arr[1, 0]
+                dy = pos_arr[0, 1] - pos_arr[1, 1]
+                if dx*dx + dy*dy < 2500000000.0:  # 50,000 km squared
+                    current_tick = int(round(sim_time / dt)) + step_idx
+                    if (current_tick & 1023) == 0:
+                        force_trail_write = True
+
         # Fase 1: Posizione e Scrittura
         for i in range(n_bodies):
             if (flags_arr[i] & FLAG_ALIVE) == 0: continue 
@@ -398,7 +419,8 @@ def update_step_double_seq(
                 i, pos_arr[i, 0], pos_arr[i, 1], 
                 vel_arr[i, 0], vel_arr[i, 1], 
                 rad_arr[i],
-                trail_buf, trail_heads, trail_last_pos
+                trail_buf, trail_heads, trail_last_pos,
+                force_trail_write
             )
             
         # =========================================================================

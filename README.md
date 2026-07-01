@@ -103,6 +103,7 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 | **Approccio a *c* (0.9c)** | 1 | 1.6 s | 1742 LY (~110M AU) | Versione alleggerita (10 GB RAM) |
 | **Approccio a *c* (0.7c)** | 1 | 16 s | 8710 LY (~550M AU) | Versione ultra-light (5 GB RAM) |
 | **NS Binarie — Orbita Stabile** | 2 | 1 ms | 640 AU | Due stelle di neutroni ~1.5 M☉ a 40.000 km |
+| **NS Binarie — Eccentricità Estrema** | 2 | 1 μs | 3 AU | Orbite gemelle altamente eccentriche (apocentro 4000 km, pericentro 200 km) |
 | **NS Binarie — Pre-Collisione** | 2 | 1 μs | 2 AU | Late inspiral, merger in ~59,7 s simulati |
 | **GW170817** | 2 | 1 μs | 3 AU | Replica del primo evento multi-messaggero (merger in ~13,9 s simulati) |
 | **GW150914** | 2 | 1 μs | 3 AU | Primo evento GW rilevato da LIGO (merger in ~18.3 s simulati, inizializzato teoricamente a T-60s) |
