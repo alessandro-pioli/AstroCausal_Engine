@@ -110,7 +110,7 @@ Tra le soluzioni determinanti per garantire la stabilità orbitale a lungo termi
 
 | Heatmap dΦ/dt | Heatmap GW Strain |
 |:---:|:---:|
-| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls width="100%"></video> |
+| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" autoplay loop muted playsinline controls width="100%"></video> |
 | **Variazione temporale del potenziale scalare (\(d\Phi/dt\)):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato. I fronti a spirale visibili indicano la propagazione a velocità finita \(c\) dei dipoli di accelerazione. Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
 
 **Dove si vedono queste onde, e cosa sono realmente.** 
@@ -274,12 +274,13 @@ Il passo $\Delta t$ non governa solo la precisione dell'integrazione. Nelle simu
 $$f_s = \frac{1}{\Delta t}$$
 
 ed è questa frequenza a stabilire se il chirp potrà *emergere* dallo spettrogramma o sparirà nel rumore. Per il **teorema di campionamento di Nyquist-Shannon**, per ricostruire un segnale di frequenza massima $f_{max}$ senza aliasing serve
-**
+
 $$f_s > 2\,f_{max}$$
 
 Nei merger di stelle di neutroni (es. GW170817) la frequenza dell'onda analoga, pari al **doppio** di quella orbitale, raggiunge $\sim 1\text{–}2\ \text{kHz}$ poco prima del contatto. Per catturarla pulita serve $f_s > 4\ \text{kHz}$, cioè $\Delta t < 2{,}5 \times 10^{-4}\ \text{s}$. Il simulatore usa $\Delta t = 1\ \mu\text{s}$ ($f_s = 1\ \text{MHz}$), un margine enorme: **è questo che permette al chirp di emergere** nello spettrogramma invece di collassare in rumore di aliasing. In altre parole, con un $\Delta t$ troppo grande l'evento fisico avverrebbe lo stesso, ma non sarebbe **osservabile**: la sonda non avrebbe abbastanza campioni per ricostruire la rampa finale di frequenza.
+ 
 
-> **Nota dell'autore.** Nyquist-Shannon non lo conoscevo per nome: ci ero arrivato per logica (per tenere stabili le orbite serve già campionare il periodo molte volte, quindi a maggior ragione per *vedere* il chirp serve campionare ben oltre la sua frequenza). Solo dopo, con l'aiuto di un LLM, ho scoperto che quel ragionamento ha un nome formale, "*il teorema di campionamento*", e da lì la giustificazione rigorosa qui sopra. pertanto faccio presente che visto che il DT è calibrato a monte a seconda dello scenario impostato ma l'utente ha la possibilità di cambiarlo in tempo reale: in tal caso, molto prima di vedere gli effetti di aliasing descritti sopra si ha un effetto per cui l'errore di trocamento distrugge le orbite. Il teorema rimane utile come regola inviolabile per la pulizia del sengale e come indizio sul corretto intervallo di impostazione della simulazione .
+> **Nota metodologica.** La connessione formale con il teorema di Nyquist-Shannon è stata analizzata a posteriori, durante la fase di formalizzazione teorica dello spettrogramma. All'atto pratico della simulazione, l'integrazione numerica delle orbite (regolata dall'errore di troncamento locale, che scala quadraticamente con il passo temporale) impone già vincoli di stabilità estremamente severi, costringendo a un campionamento molto più fitto di quello strettamente richiesto per evitare l'aliasing del segnale. Se l'utente aumenta manualmente il \(dt\) in tempo reale, la distruzione fisica dell'orbita per instabilità numerica si manifesterà molto prima degli effetti di aliasing descritti sopra. Il teorema di Nyquist-Shannon rimane tuttavia lo strumento teorico d'elezione per validare formalmente la pulizia dello strain ricostruito e per definire i limiti fisici di osservabilità della rampa di chirp.
 
 ### 4.4 Una nota sul LOD dei buffer
 
@@ -668,7 +669,7 @@ In un'orbita pulita e isolata, invece, l'anello resta immobile mentre la soglia 
 
 Sistema Luna-Terra: la Luna è al suo afelio a più di 400.000 km dalla Terra, infatti ha superato l'anello dell'orbita circolare ideale. Gli altri dettagli che emergono verranno discussi nel capitolo successivo.
 
-<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="100%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Media non trovato"></div>
 
 L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quel $h$, risulta essere vicino al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale estremo che con ogni probabilità la farà a pezzi prima ancora di raggiungere l'atmosfera di Giove, in *plunge* diretto.
 
@@ -1157,7 +1158,7 @@ Nel simulatore, i punti di Lagrange vengono visualizzati su schermo in due modal
 2. **Identificazione dei punti**: La heatmap individua i gradienti di forza ma non assegna etichette testuali. L'overlay teorico funge da guida visiva immediata per denominare e localizzare al volo la posizione generica delle singole regioni ($L_1 \dots L_5$).
 3. **Limite di visibilità per rapporti di massa estremi**: Quando il rapporto di massa tra i due corpi è dell'ordine di migliaia di volte (es. Sole-Terra, con la Terra circa 330.000 volte più leggera del Sole), i punti **$L_3$, $L_4$ e $L_5$ spariscono quasi completamente dalla heatmap**. L'influenza gravitazionale di $m_2$ a grande distanza è così debole che i pozzi di potenziale di $L_4$/$L_5$ e il punto di sella di $L_3$ presentano gradienti quasi nulli, confondendosi interamente con lo sfondo piatto dell'orbita. Al contrario, $L_1$ e $L_2$ (essendo immersi nella sfera di Hill di $m_2$ e situati nelle sue immediate vicinanze) rimangono ben visibili come picchi locali. In questi casi estremi, l'overlay teorico diventa l'unico marker visivo per individuare al volo $L_3$, $L_4$ e $L_5$ sullo schermo.
 
-<div align="center"><img src="docs/img/es_L5_unmatch.png" width="600" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/es_L5_unmatch.png" width="420" alt="Media non trovato"></div>
 
 Un chiaro esempio di discrepanza tra il punto di Lagrange teorico e il punto *emerso* dal Lagrange Hunter (in blu, punto L5 Luna-Terra).
 
