@@ -1,11 +1,11 @@
 # Guida Fisica e agli Scenari di Astro Causal Sim
 
-Questo documento è il riferimento **fisico-matematico** del progetto: spiega le equazioni dietro la dinamica e le heatmap, e collega ciascun blocco di teoria allo scenario che lo rende visibile. Per le scelte *ingegneristiche* (buffer, kernel JIT, performance) si veda [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md); per l'uso pratico, il [README.md](README.md).
+Questo documento è il riferimento **fisico-matematico** del progetto: spiega le equazioni dietro la dinamica e le heatmap, collega ciascun blocco di teoria allo scenario che lo rende visibile, e mostra con GIF, immagini e video quei fenomeni così come emergono realmente dal motore. Per le scelte *ingegneristiche* (buffer, kernel JIT, performance) si veda [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md); per l'uso pratico, il [README.md](README.md).
 
 > [!WARNING]
 > **Nota dell'autore e invito alla collaborazione**
 > Questo simulatore è un progetto indipendente e non accademico, e chi scrive **non è un fisico né un matematico di mestiere**. Le soluzioni fisiche implementate si appoggiano su una sintesi numerica di modelli standard della letteratura scientifica (tra cui la gravità a tempo ritardato, lo schema [Velocity Verlet](#41-lo-schema-di-integrazione), le formulazioni di [Liénard-Wiechert](#5-deformazione-di-li%C3%A9nard-wiechert) e [Paczyński-Wiita](#61-lo-pseudo-potenziale-di-paczy%C3%B9ki-wiita), e la reazione di radiazione gravitazionale [2.5PN](#62-cosa-sono-gli-ordini-post-newtoniani-e-il-25pn)).
-> Il motore è interamente **parameter-free** (privo di coefficienti liberi di taratura; la precedente euristica `m_chirp_mult` è stata completamente rimossa a favore della fisica reale a partire dall'implementazione della reazione 2.5PN, come discusso in [§6.5](#65-la-storia-da-m_chirp_mult-al-25pn-reale)) ed è stato validato empiricamente rispetto ai dati osservativi reali e di relatività numerica.
+> Il motore è interamente **parameter-free** (privo di coefficienti liberi di taratura) ed è stato validato empiricamente rispetto ai dati osservativi reali e di relatività numerica.
 > Trattandosi di un'opera autonoma di divulgazione e simulazione, il codice e la formalizzazione teorica gioverebbero enormemente del confronto e dello sguardo di professionisti e accademici del settore (collaborazione già tracciata nella **roadmap** del [README.md](README.md)).
 
 La scelta progettuale è rendere tutto rigorosamente **causale**: le forze
@@ -13,7 +13,7 @@ viaggiano a velocità finita $c$ e ogni corpo reagisce al passato degli
 altri. Da questa singola regola emergono, senza essere programmati,
 fenomeni che nella fisica reale appartengono al regime relativistico:
 i fronti d'onda del [chirp](#64-massa-chirp-e-formula-di-peters) visibili in $d\Phi/dt$, la forma di $f(t)$
-che ricalca la curva di Peters allo 0,97% (§6.6), le orbite a rosetta
+che ricalca la curva di Peters allo 0,97% per GW170817, sistema binario di stelle di neutroni (§6.6), e si scosta dalla relatività numerica di soli 1,27% per GW150914, sistema binario di buchi neri (§6.6.1), le orbite a rosetta
 degli **[EMRI](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allafelio)** (*Extreme Mass Ratio Inspiral*: un oggetto compatto leggero
 che spirala dentro un buco nero supermassiccio percorrendo migliaia di
 orbite con forte precessione apsidale), e il **cono di luce visibile a
@@ -41,7 +41,8 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
    - 1.1 Cosa risolve davvero il motore
    - 1.2 La natura delle onde del simulatore (livelli di astrazione)
 2. [Propagazione causale e istante di emissione](#2-propagazione-causale-e-istante-di-emissione)
-   - 2.1 Il tempo di volo per sorgenti in moto
+   - 2.1 Il cono di luce
+   - 2.2 Il tempo di volo per sorgenti in moto rettilineo, formula chiusa
 3. [Aberrazione causale, Dead Reckoning e dinamica relativistica](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica)
    - 3.1 Il problema dell'aberrazione
    - 3.2 La compensazione: Dead Reckoning ibrido
@@ -60,6 +61,7 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
    - 6.4 Massa chirp e formula di Peters
    - 6.5 La storia: da `m_chirp_mult` al 2.5PN reale
    - 6.6 Le prove: confronto col dato reale
+     - 6.6.1 Lo scenario BBH (GW150914): confronto con la relatività numerica SXS
 7. [La matematica delle heatmap](#7-la-matematica-delle-heatmap)
    - 7.1 Potenziale scalare Φ
    - 7.2 Variazione temporale dΦ/dt
@@ -75,7 +77,7 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
    - 7.6 Deformazione proiettata (GW Strain Quadrupolare)
    - 7.7 Riepilogo: come ogni heatmap converte la fisica in colore
    - 7.8 Il Pannello di Telemetria Orbitale (HUD)
-8. [L'analizzatore LIGO: dal proxy cinematico allo spettro](#8-lanalizzatore-ligo-dal-proxy-cinematico-allo-spettro)
+8. [L'analizzatore LIGO/Virgo: dal proxy cinematico allo spettro](#8-lanalizzatore-ligovirgo-dal-proxy-cinematico-allo-spettro)
    - 8.1 L'analogia con LIGO e Virgo sulla Terra
    - 8.2 Cos'è il momento di quadrupolo di massa? (Le due facce del quadrupolo)
    - 8.3 La formula 3D "camuffata" e la proiezione ortogonale al piano
@@ -100,7 +102,7 @@ Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D 
 ### 1.1 Cosa risolve davvero il motore
 Il simulatore non risolve le equazioni di campo di Einstein. Al suo cuore integra una **gravità newtoniana scalare ($GM/r^2$) resa interamente causale**, operante su uno sfondo euclideo piatto 2D. 
 
-La caratteristica distintiva e fondante del motore è che **l'informazione in tutto lo spazio viaggia rigorosamente alla velocità della luce $c$**: ogni corpo risente dell'influenza gravitazionale degli altri leggendone la posizione e lo stato all'istante di emissione passato ($[t_{\text{ret}} = t - r/c](#2-propagazione-causale-e-istante-di-emissione)$), calcolato individualmente in base al tempo di volo dell'interazione. Questo significa che ogni mutuo accoppiamento dinamico risente di un ritardo temporale finito, ed è intrinsecamente reciproco e non-locale nel tempo. Per rendere sostenibile a livello computazionale questa complessa dinamica a ritardo, il simulatore si appoggia a un'architettura basata su **buffer storici a livelli di dettaglio (LOD)** (descritta in dettaglio in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**), che consente lookup e interpolazioni temporali a costo costante $O(1)$, compilati al volo in codice macchina nativo altamente ottimizzato (tramite **Numba / LLVM**).
+La caratteristica distintiva e fondante del motore è che **l'informazione in tutto lo spazio viaggia rigorosamente alla velocità della luce $c$**: ogni corpo risente dell'influenza gravitazionale degli altri leggendone la posizione e lo stato all'istante di emissione passato ($[t_{\text{ret}} = t - r/c](#2-propagazione-causale-e-istante-di-emissione)$), calcolato individualmente in base al tempo di volo dell'interazione. Questo significa che ogni mutuo accoppiamento dinamico risente di un ritardo temporale finito, ed è intrinsecamente reciproco e non-locale nel tempo. Per rendere sostenibile a livello computazionale questa complessa dinamica a ritardo, il simulatore si appoggia a un'architettura basata su **buffer storici a livelli di dettaglio (LOD)** (il funzionamento concettuale, incluso il doppio recupero causale, è spiegato in apertura del **[§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica)**; i dettagli implementativi in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**), che consente lookup e interpolazioni temporali a costo costante $O(1)$, compilati al volo in codice macchina nativo altamente ottimizzato (tramite **Numba / LLVM**).
 
 Al di sopra di questo nucleo causale, in regimi relativistici specifici il motore innesta logiche di ordine superiore, dissipative o fenomenologiche: lo **[pseudo-potenziale di Paczyński-Wiita (§6.1)](#61-lo-pseudo-potenziale-di-paczy%C3%B9ki-wiita)** per i buchi neri, che riproduce orizzonte e ISCO senza risolvere la metrica; la **[correzione di Liénard-Wiechert](#5-deformazione-di-li%C3%A9nard-wiechert)** che comprime il campo delle sorgenti rapide vicino a $c$ (lo stesso effetto della **[contrazione di Lorentz](#5-deformazione-di-li%C3%A9nard-wiechert)** sul campo di una carica in moto); la **[reazione di radiazione 2.5PN (§6)](#6-gravit%C3%A0-estrema-paczy%C3%B9ki-wiita-25pn-e-massa-chirp)** che fa decadere le orbite compatte; e il **[freno d'inerzia relativistico (§3.4)](#34-compressione-relativistica-dellaccelerazione)** che rende $c$ un asintoto inavvicinabile.
 
@@ -110,14 +112,14 @@ Tra le soluzioni determinanti per garantire la stabilità orbitale a lungo termi
 
 | Heatmap dΦ/dt | Heatmap GW Strain |
 |:---:|:---:|
-| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video autoplay="autoplay" loop="loop" muted="muted" playsinline="playsinline" width="100%"><source src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" type="video/mp4"></video> |
-| **Variazione temporale del potenziale scalare ($d\Phi/dt$):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato. I fronti a spirale visibili indicano la propagazione a velocità finita $c$ dei dipoli di accelerazione. Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
+| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
+| **Variazione temporale del potenziale scalare ($d\Phi/dt$):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato: dice quanto e dove si sta spostando il pozzo gravitazionale scalare di ciascun corpo, non la sua accelerazione. I fronti a spirale visibili indicano la propagazione a velocità finita $c$ di questo dipolo di velocità. Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
 
 **Dove si vedono queste onde, e cosa sono realmente.** 
-Il simulatore non risolve le equazioni tensoriali complete della relatività generale nello spazio-tempo per calcolare le heatmap. Esso offre due distinti livelli di astrazione visiva per rappresentare l'irraggiamento energetico del sistema:
+Il simulatore non risolve le equazioni di campo di Einstein nello spazio-tempo per calcolare le heatmap. Esso offre due distinti livelli di astrazione visiva per rappresentare l'irraggiamento energetico del sistema:
 
-1. **L'analogo scalare ($d\Phi/dt$):** Emerge spontaneamente dalla sola propagazione causale del potenziale. Non calcola il quadrupolo, ma mostra l'onda di fase generata dallo spostamento dei singoli pozzi gravitazionali, ossia i dipoli di moto, condividendo con la fisica reale la sola frequenza orbitale e il phenomenon del chirp spettrale.
-2. **Lo strain quadrupolare proiettato:** Calcola esplicitamente la proiezione del quadrupolo delle velocità ritardate sul piano dell'osservatore. Questo layer riproduce fedelmente la simmetria angolare di quadrupolo dello spin-2 reale, eliminando gli effetti dipolari spuri e offrendo un quadro geometricamente coerente della radiazione gravitazionale.
+1. **L'analogo scalare ($d\Phi/dt$):** Emerge spontaneamente dalla sola propagazione causale del potenziale. Non calcola il quadrupolo, ma mostra l'onda di fase generata dal doppio dipolo rotante, cioè dallo spostamento causale dei singoli pozzi gravitazionali della coppia, condividendo con la fisica reale la sola frequenza orbitale e il fenomeno del chirp spettrale.
+2. **Lo strain quadrupolare proiettato:** Calcola esplicitamente la proiezione del quadrupolo delle velocità ritardate sul piano dell'osservatore, implementando la classica **formula del quadrupolo** (l'approssimazione standard di campo debole e moto lento con cui si deriva l'emissione di onde gravitazionali senza risolvere le equazioni di campo complete). Questo layer riproduce fedelmente la simmetria angolare di quadrupolo dello spin-2 reale, eliminando gli effetti dipolari spuri e offrendo un quadro geometricamente coerente della radiazione gravitazionale.
 
 La tabella seguente riassume schematicamente le differenze fisiche e geometriche tra le onde reali e le due visualizzazioni del simulatore:
 
@@ -142,11 +144,34 @@ Il cuore del modello: ogni corpo non sente la posizione *attuale* delle sorgenti
 
 $$t_{ret} = t - \frac{r}{c}$$
 
-dove $r$ è la distanza. Il valore di $t_{ret}$ è recuperato dai buffer storici con costo $O(1)$ (i dettagli di memoria sono nel deep-dive).
+dove $r$ è la distanza. Il valore di $t_{ret}$ è recuperato dai buffer storici con costo $O(1)$ (i dettagli di memoria sono nel deep-dive; il meccanismo concettuale del **doppio ritrovamento causale** con cui il motore individua $t_{ret}$ in pratica è descritto in apertura del [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica), "Il recupero in due passi").
 
-### 2.1 Il tempo di volo per sorgenti in moto
+### 2.1 Il cono di luce
 
-Una precisazione: l'equazione completa di questo paragrafo serve **solo** in un caso estremo, gli scenari «Approccio alla Velocità della Luce», dove un'accelerazione artificiale (ART) spinge di proposito un corpo oltre il limite causale per renderne visibile l'effetto: cioè *rompe volutamente la fisica*. Ed è un calcolo **formale e geometrico** (l'intersezione col cono di luce), trova *da dove* è partito il segnale.
+Un **cono di luce** è l'insieme di tutti i punti dello spaziotempo raggiungibili (o che possono raggiungere) un dato evento viaggiando esattamente alla velocità $c$. Nel classico diagramma di Minkowski a tre assi (due spaziali più il tempo verticale), l'insieme dei fronti d'onda emessi da un evento disegna letteralmente un cono che si apre nel futuro; l'insieme dei segnali che possono averlo influenzato dal passato disegna il cono simmetrico all'indietro. È la costruzione geometrica di base dietro ogni discorso di causalità relativistica, ed è esattamente il calcolo formale richiamato in apertura del §2.2: risolvere il tempo di volo *è* trovare l'intersezione con questo cono.
+
+Nella simulazione, che vive su un piano spaziale 2D, il cono si proietta in modo particolarmente semplice: **un cerchio che si espande (o si contrae) a velocità $c$**, centrato sull'evento che lo ha generato. È lo stesso oggetto geometrico del diagramma di Minkowski completo, solo osservato con **una dimensione spaziale in meno** (il classico trucco "**+1D**" per rendere visualizzabile un cono che in 3D pieno avrebbe bisogno di quattro assi): un piano spaziale 2D più il tempo produce comunque un cono a sezione circolare, e vale la stessa costruzione se si passasse a un piano 3D pieno, con il cerchio sostituito da una superficie sferica che si espande.
+
+<div align="center">
+  <img src="docs/img/Minkowski.png" width="400" alt="Diagramma classico del cono di luce di Minkowski">
+</div>
+
+*Rappresentazione geometrica del cono di luce di Minkowski nel diagramma a tre assi (due spaziali più il tempo verticale $t$). Ciascun evento nello spaziotempo definisce un cono di luce del passato (la regione da cui può ricevere segnali a velocità $\leq c$) ed un cono del futuro (la regione che può influenzare causalmente).*
+
+Il modo più diretto per vederlo emergere **nel simulatore stesso** è osservare cosa succede quando un corpo appare o scompare di colpo: l'informazione della sua nascita o morte non si propaga istantaneamente ovunque, ma parte dal punto dell'evento e si allarga come un fronte sferico (circolare, nel piano 2D) che avanza a $c$. Fuori da quel fronte, lo spazio *non sa ancora* che l'evento è accaduto, e continua a reagire al passato.
+
+| Morte causale improvvisa di una stella | Nascita causale improvvisa di una stella |
+|:---:|:---:|
+| <img src="docs/gif/Sun_causal_death.gif" width="100%" alt="Espansione del cono di luce alla scomparsa improvvisa di una stella"> | <img src="docs/gif/Sun_causal_birth.gif" width="100%" alt="Espansione del cono di luce alla comparsa improvvisa di una stella"> |
+| Il campo della stella scomparsa persiste all'esterno del fronte causale, e collassa a zero solo quando il cerchio d'espansione della "notizia" (viaggiando a velocità $c$) raggiunge i punti dello spazio. | Il campo della nuova stella è del tutto assente all'esterno del fronte causale, e si accende propagandosi verso l'esterno solo quando il cerchio d'espansione dell'evento di nascita lo raggiunge. |
+
+*L'inquadratura delle due dimostrazioni è leggermente diversa ed è intorno a 1x1 AU*
+
+*In entrambi i casi della simulazione, il fronte causale visibile nella heatmap del potenziale $\Phi$ rappresenta la sezione spaziale 2D del cono di luce dell'evento, che si propaga nello spazio alla velocità costante della luce $c$.*
+
+### 2.2 Il tempo di volo per sorgenti in moto rettilineo, formula chiusa
+
+Una precisazione: l'equazione completa di questo paragrafo serve **solo** in un caso estremo, gli scenari «Approccio alla Velocità della Luce», dove un'accelerazione artificiale (ART) spinge di proposito un corpo oltre il limite causale per renderne visibile l'effetto: cioè *rompe volutamente la fisica*. Ed è un calcolo **formale e geometrico** (l'intersezione col cono di luce di §2.1), trova *da dove* è partito il segnale.
 
 Qui c'è una distinzione di regime. Per un corpo che si muove a una frazione **minuscola** di $c$, il "segnale" gravitazionale parte da una posizione praticamente identica a quella attuale: la sorgente si può trattare come **ferma** e il ritardo è semplicemente $r/c$, con errore del tutto trascurabile. È il caso di quasi tutta la dinamica ordinaria (pianeti, stelle).
 
@@ -158,8 +183,10 @@ $$|\vec{d} + \vec{v}\,T|^2 = c^2 T^2 \;\Longrightarrow\; (c^2 - v^2)\,T^2 - 2(\v
 
 $$T = \frac{(\vec{d}\cdot\vec{v}) + \sqrt{\Delta}}{c^2 - v^2}$$
 
+Questa è la **formula chiusa**, valida solo per moto rettilineo con accelerazione nota (il caso ART): è il motivo per cui si può risolvere analiticamente, invece di ricorrere allo storico. Nel caso generale, dove non esiste soluzione analitica (moto curvilineo, N corpi, accelerazioni variabili), il motore ricorre invece alla **soluzione architetturale implicita**, il doppio ritrovamento causale sui buffer storici descritto in apertura del [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica).
+
 > [!NOTE]
-> **Il cono di Mach causale.** Se $\Delta < 0$ non esiste alcuna soluzione reale: la sorgente sta "scappando" dal proprio campo più velocemente di quanto questo possa raggiungere il bersaglio. Il bersaglio è fuori dal cono di luce passato raggiungibile, e il simulatore restituisce un contributo nullo. È l'analogo gravitazionale del cono di Mach supersonico. Si tratta di una situazione **matematicamente assurda** dal punto di vista fisico (richiede una sorgente più veloce della luce, impossibile), e infatti è **forzata di proposito** solo negli scenari "Approccio alla Velocità della Luce": la versione piena (~20 GB di RAM) a $0{,}999c$ e le due ridotte a $0{,}9c$ e $0{,}7c$, dove un'accelerazione artificiale costante spinge il Sole oltre il limite causale per renderne visibile l'effetto (il "vuoto" che si apre dietro al corpo).
+> **Il cono di Mach causale.** Se $\Delta < 0$ non esiste alcuna soluzione reale: la sorgente sta "scappando" dal proprio campo più velocemente di quanto questo possa raggiungere il bersaglio. Il bersaglio è fuori dal cono di luce passato raggiungibile, e il simulatore restituisce un contributo nullo. Geometricamente, è ciò che accade quando la sorgente **"buca" il proprio cono di luce**: supera il fronte d'onda che sta essa stessa emettendo, esattamente come un aereo supersonico supera il fronte sonoro che genera. È l'analogo gravitazionale del cono di Mach supersonico. Si tratta di una situazione **matematicamente assurda** dal punto di vista fisico (richiede una sorgente più veloce della luce, impossibile), e infatti è **forzata di proposito** solo negli scenari "Approccio alla Velocità della Luce": la versione piena (~20 GB di RAM) a $0{,}999c$ e le due ridotte a $0{,}9c$ e $0{,}7c$, dove un'accelerazione artificiale costante spinge il Sole oltre il limite causale per renderne visibile l'effetto (il "vuoto" che si apre dietro al corpo).
 
 *(Per un approfondimento di come la heatmap interpreta questi scenari estremi rimando alla sezione §5.)*
 
@@ -178,7 +205,7 @@ Prima di entrare nel merito dell'aberrazione e del dead reckoning, vale la pena 
 1. **Stima.** Si misura la distanza istantanea $r_{now}$ fra osservatore e sorgente *come si trovano ora*, e si calcola un primo tempo di volo approssimato $t_{est} = r_{now}/c$. Tradotto nel numero di passi di simulazione corrispondente ($t_{est}/\Delta t$), questo individua un punto nello storico: una **prima lettura** restituisce la **posizione ritardata stimata** $\vec r_{ret,est}$.
 2. **Ricalcolo causale.** Dalla posizione stimata si calcola la distanza vera $r_{true} = |\vec r_{obs} - \vec r_{ret,est}|$, e si ripete il conto: $t_{true} = r_{true}/c$, nuovo punto nello storico, **seconda lettura**. Da qui si ottengono posizione, velocità e massa all'istante di emissione *effettivo*, con cui il calcolo della forza, del potenziale o del quadrupolo procede senza ambiguità.
 
-Matematicamente, questo doppio passo è equivalente a una singola iterazione di Picard sull'equazione del cono di luce, e per orbite ordinarie ($v \ll c$) converge in un colpo. Per regimi estremi ($v \to c$), §2.1 fornisce la soluzione **analitica in forma chiusa**, ricavata da una quadratica nel tempo di volo, che il motore usa al posto della doppia lettura.
+Matematicamente, questo doppio passo è equivalente a una singola iterazione di Picard sull'equazione del cono di luce, e per orbite ordinarie ($v \ll c$) converge in un colpo. Per regimi estremi ($v \to c$), §2.2 fornisce la soluzione **analitica in forma chiusa**, ricavata da una quadratica nel tempo di volo, che il motore usa al posto della doppia lettura.
 
 **Cosa c'è qui e cosa nel deep dive.** Quanto sopra descrive solo il *cosa* e il *perché*. Tutti i dettagli ingegneristici (struttura interna dei tre livelli di dettaglio, ottimizzazioni di accesso, criterio di scelta del livello in base alla profondità temporale richiesta, dimensionamento della memoria per scenari estremi come $0{,}999c$) sono documentati in **[ARCHITECTURE_DEEP_DIVE.md §2](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**.
 
@@ -209,7 +236,7 @@ Se la gravità punta verso la posizione **ritardata** della sorgente, in un'orbi
   </tr>
 </table>
 
-**Showcase: Orbita Galattica (Sgr A\*) (nella GIF sopra a destra)**: Pan camera circa 22x10 AU, velocità simulazione: 35 giorni/secondo. L'inquadratura a destra mostra le parametrie sul corpo evidenziato, il Sole, con il vettore velocità verde neon e il vettore forza viola che punta a Sgr A\* ad anni luce di distanza, in orbita a ≈ 230 km/s che resta stabile a lungo termine; senza il Dead Reckoning l'aberrazione la farebbe spiraleggiare verso l'esterno.
+**Showcase: Orbita Galattica (Sgr A\*) (nella GIF sopra a destra)**: Inquadratura camera circa 22x10 AU, velocità simulazione: 35 giorni/secondo. L'inquadratura a destra mostra le parametrie sul corpo evidenziato, il Sole, con il vettore velocità verde neon e il vettore forza viola che punta a Sgr A\* ad anni luce di distanza, in orbita a ≈ 230 km/s che resta stabile a lungo termine; senza il Dead Reckoning l'aberrazione la farebbe spiraleggiare verso l'esterno.
 
 
 ### 3.3 L'equilibrio tra freno e spinta
@@ -222,7 +249,7 @@ Quando il radar relativistico rileva una coppia in regime estremo, il motore ini
 
 **Nota dell'autore. Un'ipotesi sul perché il dead reckoning può frenare alcune orbite estreme (e un nodo aperto sull'EMRI).** Il dead reckoning di 2° ordine tronca al termine in accelerazione: il primo pezzo che scarta è quello in **jerk** (la derivata terza della posizione). Due indizi fanno sospettare che questo residuo non sia solo rumore numerico. Primo: anche la reazione di radiazione 2.5PN entra all'ordine del jerk nelle equazioni del moto (è una forza che dipende dalle derivate temporali dell'accelerazione). Secondo, e qui c'è fisica accertata: l'aberrazione di una sorgente in moto *uniforme* si cancella quasi esattamente grazie ai termini di velocità del campo, e il termine che resiste a quella cancellazione, all'ordine $(v/c)^5$, è proprio la reazione di radiazione (S. Carlip, *Aberration and the speed of gravity*, [arXiv:gr-qc/9909087](https://arxiv.org/abs/gr-qc/9909087)). Da qui l'ipotesi: che il residuo del dead reckoning, quando l'accelerazione varia in modo non lineare, *possa* cadere nella stessa famiglia della perdita di energia per radiazione. È un sospetto motivato, non una dimostrazione.
 
-Va detto con altrettanta onestà dove l'analogia si fa fragile. Quel residuo è **anche**, e prima di tutto sul piano numerico, un errore di troncamento, a cui si somma l'accelerazione $\vec{a}_{ret}$ usata nell'estrapolazione: non è esatta, ma ricostruita al volo per differenze finite (§3.2), quindi essa stessa approssimata. In entrambi i casi l'ampiezza dipende dal passo, non dal coefficiente fisico ($\tfrac{8}{5}G^2 M\mu/c^5 r^3$) del 2.5PN. L'analogia, anche se cogliesse qualcosa di reale, qui sarebbe solo un'approssimazione grezza, dell'ordine giusto (jerk) ma di misura non controllata. Il dato empirico: nei contesti GW (in questa simulazione si intendono scenari dove ci si aspetta la formazione di onde gravitazionali, *Gravitational Waves*), lasciando il 2.5PN **spento** e il solo dead reckoning di 2° ordine **acceso**, l'orbita dissipa energia troppo in fretta rispetto al 2.5PN reale. È il motivo per cui in quel regime "frena troppo", ed è anche perché nel regime GW quel dead reckoning è spento e sostituito dal bypass a posizioni presenti (§3.2). Resta quindi un'**ipotesi**: un'analogia strutturale plausibile, non una sostituzione quantitativa del 2.5PN. È plausibilmente anche ciò che fa decadere lentamente l'orbita EMRI nei giorni di inspiral in cui il 2.5PN esplicito è ancora spento, un'osservazione che meriterebbe una verifica esperta.
+Va segnalata dove l'analogia diventa fragile. Quel residuo è **anche**, ed è difficile stimare con esattezza **quanto**, sul piano numerico, un errore di troncamento (la cui formulazione del costo è in [§4.2](#42-errore-di-troncamento)), a cui si somma l'accelerazione $\vec{a}_{ret}$ usata nell'estrapolazione: non è esatta, ma ricostruita al volo per differenze finite (§3.2), quindi essa stessa approssimata. In entrambi i casi l'ampiezza dipende dal passo, non dal coefficiente fisico ($\tfrac{8}{5}G^2 M\mu/c^5 r^3$) del 2.5PN. L'analogia, anche se cogliesse qualcosa di reale, qui sarebbe solo un'approssimazione grezza, dell'ordine giusto (jerk) ma di misura non controllata. Il dato empirico: nei contesti GW (in questa simulazione si intendono scenari dove ci si aspetta la formazione di onde gravitazionali, *Gravitational Waves*), lasciando il 2.5PN **spento** e il solo dead reckoning di 2° ordine **acceso**, l'orbita dissipa energia troppo in fretta rispetto al 2.5PN reale. È il motivo per cui in quel regime "frena troppo", ed è anche perché nel regime GW quel dead reckoning è spento e sostituito dal bypass a posizioni presenti (§3.2). Resta quindi un'**ipotesi**: un'analogia strutturale plausibile, non una sostituzione quantitativa del 2.5PN. È plausibilmente anche ciò che fa decadere lentamente l'orbita EMRI nei giorni di inspiral in cui il 2.5PN esplicito è ancora spento, un'osservazione che meriterebbe una verifica esperta.
 
 | Rosetta : inspiral | Rosetta : late inspiral |
 |:---:|:---:|
@@ -235,7 +262,7 @@ Va detto con altrettanta onestà dove l'analogia si fa fragile. Quel residuo è 
 
 Per impedire fughe superluminali, l'accelerazione netta di un corpo viene smorzata al crescere della velocità. Sotto la soglia $v^2 = 0{,}5\,c^2$ (≈ 0,707 c) non cambia nulla. Sopra, l'accelerazione è moltiplicata per il fattore di Lorentz inverso $\sqrt{1 - v^2/c^2}$, che la sopprime sempre di più man mano che $v \to c$: raggiungere $c$ diventa **gradualmente impossibile**, esattamente come con l'aumento relativistico dell'inerzia (servirebbe un'energia via via divergente). Oltre $0{,}999\,c$ l'accelerazione è azzerata del tutto. È un cap fenomenologico, non una derivazione dalla Relatività Generale, ma riproduce il comportamento giusto: $c$ resta un asintoto inavvicinabile.
 
-> Lo scenario complementare a **0.999c** descritto nella sezione §5 è invece un *"what-if" fisicamente impossibile*: accelerare una massa a quella velocità richiederebbe energia infinita, e la compressione dell'accelerazione appena descritta lo rende per costruzione irraggiungibile. Serve a mostrare la deformazione del campo e a spingere agli estremi la causalità del motore e la scalabilità dei buffer, fino alla "compressione" visiva verso la singolarità $c$. È un caso limite tecnico più che un risultato fisico.
+> Lo scenario complementare a **0.999c**, descritto e discusso per esteso in §5.1 (comprese le sue implicazioni fisiche e ingegneristiche), sfrutta esattamente questo asintoto: la compressione dell'accelerazione appena descritta è ciò che lo rende per costruzione irraggiungibile, ed è il motivo per cui resta un caso limite tecnico, non un risultato fisico.
 
 ---
 
@@ -301,7 +328,7 @@ Il meccanismo fisico è la **contrazione di Lorentz** del campo: il campo di una
 
 ### 5.1 Showcase: Approccio a *c*
 
-Le isolinee del pozzo di potenziale del Sole si contraggono e si schiacciano in direzione del moto.
+Le isolinee del pozzo di potenziale del Sole si comprimono lungo la direzione del moto e si allargano in quella trasversa: è la stessa "pancake compression" di Liénard-Wiechert e Lorentz descritta più sotto (§5), qui vista dall'alto sulle curve di livello invece che sul profilo del campo.
 
 **Come si legge la heatmap del potenziale gravitazionale Φ ("phi").** Il colore mappa la profondità del pozzo gravitazionale punto per punto: blu profondo/nero significa "potenziale minimo o assente", giallo intenso significa "pozzo profondo". La scala è sempre tarata sul raggio efficace minimo del corpo più massiccio dello scenario (regolato dal cinematic floor fittizio `eff_rad` per evitare che la dinamica esploda nei corpi compatti), quindi il *bianco assoluto* compare a ridosso di questa distanza di saturazione geometrica, che rappresenta un valore di $\Phi$ vicino al massimo teorico:
 
@@ -318,7 +345,7 @@ Moto della seguente dimostrazione: +x, ovvero da sinistra verso destra.
 
 <div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media non trovato"></div>
 
-Il pan è di circa **180 × 120 AU** (decine di miliardi di km per lato). A $0{,}7c$ (≈ 209.855 km/s) è già visibile l'effetto **Liénard-Wiechert**: il pozzo gravitazionale comincia a deformarsi rispetto alla simmetria sferica. Salendo verso $c$ (299.792,458 km/s) lo schiacciamento cresce in modo non lineare, finché (fittiziamente, oltre $c$), comincia a formarsi il **cono di Mach causale** descritto in §2.1.
+L'inquadratura è di circa **180 × 120 AU** (decine di miliardi di km per lato). A $0{,}7c$ (≈ 209.855 km/s) è già visibile l'effetto **Liénard-Wiechert**: il pozzo gravitazionale comincia a deformarsi rispetto alla simmetria sferica. Salendo verso $c$ (299.792,458 km/s) lo schiacciamento cresce in modo non lineare, finché (fittiziamente, oltre $c$), comincia a formarsi il **cono di Mach causale** descritto in §2.2.
 
 Un dettaglio che torna a breve: a destra del Sole (in direzione del moto) il campo cambia sfumatura in modo asimmetrico rispetto a sinistra, a $0{,}98c$ diventa qualitativamente evidente. È il preludio del fenomeno che si vede in pienezza nell'Esempio 2.
 
@@ -331,11 +358,11 @@ Lo stesso scenario, ma ravvicinato ed estremamente più lento, per cogliere gli 
     <video src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" controls="controls" width="100%"></video>
 </div>
 
-Il pan qui è di **~0,8 × 0,3 AU**. A $0{,}999c$ (≈ 299.493 km/s) il Sole sta letteralmente **cavalcando il fronte dell'informazione che lui stesso ha emesso**: la sua posizione e i suoi fronti d'onda gravitazionali viaggiano a velocità praticamente coincidenti.
+L'inquadratura qui è di **~0,8 × 0,3 AU**. A $0{,}999c$ (≈ 299.493 km/s) il Sole sta letteralmente **cavalcando il fronte dell'informazione che lui stesso ha emesso**: la sua posizione e i suoi fronti d'onda gravitazionali viaggiano a velocità praticamente coincidenti.
 
 #### Il fenomeno: il gap d'emissione fra "dov'è" e "dov'era"
 
-È il punto in cui il principio della sezione §2.1 si vede ad occhio nudo.
+È il punto in cui il **cono di luce di §2.1** si vede ad occhio nudo: la heatmap mostra, letteralmente, quanto vicini si è al suo bordo. Più un pixel è prossimo al fronte del cono (cioè più la sua distanza causale dal Sole è vicina al raggio che la luce ha potuto percorrere), più il campo che mostra è quello di un Sole ormai lontano nel tempo di emissione, e quindi debole o assente.
 
 Il puntino giallo è il Sole *adesso*, alla sua posizione reale. Il taglio verticale netto al centro, ovvero la linea bianca compressa che separa il pozzo arancione a sinistra dal vuoto viola a destra, è il **disco di Liénard-Wiechert + Lorentz al massimo**: il campo del Sole si schiaccia in un disco *perpendicolare* al moto, esattamente come una carica relativistica (§5).
 
@@ -345,7 +372,7 @@ $$r_{ret} \approx \frac{d}{1 - v/c}, \qquad \text{a } v = 0{,}999c \;\Rightarrow
 
 Tradotto: per un pixel a pochi milioni di km a destra, l'emissione che arriva *adesso* è partita quando il Sole era a **miliardi di km più a sinistra**, fino a *320 anni-luce nel passato* in questo scenario. A quella distanza il pozzo gravitazionale del Sole è già trascurabile ($\Phi \propto 1/r$). Il pixel risulta **scuro fino al nero**, e non perché lì non ci sia gravità, ma perché sta mostrando un Sole che, da *dov'era allora*, non si faceva sentire qui.
 
-Il **gap fra posizione attuale e posizione di emissione** è la chiave. A $0{,}7c$ il gap è ~3,3 volte la distanza attuale (l'asimmetria si vede appena); a $0{,}999c$ è 1000 volte (il buio davanti è quasi perfetto); a $v = c$ il rapporto diverge e il simulatore restituisce contributo nullo a destra (quando poi $v > c$ il discriminante dell'equazione del tempo di volo cambia segno, entriamo nel regime fittizio del **cono di Mach causale** di §2.1).
+Il **gap fra posizione attuale e posizione di emissione** è la chiave. A $0{,}7c$ il gap è ~3,3 volte la distanza attuale (l'asimmetria si vede appena); a $0{,}999c$ è 1000 volte (il buio davanti è quasi perfetto); a $v = c$ il rapporto diverge e il simulatore restituisce contributo nullo a destra (quando poi $v > c$ il discriminante dell'equazione del tempo di volo cambia segno, entriamo nel regime fittizio del **cono di Mach causale** di §2.2).
 
 In altre parole: ciò che si vede non è una "mancanza di gravità" davanti al Sole, è il *suo passato* in scala: più $v$ si avvicina a $c$, più il passato visibile è lontano. Il taglio verticale è la firma di Liénard-Wiechert e Lorentz al massimo, e il buio a destra è il principio causale del §2.1 reso letteralmente visibile.
 
@@ -380,7 +407,7 @@ $R_s$ è il **raggio di Schwarzschild**, cioè il raggio dell'**orizzonte degli 
 
 **Una nota sul "softening" (e come è diventato uno stabilizzatore senza volerlo).** Il softening è una piccola modifica al calcolo della distanza usata dalla forza: invece di $r$ il kernel usa $d = \sqrt{r^2 + S_{soft}^2}$, con $S_{soft} = 10$ km. In pratica: per coppie lontane $r$ e $d$ sono identici (a 1000 km cambia di $5\cdot10^{-5}$), ma quando $r$ scende sotto la decina di km la distanza non va mai sotto $S_{soft}$. Tutto qui.
 
-*Perché esiste.*: il softening è nato **prima del sistema di collisioni**, quando l'unico modo per evitare dei NaN (Not a Number, che porta in errore il simulatore) era impedire al denominatore $(d - R_s)^2$ del potenziale PW di passare per zero (per impedire i negativi invece è bastata una riga di codice semplice). Bastava che due corpi finissero per un istante dentro il loro raggio di Schwarzschild perché la forza diventasse infinita, l'energia esplodesse e tutto il tensorone andasse a `inf` in un tick. Il softening era il primo argine: una toppa contro la divisione per zero, niente di più ambizioso. Oggi il sistema di collisioni (§3.3 e ARCHITECTURE §3) gestisce il contatto in modo pulito, e in linea di principio il softening sarebbe rimovibile.
+*Perché esiste.*: il softening è nato **prima del sistema di collisioni**, quando l'unico modo per evitare dei NaN (Not a Number, che porta in errore il simulatore) era impedire al denominatore $(d - R_s)^2$ del potenziale PW di passare per zero (per impedire i negativi invece è bastata una riga di codice semplice). Bastava che due corpi finissero per un istante dentro il loro raggio di Schwarzschild perché la forza diventasse infinita, l'energia esplodesse e tutto il tensorone andasse a `inf` in un tick. Il softening era il primo argine e una toppa contro la divisione per zero, niente di più ambizioso. Oggi il sistema di collisioni (§3.3 e ARCHITECTURE §3) gestisce il contatto in modo pulito, e in linea di principio il softening sarebbe rimovibile.
 
 *L'effetto collaterale.* Negli stress test su GW170817, toglierlo rende rumorosi gli ultimi millisecondi del chirp (aderenza a Peters che peggiora dallo 0,97% a ~3,8%, §6.6). Ipotesi: a 30-40 km la forza è così ripida che dentro un singolo tick Verlet calcia da una posizione già stantia, generando eccentricità spuria; il softening schiaccia quella pendenza e smorza l'errore. Tenerlo acceso non nasconde fisica vera: la reazione di radiazione *circolarizza* le orbite (Peters 1964, §6.4), quindi un'eccentricità che cresce verso il merger è per forza numerica. Nato come tappabuchi anti-NaN, finito per fare anche da stabilizzatore in un caso che non era previsto.
 
@@ -516,7 +543,7 @@ La somma dei contributi $GM/r$ (causali) di tutti i corpi, con la correzione di 
   <img src="docs/img/solar_system_1.png" width="600" alt="Media non trovato">
 </div>
 
-Nella figura si osserva la classica topografia dei primi pianeti del sistema solare in modalità $\Phi$ ("phi mode"). A rendere speciale questa visualizzazione è la sua interazione con l'informazione gravitazionale a velocità finita $c$: in vari scenari o tramite interazioni in-game è possibile visualizzare i fronti d'onda comprimersi o espandersi. Per un'analisi dettagliata di questa distorsione si rimanda al capitolo [§5](#5-il-disco-di-lienard-wiechert--lorentz-al-massimo), dedicato alla deformazione di Liénard-Wiechert e alla contrazione di Lorentz.
+Nella figura si osserva la classica topografia dei primi pianeti del sistema solare in modalità $\Phi$ ("phi mode"). A rendere speciale questa visualizzazione è la sua interazione con l'informazione gravitazionale a velocità finita $c$: in vari scenari o tramite interazioni in-game è possibile visualizzare i fronti d'onda comprimersi o espandersi, la sezione 2D del **[cono di luce di §2.1](#21-il-cono-di-luce)** reso visibile quando un corpo appare o scompare di colpo. Per un'analisi dettagliata di questa distorsione si rimanda al capitolo [§5](#5-deformazione-di-liénard-wiechert), dedicato alla deformazione di Liénard-Wiechert e alla contrazione di Lorentz.
 
 ### 7.2 Variazione temporale dΦ/dt
 
@@ -534,7 +561,7 @@ Sono i due pattern visivi che la $d\Phi/dt$ mostra più chiaramente, e affiancar
 | Dipolo del corpo singolo in moto | Spirali della coppia binaria |
 |:---:|:---:|
 | <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media non trovato"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media non trovato"> |
-| Il pozzo trasla con la sorgente: il lato in avvicinamento al pixel diventa blu, quello in allontanamento rosso. È il **dipolo che si sposta**, non radiazione. Nell'esempio Giove orbita a velocità stabile (≈ 13 km/s) e il suo dipolo accompagna il moto, ruotando con esso; attorno, in ordine le lune: Amaltea, Io, Europa, Ganimede, Callisto. Anche le lune maggiori possiedono il proprio dipolo che si fonde con quello di Giove, ma a causa del pan di visualizzazione molto dezoomato non sono risolvibili nella GIF dimostrativa. La sensibilità è tarata sulla massa massima dello scenario (il Sole in questo caso), e un selettore (fader) permette all'utente di scalare questo rapporto a piacimento, estendendo e riducendo luminosità ed estensione dei dipoli in modo proporzionato. | Scenario: *Stelle di Neutroni Binarie, Orbita Stabile*, velocità orbitale: 1580 km/s, pan camera $\approx$ 2 AU $\times$ 2 AU, velocità simulazione: 40 s/s. Due stelle di neutroni mediamente massicce (1,5 masse solari) orbitano ad una distanza di sicurezza di 40.000 km (nessun merger imminente). È proprio grazie alla causalità (la velocità finita $c$ di propagazione dell'informazione) che i dipoli dei due corpi in moto non si cancellano a distanza ma vengono ritardati rispetto a ciascun pixel dello schermo, avvitandosi in un pattern a spirale pienamente emergente. |
+| Il pozzo trasla con la sorgente: il lato in avvicinamento al pixel diventa blu, quello in allontanamento rosso. È il **dipolo che si sposta**, non radiazione. Nell'esempio Giove orbita a velocità stabile (≈ 13 km/s) e il suo dipolo accompagna il moto, ruotando con esso; attorno, in ordine le lune: Amaltea, Io, Europa, Ganimede, Callisto. Anche le lune maggiori possiedono il proprio dipolo che si fonde con quello di Giove, ma a causa dell'inquadratura di visualizzazione molto dezoomata non sono risolvibili nella GIF dimostrativa. La sensibilità è tarata sulla massa massima dello scenario (il Sole in questo caso), e un selettore (fader) permette all'utente di scalare questo rapporto a piacimento, estendendo e riducendo luminosità ed estensione dei dipoli in modo proporzionato. | Scenario: *Stelle di Neutroni Binarie, Orbita Stabile*, velocità orbitale: 1580 km/s, inquadratura camera $\approx$ 2 AU $\times$ 2 AU, velocità simulazione: 40 s/s. Due stelle di neutroni mediamente massicce (1,5 masse solari) orbitano ad una distanza di sicurezza di 40.000 km (nessun merger imminente). È proprio grazie alla causalità (la velocità finita $c$ di propagazione dell'informazione) che i dipoli dei due corpi in moto non si cancellano a distanza ma vengono ritardati rispetto a ciascun pixel dello schermo, avvitandosi in un pattern a spirale pienamente emergente. |
 
 
 > [!NOTE]
@@ -679,7 +706,7 @@ L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e os
 
 Questa è l'unica heatmap del simulatore che codifica **tre quantità fisiche distinte simultaneamente**, e merita una lettura combinata:
 1. **Topologia degli spazi efficaci** *(dal segno di $D$, dato dalla tinta rosso/blu)*. Nel frame corotante alla $\omega$ istantanea della coppia, il segno del determinante Hessiano partiziona lo spazio in due regioni complementari: le zone rosse (iperboliche, $D < 0$), dove il gradiente gravitazionale impone una curvatura differenziale (stiramento lungo una direzione, compressione lungo l'altra), e le zone blu (ellittiche, $D > 0$), dove la forza centrifuga domina uniformemente su entrambi gli assi, spingendo la materia verso l'esterno. Il confine $D = 0$ tra le due regioni traccia dinamicamente i **lobi di Roche**.
-In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il mare blu si espande sommergendo il sistema: la centrifuga vince sulla caduta e il corpo sta accelerando in uscita verso il proprio afelio. In questo oceano, lo spazio efficace del corpo minore sopravvive come una "nocciolina" rossa, una tasca in cui la sua autogravità locale sconfigge la centrifuga circostante. L'errore interpretativo da evitare è confondere spazio topologico e materia: un corpo conserva la propria integrità strutturale solo se la sua estensione fisica è interamente contenuta nella propria tasca rossa. Il linea di massima, all'interno della sacca di autogravità è importante giusto notare come dalla zona gialla in poi l'autogravità si faccia importante e determinante, un qualsiasi oggetto in quell'area con velocità angolari simili avrà il vettore forza (visibile nel simulatore) nella direzione del padrone dello spazio efficace.
+In fase ad alta energia centrifuga (es. al perielio di un'orbita eccentrica), il mare blu si espande sommergendo il sistema: la centrifuga vince sulla caduta e il corpo sta accelerando in uscita verso il proprio afelio. In questo oceano, lo spazio efficace del corpo minore sopravvive come una "nocciolina" rossa, una tasca in cui la sua autogravità locale sconfigge la centrifuga circostante. La forma di quella tasca non è mai un cerchio: la **dimensione** con cui il mare blu la erode è governata dalla centrifuga (isotropa, cresce uniformemente su tutti gli assi dell'Hessiana), mentre la sua **forma allungata**, compressa verso il compagno e sul lato opposto, è impressa dalla marea del compagno stesso (anisotropa per costruzione, §7.4.6 punto 2): è la combinazione di entrambi gli effetti, non della sola centrifuga, a scolpire il profilo finale della nocciolina. L'errore interpretativo da evitare è confondere spazio topologico e materia: un corpo conserva la propria integrità strutturale solo se la sua estensione fisica è interamente contenuta nella propria tasca rossa. In linea di massima, all'interno della sacca di autogravità è importante giusto notare come dalla zona gialla in poi l'autogravità si faccia importante e determinante, un qualsiasi oggetto in quell'area con velocità angolari simili avrà il vettore forza (visibile nel simulatore) nella direzione del padrone dello spazio efficace.
 
 #### 7.4.5 Caso di studio: La missione Artemis II
 
@@ -816,7 +843,7 @@ Nelle rappresentazioni divulgative o nelle approssimazioni analitiche standard, 
 
 L'interpretazione che mi sento di proporre è semplice: l'asse nodale rigido era un sottoprodotto sistematico dell'approssimazione *single-step*. Una volta che ciascuna sorgente viene letta dal suo proprio istante di emissione, con tempi e versori di proiezione distinti ($t - r_A/c \neq t - r_B/c$ e $\hat{n}_A \neq \hat{n}_B$), gli zeri dei contributi dei singoli corpi non si allineano più lungo curve regolari, e l'asse separatorio si dissolve nelle interferenze locali fra le due sorgenti. Resta in vista, fra le due masse, un caratteristico pattern di interferenza ravvicinato, visivamente una "forma a seme" rossa che pulsa col chirp.
 
-<video autoplay="autoplay" loop="loop" muted="muted" playsinline="playsinline" width="700"><source src="https://github.com/user-attachments/assets/aee7fd2d-70f0-4d1d-9767-315d6bae5d28" type="video/mp4"></video>
+<video src="https://github.com/user-attachments/assets/aee7fd2d-70f0-4d1d-9767-315d6bae5d28" controls="controls" width="700"></video>
 
 *Loop di una coalescenza di buchi neri binari renderizzata in modalità GW Strain. La sequenza alterna due punti di vista: una vista ravvicinata sulla regione fra i due corpi, dove si forma e pulsa col chirp la "forma a seme" rossa di interferenza ravvicinata fra i due contributi quadrupolari, e una vista panoramica dezoommata, in cui si vedono le macro-spirali radiative propagarsi verso l'esterno a velocità $c$. Da notare l'assenza dell'asse nodale rigido descritto sopra: la transizione fra polarità ciano e rossa avviene in modo continuo, senza linee dritte di separazione.*
 
@@ -861,9 +888,11 @@ Quando l'oggetto compatto leggero percorre la sua orbita fortemente eccentrica a
   
   *Il quadrupolo statico nudo all'afelio: una inquadratura molto ravvicinata (zoomata) e con guadagno (gain) aumentato rende visibile la caratteristica croce quadrilobata dello strain (ciano/rosso alternato) del corpo leggero, altrimenti invisibile per via del rallentamento cinetico.*
  
-<video autoplay="autoplay" loop="loop" muted="muted" playsinline="playsinline" width="700"><source src="https://github.com/user-attachments/assets/8d30ed55-33fe-4897-b678-e1e165158f21" type="video/mp4"></video>
+<video src="https://github.com/user-attachments/assets/8d30ed55-33fe-4897-b678-e1e165158f21" controls="controls" width="700"></video>
 
 *Ciclo orbitale completo dell'EMRI (afelio -> pericentro -> afelio) renderizzato in modalità GW Strain. Il video mostra chiaramente la transizione dinamica tra l'emissione stazionaria e debole all'apocentro (in cui spicca il quadrupolo nudo del corpo leggero orientato lungo l'asse orbitale) e la violenta scarica ondulatoria concentrica rilasciata durante il passaggio ravvicinato al pericentro, che si propaga nello spazio.*
+
+*(È disponibile anche come GIF in loop reale in `docs/gif/GWH_EMRI_LOOP.gif`.)*
 
 | Vista macro: Early Inspiral (decine di AU) | Vista macro: Late Inspiral (decine di AU) |
 |:---:|:---:|
