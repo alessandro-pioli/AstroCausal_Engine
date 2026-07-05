@@ -112,7 +112,7 @@ Per facilitare la consultazione del documento, di seguito vengono definiti i con
 10. [Fenomeni emergenti](#10-fenomeni-emergenti)
     - 10.1 Caso di studio: GW190814, la sovradissipazione in campo profondo
     - 10.2 Altri fenomeni emergenti
-    - 10.3 Il *wobble* del corpo di riferimento (il Sole non sta mai fermo)
+    - 10.3 Il *wobble* del corpo di riferimento
 
 ---
 
