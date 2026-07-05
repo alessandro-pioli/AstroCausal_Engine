@@ -179,8 +179,9 @@ class GravityRenderer:
                             vy_n = self.p_vel[t_local, 1] - self.p_vel[a_local, 1]
                             h_n = dx_n * vy_n - dy_n * vx_n
                             omega_sq_n = (h_n * h_n) / (r_n ** 4)
+                            q_n = m2_n / M_tot_n
                             # (27.0 / 4.0) è il coefficiente analitico per normalizzare il lobo di Roche critico nei sistemi circolari
-                            f_norm_candidate = (27.0 / 4.0) * r_n * (1.0 - r_n) * omega_sq_n * r_n
+                            f_norm_candidate = (27.0 / 4.0) * q_n * (1.0 - q_n) * omega_sq_n * r_n
                             if f_norm_candidate > 1e-300:
                                 f_norm = f_norm_candidate
 
