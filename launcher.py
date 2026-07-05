@@ -80,7 +80,7 @@ PRESETS_DB = {
         "desc": "La versione semplificata del Sistema Solare (solo il Sole e i 9 pianeti maggiori, senza satelliti naturali). Consente di osservare la stabilità kepleriana a lungo termine su qualsiasi hardware grazie a un DT incrementato (512 s/step).\nConsigliato: Heatmap Phi per analizzare la geometria statica e pulita dei campi gravitazionali.",
         "dt": "512.0"
     },
-    "Sistema Solare \u2014 Orbita Galattica (Sgr A*)": {
+    "Sistema Solare: Orbita Galattica (Sgr A*)": {
         "desc": "Il Sistema Solare viaggia a 230 km/s in orbita galattica attorno a Sagittarius A* (il buco nero supermassiccio centrale da 4.1 milioni di M\u2609). Test per osservare il comportamento del campo gravitazionale e della stabilità orbitale sotto una traslazione globale ad alta velocità (boost di 230 km/s).\nConsigliato: Heatmap Phi per osservare come i campi locali rimangano stabili e non distorti nonostante la velocità globale di sistema.",
         "dt": "512.0"
     },
@@ -88,11 +88,11 @@ PRESETS_DB = {
         "desc": "Stress-test N-Body estremo con 100 corpi massicci che orbitano in modo caotico attorno a un buco nero centrale da 1000 M\u2609.\nGUIDA PERFORMANCE: Data l'estrema richiesta computazionale, gioca con i tasti T (dimezza DT, aumenta precisione) e Y (raddoppia DT, riduce precisione) per gestire la velocità mantenendo buoni FPS. Evita velocità engine (tasti 1-5) troppo elevate. Premere H per spegnere completamente le heatmap grafiche disattivando il campo aumenta drasticamente le prestazioni.",
         "dt": "1.0"
     },
-    "Terra \u2014 Luna \u2014 ISS \u2014 Hubble": {
+    "Terra - Luna - ISS - Hubble": {
         "desc": "Problema a più corpi reale in regime geocentrico. Include l'orbita ellittica reale della Luna, la Stazione Spaziale Internazionale (ISS) attiva e controllabile dal giocatore (tasti WASD) e il Telescopio Spaziale Hubble passivo in orbita circolare stabile.\nLAGRANGE HUNTER GUIDE: Per far emergere naturalmente i punti di Lagrange (L1-L5), seleziona la Luna premendo il tasto TAB a ripetizione (o facendo doppio click su di essa per bloccare la camera), quindi premi L per attivare il Roche Lagrange Hunter. Regola il fader della sensibilità sullo schermo e usa lo zoom per visualizzare i lobi gravitazionali e le valli stabili.",
         "dt": "1.0"
     },
-    "Sole \u2014 Terra \u2014 Luna \u2014 Artemis II (Motors Off)": {
+    "Sole - Terra - Luna - Artemis II (Motors Off)": {
         "desc": "La navicella Artemis II (Orion + modulo di servizio, ~26 tonnellate) in crociera translunare passiva (\"motors off\"). Scenario eliocentrico reale con il Sole al centro cartesiano e Terra e Luna che gli orbitano attorno, ideale per mostrare la transizione degli spazi gravitazionali efficaci.\nConsigliato: Roche Lagrange Hunter per mappare l'interazione dei campi durante l'avvicinamento lunare.",
         "dt": "1.0"
     },
@@ -109,27 +109,31 @@ PRESETS_DB = {
         "dt": "1.6"
     },
     "Approccio alla Velocità della Luce (ART) [0.7c -> c] - ULTRA-LIGHT 5 gb RAM ver": {
-        "desc": "Versione ultra-alleggerita dello scenario relativistico. Partendo da 0.7c, permette di apprezzare la transizione dinamica da un campo gravitazionale sferico ad un disco piatto di Lambert man mano che v si approssima a c. Richiede solo 5 GB di RAM di picco in fase di costruzione (2.5 GB operativi) coprendo ben 8710 anni luce di storia causale con DT=16.0. SOLO la heatmap Phi gestisce questo ramo relativistico.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
+        "desc": "Versione ultra-alleggerita dello scenario relativistico. Partendo da 0.7c, permette di apprezzare la transizione dinamica da un campo gravitazionale sferico al disco piatto di Liénard-Wiechert man mano che v si approssima a c. Richiede solo 5 GB di RAM di picco in fase di costruzione (2.5 GB operativi) coprendo ben 8710 anni luce di storia causale con DT=16.0. SOLO la heatmap Phi gestisce questo ramo relativistico.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
         "dt": "16.0"
     },
-    "Stelle di Neutroni Binarie \u2014 Eccentricità Estrema": {
+    "Stelle di Neutroni Binarie: Eccentricità Estrema": {
         "desc": "Due stelle di neutroni gemelle (~1.5 M\u2609) in orbite estremamente eccentriche attorno al comune baricentro. Il baricentro orbitale corrisponde esattamente alla metà della loro separazione al pericentro (200 km), con le orbite che si intrecciano velocemente.\nConsigliato: DPHI per osservare l'onda quadrupolare impulsiva al pericentro.",
         "dt": "0.000001"
     },
-    "Stelle di Neutroni Binarie \u2014 Orbita Stabile": {
+    "Stelle di Neutroni Binarie: Orbita Stabile": {
         "desc": "Due stelle di neutroni (~1.5 M\u2609) in orbita circolare stabile a 40.000 km. Stato di riferimento pre-inspiral. L'irraggiamento di onde gravitazionali a questa distanza produce un decadimento orbitale reale ma lento, con fusione prevista su scala di secoli.\nConsigliato: DPHI per l'onda quadrupolare pura del sistema binario.",
         "dt": "0.001"
     },
-    "Stelle di Neutroni Binarie \u2014 Pre-Collisione": {
-        "desc": "Late Inspiral di due stelle di neutroni separate da soli 375 km. Il collasso finale e la fusione avvengono in esattamente 52 secondi di tempo simulato.\nGUIDA OPERATIVA: La modalità DPHI (onde gravitazionali) è obbligatoria. Premi P per posizionare la sonda LIGO sullo schermo (non troppo vicina al centro per evitarne la distruzione prematura). Per salvare il dump NPY dei dati prima della collisione, premi nuovamente P (disattivando la sonda) o chiudi la simulazione tornando al launcher. Usa i tasti da 1 a 5 per accelerare la simulazione, ma NON PREMERE T o Y: la fisica relativistica 2.5PN è tarata sul DT iniziale (1e-6) e alterarlo rovinerebbe irrimediabilmente il chirp ondulatorio.",
+    "Stelle di Neutroni Binarie: Pre-Collisione": {
+        "desc": "Late Inspiral di due stelle di neutroni separate da soli 375 km. Il collasso finale e la fusione avvengono in circa 60 secondi di tempo simulato.\nGUIDA OPERATIVA: La modalità DPHI (onde gravitazionali) è obbligatoria. Premi P per posizionare la sonda LIGO sullo schermo (non troppo vicina al centro per evitarne la distruzione prematura). Per salvare il dump NPY dei dati prima della collisione, premi nuovamente P (disattivando la sonda) o chiudi la simulazione tornando al launcher. Usa i tasti da 1 a 5 per accelerare la simulazione, ma NON PREMERE T o Y: la fisica relativistica 2.5PN è tarata sul DT iniziale (1e-6) e alterarlo rovinerebbe irrimediabilmente il chirp ondulatorio.",
         "dt": "0.000001"
     },
-    "GW170817 \u2014 Merger Stelle di Neutroni": {
-        "desc": "Replica dell'evento GW170817 a f_GW = 50 Hz. Il collasso gravitazionale e la conseguente kilonova avvengono in esattamente 15 secondi di tempo simulato.\nGUIDA OPERATIVA: La visualizzazione DPHI è obbligatoria. Premi P per posizionare la sonda LIGO a debita distanza dal baricentro orbitale per catturarne lo strain. Salva il dump dei dati disattivando la sonda con P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocità tramite i tasti 1-5, ma evita rigorosamente i tasti T e Y per non compromettere le correzioni relativistiche calibrate sul DT di partenza.",
+    "GW170817: Merger Stelle di Neutroni": {
+        "desc": "Replica dell'evento GW170817 a f_GW = 50 Hz. Il collasso gravitazionale e la conseguente kilonova avvengono in circa 14 secondi di tempo simulato.\nGUIDA OPERATIVA: La visualizzazione DPHI è obbligatoria. Premi P per posizionare la sonda LIGO a debita distanza dal baricentro orbitale per catturarne lo strain. Salva il dump dei dati disattivando la sonda con P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocità tramite i tasti 1-5, ma evita rigorosamente i tasti T e Y per non compromettere le correzioni relativistiche calibrate sul DT di partenza.",
         "dt": "0.000001"
     },
-    "GW150914 \u2014 Merger Buchi Neri": {
-        "desc": "Il primo storico segnale di onde gravitazionali rilevato da LIGO. Due buchi neri da 36 e 29 M\u2609 si fondono in esattamente 9.5 secondi di tempo simulato.\nGUIDA OPERATIVA: Usa la mappa DPHI (tasto H) per tracciare i fronti d'onda concentrici. Distribuisci la sonda LIGO premendo P a distanza adeguata (non troppo vicina). Salva premendo di nuovo P o chiudendo la simulazione tornando al launcher per eseguire l'analisi spettrale nel LIGO Analyzer. Regola i passi dell'engine con i tasti 1-5 ma NON alterare il DT con T o Y per preservare la calibrazione del chirp relativistico.",
+    "GW150914: Merger Buchi Neri": {
+        "desc": "Il primo storico segnale di onde gravitazionali rilevato da LIGO. Due buchi neri da 36 e 29 M\u2609 (source frame) si fondono in circa 52 secondi di tempo simulato (52.034 s misurati, contro i ~55 attesi da Peters e dalla relativit\u00e0 numerica SXS; errore medio del chirp vs NR: 1.27%).\nGUIDA OPERATIVA: Usa la mappa DPHI (tasto H) per tracciare i fronti d'onda concentrici. Distribuisci la sonda LIGO premendo P a distanza adeguata (non troppo vicina). Salva premendo di nuovo P o chiudendo la simulazione tornando al launcher per eseguire l'analisi spettrale nel LIGO Analyzer. Regola i passi dell'engine con i tasti 1-5 ma NON alterare il DT con T o Y per preservare la calibrazione del chirp relativistico.",
+        "dt": "0.000001"
+    },
+    "GW190814: Merger Asimmetrico (Mass Gap)": {
+        "desc": "Il merger pi\u00f9 asimmetrico osservato all'epoca (q = 0.112): un buco nero da 23 M\u2609 ingoia un oggetto misterioso da 2.6 M\u2609 nel 'mass gap', la stella di neutroni pi\u00f9 pesante o il buco nero pi\u00f9 leggero mai rilevato, senza controparte elettromagnetica. La coalescenza avviene in circa 20 secondi di tempo simulato (inizializzazione Peters a T-20s, f_GW iniziale ~15 Hz, ISCO a ~162 Hz).\nGUIDA OPERATIVA: Usa DPHI (tasto H) o GW Strain (tasto L con corpo bloccato) per il chirp asimmetrico. Premi P per posizionare la sonda LIGO a debita distanza; salva il dump premendo di nuovo P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocit\u00e0 con i tasti 1-5 ma NON usare T o Y: la fisica 2.5PN \u00e8 tarata sul DT iniziale (1e-6).",
         "dt": "0.000001"
     },
     "Alpha Centauri + Sistema Polyphemus (Avatar)": {
@@ -140,7 +144,7 @@ PRESETS_DB = {
         "desc": "Laboratorio didattico con un buco nero centrale (1000 M\u2609) e 5 particelle test su corsie separate: Circolare (e=0), Ellittica (e=0.6), Alta Eccentricit\u00e0 (e=0.95), Iperbolica (fuga), Retrograda Circolare.\nConsigliato: Phi Scalare per osservare le deformazioni e la precessione delle isolinee di potenziale.",
         "dt": "0.2"
     },
-    "EMRI \u2014 Plunge Relativistico": {
+    "EMRI: Plunge Relativistico": {
         "desc": "Extreme Mass Ratio Inspiral: un buco nero da 10 M\u2609 spiraleggia verso un BH da 1000 M\u2609 (rapporto 1:100). Il collasso e il plunge finale avvengono in esattamente 13 giorni e 10 ore di tempo simulato. Se al posto del buco nero minore vi fosse una stella comune, verrebbe fatta a pezzi dalle forze mareali estreme già alla prima rivoluzione (fenomeno osservabile attivando la Tidal Heatmap).\nConsigliato: Usa la modalità DPHI (tasto H) per seguire le onde concentriche ed accelera la simulazione con i tasti 4 e 5 per coprire l'intera durata del plunge.",
         "dt": "0.05"
     },
@@ -225,7 +229,7 @@ class LauncherApp(tk.Tk):
 
         self.lbl_rad = ttk.Label(info_frame, text="Sim Radius: N/A", font=('Segoe UI', 10), foreground="#C0A0FF")
         self.lbl_rad.grid(row=0, column=1, sticky=tk.W, padx=(0, 15))
-        ToolTip(self.lbl_rad, "Il raggio massimo dell'orizzonte spaziale in cui le Onde Gravitazionali e le forze di campo mantengono causalità cronologica. Calcolato ai sensi della Velocità della Luce C.")
+        ToolTip(self.lbl_rad, "Il raggio massimo entro cui forze e campi mantengono la causalità (propagazione alla velocità della luce c, letta dai buffer storici). Oltre questo raggio l'interazione torna newtoniana istantanea.")
 
         self.lbl_step = ttk.Label(info_frame, text="Ideal Step: N/A", font=('Segoe UI', 10), foreground="#FFC0A0")
         self.lbl_step.grid(row=0, column=2, sticky=tk.W)
@@ -254,7 +258,7 @@ class LauncherApp(tk.Tk):
 
         dt_lbl = ttk.Label(dt_frame, text="Delta Time Integratore (DT):")
         dt_lbl.pack(side=tk.LEFT)
-        ToolTip(dt_lbl, text="Il frame di tempo (in secondi) processato per ogni step.\nUn dt piccolissimo (1e-6) impegna il garbage collector quasi a zero ma avanza lo spazio len_Lx pianissimo.\nUn dt altissimo forza gli storici regressivi dell'equazione e carica massicciamente la RAM e i ring-buffer.\nÈ fortemente raccomandato il valore fornito dallo scenario stesso!")
+        ToolTip(dt_lbl, text="Il tempo simulato (in secondi) avanzato a ogni step di fisica.\nUn DT piccolo (es. 1e-6) aumenta la precisione ma richiede più slot nei buffer storici per coprire il raggio causale (più RAM) e fa scorrere il tempo simulato lentamente.\nUn DT grande alleggerisce RAM e accelera il tempo simulato, a scapito della precisione numerica delle orbite.\nÈ fortemente raccomandato il valore fornito dallo scenario stesso!")
 
         self.dt_var = tk.StringVar(value="1.0")
         self.dt_entry = tk.Entry(dt_frame, textvariable=self.dt_var, bg="#2D2D2D", fg="#FFFFFF", font=('Segoe UI', 10), justify='right')

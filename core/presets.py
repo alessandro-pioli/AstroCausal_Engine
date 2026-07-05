@@ -37,13 +37,13 @@ def get_preset(name="Sistema Solare Completo"):
         return _make_solar_system()
     elif name == "Sistema Solare (Leggero)":
         return _make_solar_system_light()
-    elif name == "Sistema Solare — Orbita Galattica (Sgr A*)":
+    elif name == "Sistema Solare: Orbita Galattica (Sgr A*)":
         return _make_galactic_solar_system()
     elif name == "Ammasso Caotico (100 Corpi)":
         return _make_random_cluster(100)
-    elif name == "Terra — Luna — ISS — Hubble":
+    elif name == "Terra - Luna - ISS - Hubble":
         return _make_earth_moon_iss_hubble()
-    elif name == "Sole — Terra — Luna — Artemis II (Motors Off)":
+    elif name == "Sole - Terra - Luna - Artemis II (Motors Off)":
         return _make_sun_earth_moon_artemis2()
     elif name == "Sistema Gioviano Completo":
         return _make_jovian_system()
@@ -53,21 +53,23 @@ def get_preset(name="Sistema Solare Completo"):
         return _make_Rspeed_test_light()
     elif name == "Approccio alla Velocità della Luce (ART) [0.7c -> c] - ULTRA-LIGHT 5 gb RAM ver":
         return _make_Rspeed_test_ultralight()
-    elif name == "Stelle di Neutroni Binarie — Orbita Stabile":
+    elif name == "Stelle di Neutroni Binarie: Orbita Stabile":
         return _make_binary_neutron_stars_stable()
-    elif name == "Stelle di Neutroni Binarie — Eccentricità Estrema":
+    elif name == "Stelle di Neutroni Binarie: Eccentricità Estrema":
         return _make_extreme_eccentric_binary_ns()
-    elif name == "Stelle di Neutroni Binarie — Pre-Collisione":
+    elif name == "Stelle di Neutroni Binarie: Pre-Collisione":
         return _make_binary_neutron_stars_pre_collision()
-    elif name == "GW170817 — Merger Stelle di Neutroni":
+    elif name == "GW170817: Merger Stelle di Neutroni":
         return _make_GW170817_merger()
     elif name == "Alpha Centauri + Sistema Polyphemus (Avatar)":
         return _make_alpha_centauri_avatar()
-    elif name == "GW150914 — Merger Buchi Neri":
+    elif name == "GW150914: Merger Buchi Neri":
         return _make_GW150914_merger()
+    elif name == "GW190814: Merger Asimmetrico (Mass Gap)":
+        return _make_GW190814_merger()
     elif name == "Laboratorio Orbite Estreme":
         return _make_extreme_eccentricity_test()
-    elif name == "EMRI — Plunge Relativistico":
+    elif name == "EMRI: Plunge Relativistico":
         return _make_relativistic_plunge_test()
     elif name == "Scontro fra Galassie Nane":
         return _make_dual_cluster_collision()
@@ -81,21 +83,21 @@ def get_preset(name="Sistema Solare Completo"):
 # --- GENERATORI SPECIFICI ---
 def _make_Rspeed_test():
     """
-    Approccio alla Velocità della Luce — Test ART (Accelerazione Relativistica Artificiale).
+    Approccio alla Velocità della Luce: Test ART (Accelerazione Relativistica Artificiale).
 
     Il Sole viene lanciato a v = 0.999c con un vettore di accelerazione artificiale costante (ART)
     che VIOLA intenzionalmente il freno relativistico del motore (che richiederebbe energia infinita).
     Questo permette di osservare:
-      - Lo schiacciamento dei campi di Lambert in modalità Phi scalare: man mano che v -> c,
+      - Lo schiacciamento del campo alla Liénard-Wiechert in modalità Phi scalare: man mano che v -> c,
         le isolinee di potenziale gravitazionale si comprimono in un disco perpendicolare alla direzione
         di moto, raggiungendo verticalmente l'infinito esattamente a c.
       - Il 'muro del Deep Space': la coda causale L0→L1→L2 si comprime fino a diventare
-        una singolarità ottica al raggiungimento di c. Oltre, appare la coda 'fictiva' —
+        una singolarità ottica al raggiungimento di c. Oltre, appare la coda 'fictiva',
         il boom sonico non più solo della luce, ma dell'informazione causale stessa.
       - L'uscita dal cono di Mach: la regione in cui il kernel grafico non riceve più informazioni
         causali dal Sole (zero contributo al campo) e vediamo il vuoto assoluto alle spalle.
 
-    MODALITÀ CONSIGLIATA: Phi Scalare (per vedere la compressione dei campi di Lambert).
+    MODALITÀ CONSIGLIATA: Phi Scalare (per vedere la compressione del campo alla Liénard-Wiechert).
     Il sim_radius è impostato a ~1000 anni luce per permettere alla coda di memoria L2 di
     estendersi abbastanza da rendere visibile il collasso causale prima del muro.
     """
@@ -145,7 +147,7 @@ def _make_Rspeed_test_ultralight():
 
 def _make_solar_system():
     """
-    Sistema Solare Completo — Meccanica Kepleriana Realistica.
+    Sistema Solare Completo: Meccanica Kepleriana Realistica.
 
     Riproduce il Sistema Solare con masse, semiaassi, eccentricità e raggi reali JPL.
     Include il Sole, tutti e otto i pianeti principali, Plutone, e le lune significative
@@ -316,7 +318,7 @@ def _make_solar_system():
 
 def _make_solar_system_light():
     """
-    Sistema Solare (Versione Leggera) — Solo Pianeti, Nessuna Luna.
+    Sistema Solare (Versione Leggera): Solo Pianeti, Nessuna Luna.
 
     Identico al Sistema Solare Completo per masse, eccentricità e posizioni,
     ma privo di lune per ridurre drasticamente il numero di corpi simulati.
@@ -371,7 +373,7 @@ def _make_solar_system_light():
 
 def _make_random_cluster(n):
     """
-    Ammasso Caotico — Stress-Test N-Body con Buco Nero Ipermassiccio.
+    Ammasso Caotico: Stress-Test N-Body con Buco Nero Ipermassiccio.
 
     Un buco nero supermassiccio (1000 masse solari) al centro circondato da N=100 corpi
     con masse, distanze, velocità e orientazioni randomizzate (con 15% di orbite retrograde).
@@ -427,7 +429,7 @@ def _make_random_cluster(n):
 
 def _make_earth_moon_iss_hubble():
     """
-    Terra — Luna — ISS — Hubble — Scenario Geocentrico.
+    Terra - Luna - ISS - Hubble: Scenario Geocentrico.
 
     Micro-scenario geocentrico con dati reali: la Terra al centro, la Luna in orbita
     ellittica (e=0.0549, a=384.400 km) e due satelliti artificiali:
@@ -464,7 +466,7 @@ def _make_earth_moon_iss_hubble():
 
 def _make_sun_earth_moon_artemis2():
     """
-    Terra — Luna — Artemis II (Motors Off) — Scenario Eliocentrico.
+    Terra - Luna - Artemis II (Motors Off): Scenario Eliocentrico.
 
     Scenario eliocentrico reale: il Sole al centro, la Terra e la Luna in orbita
     attorno al Sole, e la navicella Artemis II (Orion) in crociera translunare passiva.
@@ -535,7 +537,7 @@ def _make_sun_earth_moon_artemis2():
 
 def _make_jovian_system():
     """
-    Sistema Gioviano Completo — 13 lune in tre famiglie dinamiche.
+    Sistema Gioviano Completo: 13 lune in tre famiglie dinamiche.
 
     Giove al centro con le quattro lune interne, le quattro galileiane in risonanza
     di Laplace 1:2:4 (Io-Europa-Ganimede) e cinque irregolari esterne dei gruppi
@@ -595,7 +597,7 @@ def _make_jovian_system():
 
 def _make_extreme_eccentric_binary_ns():
     """
-    Stelle di Neutroni Binarie — Eccentricità Estrema.
+    Stelle di Neutroni Binarie: Eccentricità Estrema.
 
     Due stelle di neutroni gemelle (~1.5 M_sol ciascuna) in orbite altamente
     eccentriche attorno al comune baricentro. Il baricentro corrisponde alla
@@ -626,7 +628,7 @@ def _make_extreme_eccentric_binary_ns():
 
 def _make_binary_neutron_stars_stable():
     """
-    Stelle di Neutroni Binarie — Orbita Circolare Stabile (Pre-Inspiral).
+    Stelle di Neutroni Binarie: Orbita Circolare Stabile (Pre-Inspiral).
 
     Due stelle di neutroni identiche (~1.5 masse solari ciascuna) in orbita circolare
     perfetta a distanza reciproca di 40.000 km, con velocità kepleriana calcolata
@@ -658,7 +660,7 @@ def _make_binary_neutron_stars_stable():
 
 def _make_binary_neutron_stars_pre_collision():
     """
-    Stelle di Neutroni Binarie — Late Inspiral (Pre-Collisione).
+    Stelle di Neutroni Binarie: Late Inspiral (Pre-Collisione).
 
     'Fotografia' del sistema a r = 375 km di separazione totale, corrispondente
     a una frequenza d'onda gravitazionale attesa di ~66.8 Hz (frequenza orbitale ~33 Hz).
@@ -699,7 +701,7 @@ def _make_binary_neutron_stars_pre_collision():
 
 def _make_GW170817_merger():
     """
-    GW170817 — Kilonova: il Merger di Stelle di Neutroni più Famoso della Storia.
+    GW170817, Kilonova: il Merger di Stelle di Neutroni più Famoso della Storia.
 
     Replica dell'evento rilevato da LIGO/Virgo il 17 agosto 2017, il primo merger
     di stelle di neutroni osservato sia in onde gravitazionali che in luce (kilonova).
@@ -754,7 +756,7 @@ def _make_GW170817_merger():
 
 def _make_alpha_centauri_avatar():
     """
-    Alpha Centauri + Sistema Polyphemus — Triplo Stellare Reale con Scenario Immaginario.
+    Alpha Centauri + Sistema Polyphemus: Triplo Stellare Reale con Scenario Immaginario.
 
     Il sistema triplo stellare reale Alpha Centauri:
       - Alpha Centauri A (1.1 M_sol, stella simile al Sole, tipo G)
@@ -860,7 +862,7 @@ def _make_alpha_centauri_avatar():
 
 def _make_GW150914_merger():
     """
-    GW150914 — Il Primo Segnale di Onde Gravitazionali mai Rilevato dall'Umanità.
+    GW150914: il Primo Segnale di Onde Gravitazionali mai Rilevato dall'Umanità.
 
     Replica dell'evento del 14 settembre 2015, annunciato da LIGO il 11 febbraio 2016
     (Abbott et al., PRL 116, 2016). Due buchi neri in fusione:
@@ -906,7 +908,65 @@ def _make_GW150914_merger():
     ideal_dt = 0.000001
     ideal_sim_radius = 3 * AU_IN_KM
     ideal_step = DEFAULT_STEP
-    
+
+    return bodies, ideal_dt, ideal_sim_radius, ideal_step
+
+
+def _make_GW190814_merger():
+    """
+    GW190814: il Merger più Asimmetrico e l'Oggetto Misterioso del Mass Gap.
+
+    Replica dell'evento del 14 agosto 2019, rivelato dalla rete LIGO-Virgo
+    (Abbott et al., ApJL 896, L44, 2020). La coppia più asimmetrica osservata
+    fino ad allora (rapporto di massa q = 0.112):
+      - BH-A: 24.43 masse solari detector-frame (source 23.2, z = 0.053; r_s = 72 km)
+      - Oggetto-B: 2.73 masse solari detector-frame (source 2.59; r_s = 8 km)
+    L'oggetto secondario cade nel "mass gap" (2.5-5 masse solari): la stella di
+    neutroni più pesante o il buco nero più leggero mai osservato, senza
+    controparte elettromagnetica né firme mareali nel segnale.
+    Il sistema è inizializzato a ~20 secondi (Peters, chirp detector-frame ~6.42)
+    prima del merger, con separazione di 1.160 km (f_GW iniziale ~15 Hz, ISCO
+    teorica a ~162 Hz) e velocità circolari esatte calcolate contro la forza
+    reale del kernel (PW per-sorgente + softening).
+    Il rapporto di massa estremo rende lo scenario un banco di prova della
+    ripartizione (m_src/M) della reazione 2.5PN: quasi tutta la spinta
+    dissipativa ricade sull'oggetto leggero, come in un piccolo EMRI.
+
+    MODALITÀ CONSIGLIATA: DPHI o GW Strain per il chirp asimmetrico.
+    Attivare Sonda LIGO prima del lancio per analisi post-processing con LIGO Analyzer.
+    """
+    bodies = []
+
+    # 1. Masse in DETECTOR FRAME (source 23.2/2.59 x 1.053, z = 0.053): è la
+    # chirp detector-frame (~6.42) a governare le frequenze misurate.
+    mass_A = 24.43 * 1.98847e30
+    mass_B = 2.727 * 1.98847e30
+    mass_tot = mass_A + mass_B
+
+    # 2. Separazione a T-20 secondi secondo Peters con la chirp detector-frame
+    dist_total = 1160.0
+    r_A = dist_total * (mass_B / mass_tot)
+    r_B = dist_total * (mass_A / mass_tot)
+
+    # 3. Calcolo della velocità circolare coerente con lo pseudo-potenziale di Paczyński-Wiita
+    v_base = solve_pair_circular_velocity(mass_A, mass_B, dist_total)
+    v_A = v_base * (mass_B / mass_tot)
+    v_B = v_base * (mass_A / mass_tot)
+
+    # 4. Raggi visivi = raggi di Schwarzschild esatti delle masse detector-frame (km).
+    # Per l'oggetto misterioso B si adotta il raggio da buco nero: l'evento non
+    # mostra firme mareali e la dinamica è indistinguibile da un BBH.
+    rad_A = 72.1
+    rad_B = 8.1
+
+    # Colori distinti: Arancio e Verde per non confonderlo con GW150914 (ciano/magenta)
+    bodies.append(CelestialBody(0, mass_A, [-r_A, 0.0], [0.0, -v_A], rad_A, (255, 150, 0), pre_existed=False, name="BH GW19-A"))
+    bodies.append(CelestialBody(1, mass_B, [r_B, 0.0], [0.0, v_B], rad_B, (0, 255, 140), pre_existed=False, name="GW19-B (?)"))
+
+    ideal_dt = 0.000001
+    ideal_sim_radius = 3 * AU_IN_KM
+    ideal_step = DEFAULT_STEP
+
     return bodies, ideal_dt, ideal_sim_radius, ideal_step
 
 
@@ -992,14 +1052,14 @@ def _make_galactic_solar_system():
 
 def _make_extreme_eccentricity_test():
     """
-    Laboratorio di Orbite Estreme — Didattica Astrodinamica.
+    Laboratorio di Orbite Estreme: Didattica Astrodinamica.
 
     Un buco nero centrale (1000 masse solari) circondato da cinque 'particelle test'
     inizializzate su corsie orbitali deliberatamente separate per evitare collisioni:
       - Circolare (e=0.00): orbita circolare perfetta come riferimento.
       - Ellittica (e=0.60): orbit moderatamente eccentric con pericentro ravvicinato.
       - Altamente ellittica (e=0.95): quasi-parabolica, forte precessione del pericentro.
-      - Iperbolica (e>1, fuga): velocità leggermente sopra quella di fuga — traiettoria aperta.
+      - Iperbolica (e>1, fuga): velocità leggermente sopra quella di fuga, traiettoria aperta.
       - Retrograda circolare: orbita circolare nella direzione opposta alle altre.
     Tutte le velocità sono calcolate da scipy tramite il potenziale Paczyński-Wiita.
     Ottimo per confrontare visivamente l'effetto dell'eccentricità e dell'inversione d'orbita.
@@ -1062,7 +1122,7 @@ def _make_extreme_eccentricity_test():
 
 def _make_dual_cluster_collision():
     """
-    Scontro fra Galassie Nane — Impatto Quasi-Frontale Catastrofico.
+    Scontro fra Galassie Nane: Impatto Quasi-Frontale Catastrofico.
 
     Due galassie nane con nucleo massiccio (65.000 masse solari ciascuno) + 100 stelle
     di disco ciascuna (200 corpi totali) si avvicinano in rotta di collisione quasi-frontale.
@@ -1148,7 +1208,7 @@ def _make_dual_cluster_collision():
 
 def _make_relativistic_plunge_test():
     """
-    EMRI — Extreme Mass Ratio Inspiral: Plunge Relativistico.
+    EMRI (Extreme Mass Ratio Inspiral): Plunge Relativistico.
 
     Un Extreme Mass Ratio Inspiral (EMRI) è un sistema in cui un buco nero di massa
     stellare (qui: 10 masse solari) spiraleggia verso un buco nero supermassiccio centrale
@@ -1157,7 +1217,7 @@ def _make_relativistic_plunge_test():
     dalla distruzione mareale prima di raggiungere l'orizzonte degli eventi (superamento del limite di Roche).
     Il corpo viene lanciato con velocità tangenziale al 15% della circolare: questa
     sottovelocità garantisce un'orbita fortemente ellittica che porta rapidamente
-    al plunge — la spirale finale nel pozzo di Paczyński-Wiita che produce
+    al plunge, la spirale finale nel pozzo di Paczyński-Wiita che produce
     onde gravitazionali concentriche di crescente frequenza e ampiezza.
     Gli EMRI reali sono una delle sorgenti target del futuro rivelatore spaziale LISA.
 
@@ -1200,7 +1260,7 @@ def _make_relativistic_plunge_test():
 
 def _make_blank():
     """
-    Scenario Vuoto — Tela Bianca.
+    Scenario Vuoto: Tela Bianca.
 
     Un universo completamente vuoto con parametri di default.
     Il raggio di simulazione causale dell'informazione è modificabile attraverso astro_settings.ini

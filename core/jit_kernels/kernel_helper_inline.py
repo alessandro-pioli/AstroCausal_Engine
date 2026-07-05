@@ -46,15 +46,24 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
     BH_ACCRETION_MULT=max(1.0, min(10.0 * dt, 100.0))
     BH_THRESHOLD=0.001
 
-    # EMRI guard: per una coppia a rapporto di massa >= 100:1 con un BH, il corpo grande
-    # cattura il piccolo a 1.9*rs invece di 1.0*rs, assorbendolo PRIMA della fascia
-    # singolare di Paczynski-Wiita. A DT finito quella fascia inietta energia e "spara via"
-    # il corpo (cannone EMRI): assorbirlo prima e' una regolarizzazione-per-assorbimento.
-    # Attivo solo col floor sotto 1.9 (DT piccolo); a DT grande il mult e' gia' >= 1.9 e
-    # i BBH a massa comparabile restano a contatto fra orizzonti tangenti.
-    # Guardia per assorbimento preventivo a 1.9 volte rs (limite orizzonte allargato prima dell'ISCO)
-    emri_guard = BH_ACCRETION_MULT < 1.9
-    emri_delta = (1.9 - BH_ACCRETION_MULT)    # * massa_grande = raggio extra
+    # EMRI guard: due soglie di rapporto di massa, due raggi di cattura target, per non
+    # sovra-espandere le coppie intermedie (che gonfierebbero la sovradissipazione, §10.1).
+    # Il corpo grande cattura il piccolo PRIMA della fascia singolare di Paczynski-Wiita: a DT
+    # finito quella fascia inietta energia e "spara via" il corpo (cannone EMRI); assorbirlo
+    # prima e' una regolarizzazione-per-assorbimento. La scala del pericolo: al contatto
+    # (r = rsA+rsB) la distanza dalla singolarita' del grande e' rsB, e l'amplificazione PW
+    # rispetto a Newton cresce come (rapporto di massa)^2. A 1.24:1 (GW150914, validato vs
+    # NR) vale ~1.5x, innocua. A 9:1 (GW190814) vale ~80x: pericoloso ma non estremo, il
+    # floor 1.25 basta. Oltre 50:1 (EMRI veri) serve il floor pieno 1.9 gia' usato in origine.
+    # Sotto 3:1 il floor 1.0 a orizzonti tangenti resta sicuro e il regime BBH comparabile
+    # non viene toccato. Attivi solo sotto il proprio target (DT piccolo); a DT grande il
+    # mult naturale e' gia' oltre il target e il delta si annulla da solo.
+    emri_target_mid = 1.25
+    emri_target_high = 1.9
+    emri_guard_mid = BH_ACCRETION_MULT < emri_target_mid
+    emri_guard_high = BH_ACCRETION_MULT < emri_target_high
+    emri_delta_mid = (emri_target_mid - BH_ACCRETION_MULT)    # * massa_grande = raggio extra
+    emri_delta_high = (emri_target_high - BH_ACCRETION_MULT)  # * massa_grande = raggio extra
 
     # --- PRE-PASSO O(N): calcola real_r e is_bh UNA VOLTA per corpo ---
     # + trova la velocità massima per il filtro spaziale del CCD
@@ -119,13 +128,20 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
 
             # EMRI guard (loop-invariant: spento del tutto a DT grande): se la coppia ha
             # rapporto estremo, espandi il raggio di cattura del BH grande PRIMA del filtro.
-            if emri_guard:
+            if emri_guard_high:
                 m2j=mass_arr[j]
-                # Soglia di rapporto di massa 90.0 per classificare il sistema come EMRI (Extreme Mass Ratio Inspiral)
-                if is_bh1 and m1 > m2j * 90.0:
-                    r_sum += r_sum*emri_delta
-                elif is_bh_cache[j] and m2j > m1 * 90.0:
-                    r_sum += r_sum*emri_delta
+                # Soglie di rapporto di massa: 3.0 copre EMRI, NSBH e BBH asimmetrici
+                # (GW190814 e simili) col floor 1.25; 50.0 isola gli EMRI estremi col floor 1.9.
+                if is_bh1 and m1 > m2j * 3.0:
+                    if m1 > m2j * 50.0:
+                        r_sum += r_sum*emri_delta_high
+                    elif emri_guard_mid:
+                        r_sum += r_sum*emri_delta_mid
+                elif is_bh_cache[j] and m2j > m1 * 3.0:
+                    if m2j > m1 * 50.0:
+                        r_sum += r_sum*emri_delta_high
+                    elif emri_guard_mid:
+                        r_sum += r_sum*emri_delta_mid
 
             dx=px1 - pos_arr[j, 0]
 
@@ -399,16 +415,25 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
         dist_sq_old = dist_visual * dist_visual
     
     # ---- SOGLIE RELATIVISTICHE ----
-    v_sq = src_vx*src_vx + src_vy*src_vy
-    
+    # Gate del regime GW sulla VELOCITA' RELATIVA della coppia (invariante galileiana,
+    # la stessa variabile della formula 2.5PN). Nel baricentro le velocita' dei due corpi
+    # sono sempre antiparallele, quindi |v_rel| = |v_A| + |v_B|. Per masse uguali
+    # v_src = v_rel/2: la soglia 0.1c sulla relativa equivale ESATTAMENTE al vecchio
+    # criterio per-sorgente a 0.05c (GW150914/GW170817 validati restano invariati).
+    # Il vecchio criterio falliva nelle coppie asimmetriche dal lato della sorgente
+    # pesante (v_A = v_rel*m_B/M resta sotto soglia per quasi tutto l'inspiral):
+    # il corpo leggero non riceveva ne' il bypass ne' il freno 2.5PN (cannone GW190814).
+    rel_vx = my_vx - src_vx
+    rel_vy = my_vy - src_vy
+    v_rel_sq = rel_vx*rel_vx + rel_vy*rel_vy
+
     r_s = src_mass * rs_factor
-    threshold_gw = 0.0025 * c_sq
-    threshold_lw = 0.25 * c_sq
-    
-    # 2. Dead Reckoning Ibrido 
+    threshold_gw = 0.01 * c_sq    # (0.1c)^2 sulla relativa == vecchio (0.05c)^2 sulla singola a masse uguali
+
+    # 2. Dead Reckoning Ibrido
     time_of_flight = dist_visual * inv_c
-    
-    is_gw = (v_sq > threshold_gw) and (dist_visual < (r_s * 1000.0))
+
+    is_gw = (v_rel_sq > threshold_gw) and (dist_visual < (r_s * 1000.0))
     
     if is_gw:
         # Regime GW: si utilizza la posizione attuale per prevenire errori di aberrazione
@@ -440,28 +465,16 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
         dist_pw = 1.0
 
     # Vettore = (1 / r) * (1 / (r - rs)^2)
-    inv_dist3 = 1.0 / (dist * dist_pw * dist_pw) 
+    inv_dist3 = 1.0 / (dist * dist_pw * dist_pw)
     scalar = (g_const * src_mass) * inv_dist3
-    
-    # 4. Correzione Liénard-Wiechert (Check Relativistico)
-    threshold_lw = 0.25 * c_sq
-    
-    if v_sq > threshold_lw:
-        lw_denominator = dist 
-        if lw_denominator < 1e-3: lw_denominator = 1e-3
-        doppler_factor = dist_visual / lw_denominator
-        scalar *= doppler_factor
 
     ax = dx * scalar
     ay = dy * scalar
 
     # 5. RADIATION REACTION (Esattore delle Tasse 2.5 PN)
-    # Gatekeeper calibrato: > 5% della velocità della luce (15.000 km/s) e vicinanza estrema
+    # Gatekeeper: v_rel > 10% di c (vedi gate is_gw sopra) e vicinanza estrema.
+    # rel_vx/rel_vy/v_rel_sq sono gia' calcolati in testa alla funzione per il gate.
     if is_gw:
-        rel_vx = my_vx - src_vx
-        rel_vy = my_vy - src_vy
-        v_rel_sq = rel_vx*rel_vx + rel_vy*rel_vy
-        
         # Stampa telemetria ogni 0.25 s di simulazione; nell'endgame passa a 1 ms
         # per non lasciare cieca la spazzolata finale. Soglia scale-aware: 120 km
         # copre le NS, 6*r_s i buchi neri (il loro contatto e' a centinaia di km).
@@ -948,4 +961,4 @@ def calculate_gw_contribution(
     h_plus_proj = (vx_rel*vx_rel - vy_rel*vy_rel) * (nx*nx - ny*ny) + 4.0 * (vx_rel * vy_rel) * (nx * ny)
 
     # Radiazione Far-Field (1/R)
-    return (ret_mass * h_plus_proj) / r_geom
+    return (ret_mass * h_plus_proj) / r_geom
