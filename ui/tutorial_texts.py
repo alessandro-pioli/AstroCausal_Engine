@@ -2,80 +2,68 @@ from ui.ui_theme import UITheme
 
 def push_default_tutorials(manager):
     manager.enqueue(
-        "🌌 ASTRO CAUSAL SIM: WELCOME 🌌",
+        " ESSENTIAL CONTROLS ",
         [
-            "Welcome to the Hardcore N-Body Simulation Engine.",
+            "Welcome to AstroCausal Engine.",
             "",
-            "MOUSEDOWN / DRAG : Pan across the universe.",
-            "SCROLL WHEEL / +/-: Zoom in and out.",
-            "HINTS            : Observe events from macro or micro perspectives."
+            "Mouse Drag / WASD / Arrows : Pan the camera.",
+            "Mouse Wheel / +/-          : Zoom in and out.",
+            "[R]                        : Toggle body trails.",
+            "Double-Click on a body     : Lock camera, open Telemetry HUD.",
+            "Double-Click on empty space: Probe the field at that point.",
+            "[TAB]                      : Cycle through active bodies.",
         ],
         UITheme.INFO
     )
     manager.enqueue(
-        "⏱️ TIME & EXECUTION SPEED ⏱️",
+        " SPEED & PRECISION ",
         [
-            "Simulation speed defines how fast time passes.",
+            "[1] to [5] : Physics speed multiplier (more steps per frame).",
+            "[T] / [Y]  : Halve / double the time-step (DT).",
             "",
-            "Press keys [1] to [5] to change the speed multiplier.",
-            "Higher multipliers execute more physics steps per render frame.",
+            "Lower DT means more precision, at the cost of simulated speed.",
         ],
         UITheme.HIGHLIGHT_MAIN
     )
     manager.enqueue(
-        "⚛️ PRECISION & TIME-STEP (DT) ⚛️",
+        " VISUALIZATION & TOOLS ",
         [
-            "Physical accuracy directly depends on the Integration Time-Step (DT).",
-            "This engine uses a Verlet-based Integrator internally.",
+            "[H] : Cycle main heatmaps (Potential, dPhi/dt, Tidal Stress).",
+            "[L] : Cycle paired heatmaps on a locked body",
+            "      (Lagrange Hunter, Roche, GW Strain).",
+            "[G] : Cycle heatmap resolution.",
+            "[P] : Place or remove the LIGO probe.",
             "",
-            "Press [Y] to INCREASE DT: Runs faster, but fast bodies might 'cut corners',",
-            "resulting in severe orbital drifts.",
-            "Press [T] to DECREASE DT: Slower execution, but ensures absolute",
-            "precision for tight orbits and close-encounters.",
-        ],
-        UITheme.DANGER
-    )
-    manager.enqueue(
-        "🔧 BOTTLENECKS & PERFORMANCE 🔧",
-        [
-            "Physics calculations are heavy. If you experience low FPS:",
-            "1. Lower the Speed Multiplier [1-5].",
-            "2. To maintain the same fast-forward simulation time, you can",
-            "   increase DT [Y] (if the scenario's orbits are stable enough).",
-            "",
-            "Finding the perfect balance between Speed and DT is the key",
-            "to fluidly master this Causal Engine!"
-        ],
-        (255, 150, 50)
-    )
-    manager.enqueue(
-        "🪐 GRAVITATIONAL FIELD MODES 🪐",
-        [
-            "Press [H] to cycle through GPU-accelerated field modes:",
-            "",
-            "0. OFF (Void / Trails mapping)",
-            "1. PHI: Gravitational Potential Well Heatmap",
-            "2. D-PHI: Space-Time Gradient (Gravitational Waves)",
-            "5. TIDAL STRESS: Tidal spaghettification"
+            "Press [F] anytime for the full key legend.",
         ],
         (200, 100, 255)
     )
     manager.enqueue(
-        "🔍 TELEMETRY, LOCKING & LOGS 🔍",
+        " CONSOLE & KEY STATS ",
         [
-            "DOUBLE-CLICK on any celestial body to lock the camera.",
-            "This opens the Real-Time Telemetry HUD with physics vectors.",
+            "A log console lives in the top-right corner.",
+            "Click its header [-] / [+] to collapse or expand it.",
             "",
-            "You will also find a GAME CONSOLE in the top-right corner.",
-            "Click its header [-] to expand or collapse system logs",
-            "such as garbage collection rules or physical alerts."
+            "Simulated time, DT, the speed multiplier and FOV",
+            "stay pinned top-left at all times.",
+        ],
+        (100, 200, 255)
+    )
+    manager.enqueue(
+        " LEARN MORE ",
+        [
+            "That covers the essentials to get moving.",
+            "",
+            "For heatmap physics and the full usage guide, see",
+            "README.md and PHYSICS_AND_SCENARIO_GUIDE.md",
+            "in the project folder.",
         ],
         UITheme.SUCCESS
     )
 
 def push_radar_warnings(manager):
     manager.enqueue(
-        "🚨 RELATIVISTIC SYSTEM DETECTED 🚨",
+        " RELATIVISTIC SYSTEM DETECTED ",
         [
             "The system has detected an extreme gravitational interaction.",
             "Gravitational Waves (GW) generation is possible in this scenario.",
@@ -86,7 +74,7 @@ def push_radar_warnings(manager):
         UITheme.DANGER
     )
     manager.enqueue(
-        "⚠️ PHOTOSENSITIVITY WARNING ⚠️",
+        " PHOTOSENSITIVITY WARNING ",
         [
             "You can adjust the simulation speed using the keys [1-5].",
             "",
@@ -97,32 +85,19 @@ def push_radar_warnings(manager):
         ],
         UITheme.HIGHLIGHT_MAIN
     )
-    manager.enqueue(
-        "🛰️ REAL-TIME TELEMETRY 🛰️",
-        [
-            "Double-click on any body to TARGET it.",
-            "",
-            "This will open a real-time data HUD at the bottom.",
-            "You can use this data (mass, velocity, local acceleration)",
-            "and the distance to the dominant mass to gauge",
-            "the precise moment of collision or merger."
-        ],
-        (50, 150, 255)
-    )
 
 def push_ligo_info(manager):
     manager.enqueue(
-        "📡 LIGO PROBE PLACEMENT 📡",
+        " LIGO PROBE PLACEMENT ",
         [
             "You are about to deploy a stationary LIGO Probe.",
+            "It records local gravitational strain, detectable mainly during",
+            "Neutron Star or Black Hole binary collapses.",
             "",
-            "It continuously records local gravitational strain and energy flux.",
+            "Exit the simulation to analyze the recording (strain graph,",
+            "spectrogram, chirp mass estimate) in the LIGO Analyzer.",
             "",
-            "Only extraordinary events like Neutron Star or Black Hole binary collapses",
-            "generate macroscopic waves detectable by this probe.",
-            "",
-            "To consult the results, exit the simulation. A menu will appear",
-            "to build the strain graph and spectrogram."
+            "Full pipeline details in PHYSICS_AND_SCENARIO_GUIDE.md, §8.",
         ],
         UITheme.INFO
     )
