@@ -41,12 +41,12 @@ class HudRenderer:
             div_mode_str = f"AUTO (Curr: {resolution_div})" if gstate.resolution_mode == 'AUTO' else f"{gstate.resolution_mode}"
             
             self.cached_lines = [
-                (time_formatted, UITheme.HIGHLIGHT_MAIN),
-                (f"DT  : {DT} s", UITheme.HIGHLIGHT_MAIN),
-                (f"SPEED: {speed_multiplier}x ({speed_str})", UITheme.HIGHLIGHT_MAIN),
+                (time_formatted, UITheme.COLOR_WHITE),
+                (f"DT  : {DT} s", UITheme.COLOR_WHITE),
+                (f"SPEED: {speed_multiplier}x ({speed_str})", UITheme.COLOR_WHITE),
                 (f"TPS: {int(real_tps)} | FPS: {fps:.1f}", UITheme.HIGHLIGHT_MAIN),
                 (f"Scale: 1px = {format_unit(camera.scale)}", UITheme.HIGHLIGHT_MAIN),
-                (f"FOV  : {format_unit(fov_w_km)} x {format_unit(fov_h_km)}", UITheme.HIGHLIGHT_MAIN),
+                (f"FOV  : {format_unit(fov_w_km)} x {format_unit(fov_h_km)}", UITheme.COLOR_WHITE),
                 (f"Bodies: {len(bodies)} | {lock_str}", UITheme.HIGHLIGHT_MAIN),
                 ("----------------", UITheme.COLOR_WHITE),
                 (f"View Mode: {field_status}", UITheme.COLOR_WHITE),
@@ -61,12 +61,13 @@ class HudRenderer:
             else:
                 self.cached_lines.append(("[P] Place LIGO Probe", UITheme.COLOR_WHITE))
 
-            # Suggerimento heatmap: appare solo se un corpo e' bloccato e non siamo
-            # gia' in Lagrange Hunter / Roche (cosi' i conteggi x1/x2 restano esatti).
-            if locked_body_idx is not None and gstate.view_mode not in (3, 4):
+            # Suggerimento heatmap: sempre visibile quando un corpo e' bloccato,
+            # a prescindere dalla heatmap corrente.
+            if locked_body_idx is not None:
                 hint_col = (255, 210, 0)  # giallo-oro acceso, distinto dal mint di [F]
                 self.cached_lines.append(("[L] x1  Lagrange Hunter mode", hint_col))
                 self.cached_lines.append(("[L] x2  Roche Topology", hint_col))
+                self.cached_lines.append(("[L] x3  GW Strain", hint_col))
 
         screen.blit(self.hud_bg, (10,10))
         
