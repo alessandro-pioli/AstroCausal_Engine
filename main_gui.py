@@ -28,6 +28,13 @@ from utils.gc_worker import GCWorker
 
 
 def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
+    """Entry point del processo simulatore: esegue in sequenza la bootstrap a nove
+    fasi (§9.3 di ARCHITECTURE_DEEP_DIVE.md, dalla splash Tkinter fino al frame
+    zero in pausa) e poi entra nel game loop a ordine fisso (eventi → fisica →
+    rendering, §9.1). Ogni 60 frame controlla morti e avvia lo scan GC asincrono
+    (§6); quando il GC certifica un'estinzione causale, il rebuild successivo
+    riaggancia camera e coppia Lagrange per nome, non per indice, perché il rebuild
+    compatta gli indici dei corpi superstiti."""
     data.WIDTH = w
     data.HEIGHT = h
 
@@ -60,7 +67,7 @@ def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
         w, h = data.WIDTH, data.HEIGHT
     else:
         screen = pygame.display.set_mode((data.WIDTH, data.HEIGHT))
-    pygame.display.set_caption("Astro Causal Sim - Hardcore Kernel Edition")
+    pygame.display.set_caption("AstroCausal Engine")
     clock = pygame.time.Clock()
 
     # --- FONTS ---
@@ -322,7 +329,7 @@ def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Astro Causal Sim Engine")
+    parser = argparse.ArgumentParser(description="AstroCausal Engine")
     parser.add_argument("--preset", type=str, default="solar_system")
     parser.add_argument("--width", type=int, default=1200)
     parser.add_argument("--height", type=int, default=800)

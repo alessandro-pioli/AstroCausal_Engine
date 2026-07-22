@@ -16,9 +16,7 @@ def format_unit(val):
     else:
         return f"{val:.0f} km"
 
-# ==============================================================================
 # TOOLTIP CLASS
-# ==============================================================================
 class ToolTip(object):
     """Classe helper per mostrare tooltip esplicativi sui widget."""
     def __init__(self, widget, text='widget info'):
@@ -68,103 +66,102 @@ class ToolTip(object):
         if tw:
             tw.destroy()
 
-# ==============================================================================
 # DATABASE PRESET & INFO
-# ==============================================================================
 PRESETS_DB = {
     "Sistema Solare Completo": {
-        "desc": "Il nostro ecosistema planetario completo: Sole, 8 pianeti principali, Plutone e le lune più grandi. Le orbite sono inizializzate al pericentro con velocità kepleriana risolta numericamente sul potenziale di Paczyński-Wiita per garantire la massima stabilità fisica.\nConsigliato: Visualizzazione Phi Scalare per i pozzi gravitazionali o Roche per esplorare le sfere di Hill dei pianeti maggiori.",
+        "desc": "Il nostro ecosistema planetario completo: Sole, 8 pianeti principali, Plutone e le lune più grandi. Le orbite sono inizializzate al pericentro con velocità kepleriana risolta numericamente sul potenziale di Paczyński-Wiita per garantire la massima stabilità fisica.",
         "dt": "150.0"
     },
     "Sistema Solare (Leggero)": {
-        "desc": "La versione semplificata del Sistema Solare (solo il Sole e i 9 pianeti maggiori, senza satelliti naturali). Consente di osservare la stabilità kepleriana a lungo termine su qualsiasi hardware grazie a un DT incrementato (512 s/step).\nConsigliato: Heatmap Phi per analizzare la geometria statica e pulita dei campi gravitazionali.",
+        "desc": "La versione semplificata del Sistema Solare (solo il Sole e i 9 pianeti maggiori, senza satelliti naturali). Consente di osservare la stabilità kepleriana a lungo termine su qualsiasi hardware grazie a un DT incrementato (512 s/step).",
         "dt": "512.0"
     },
     "Sistema Solare: Orbita Galattica (Sgr A*)": {
-        "desc": "Il Sistema Solare viaggia a 230 km/s in orbita galattica attorno a Sagittarius A* (il buco nero supermassiccio centrale da 4.1 milioni di M\u2609). Test per osservare il comportamento del campo gravitazionale e della stabilità orbitale sotto una traslazione globale ad alta velocità (boost di 230 km/s).\nConsigliato: Heatmap Phi per osservare come i campi locali rimangano stabili e non distorti nonostante la velocità globale di sistema.",
+        "desc": "Il Sistema Solare viaggia a 230 km/s in orbita galattica attorno a Sagittarius A* (il buco nero supermassiccio centrale da 4.1 milioni di M\u2609). Test per osservare il comportamento del campo gravitazionale e della stabilità orbitale sotto una traslazione globale ad alta velocità (boost di 230 km/s).",
         "dt": "512.0"
     },
     "Ammasso Caotico (100 Corpi)": {
-        "desc": "Stress-test N-Body estremo con 100 corpi massicci che orbitano in modo caotico attorno a un buco nero centrale da 1000 M\u2609.\nGUIDA PERFORMANCE: Data l'estrema richiesta computazionale, gioca con i tasti T (dimezza DT, aumenta precisione) e Y (raddoppia DT, riduce precisione) per gestire la velocità mantenendo buoni FPS. Evita velocità engine (tasti 1-5) troppo elevate. Premere H per spegnere completamente le heatmap grafiche disattivando il campo aumenta drasticamente le prestazioni.",
-        "dt": "1.0"
+        "desc": "Stress-test N-Body estremo con 100 corpi massicci che orbitano in modo caotico attorno a un buco nero centrale da 1000 M\u2609.\nGUIDA PERFORMANCE: Data l'estrema richiesta computazionale, utilizzare i tasti T (dimezza DT, aumenta precisione) e Y (raddoppia DT, riduce precisione) per gestire la velocità mantenendo buoni FPS. Evitare velocità engine (tasti 1-5) troppo elevate. Premere H per spegnere completamente le heatmap grafiche disattivando il campo aumenta drasticamente le prestazioni.",
+        "dt": "64.0"
     },
     "Terra - Luna - ISS - Hubble": {
-        "desc": "Problema a più corpi reale in regime geocentrico. Include l'orbita ellittica reale della Luna, la Stazione Spaziale Internazionale (ISS) attiva e controllabile dal giocatore (tasti WASD) e il Telescopio Spaziale Hubble passivo in orbita circolare stabile.\nLAGRANGE HUNTER GUIDE: Per far emergere naturalmente i punti di Lagrange (L1-L5), seleziona la Luna premendo il tasto TAB a ripetizione (o facendo doppio click su di essa per bloccare la camera), quindi premi L per attivare il Roche Lagrange Hunter. Regola il fader della sensibilità sullo schermo e usa lo zoom per visualizzare i lobi gravitazionali e le valli stabili.",
+        "desc": "Problema a più corpi reale in regime geocentrico. Include l'orbita ellittica reale della Luna, la Stazione Spaziale Internazionale (ISS) attiva e controllabile dall'utente (tasti WASD) e il Telescopio Spaziale Hubble passivo in orbita circolare stabile.",
         "dt": "1.0"
     },
     "Sole - Terra - Luna - Artemis II (Motors Off)": {
-        "desc": "La navicella Artemis II (Orion + modulo di servizio, ~26 tonnellate) in crociera translunare passiva (\"motors off\"). Scenario eliocentrico reale con il Sole al centro cartesiano e Terra e Luna che gli orbitano attorno, ideale per mostrare la transizione degli spazi gravitazionali efficaci.\nConsigliato: Roche Lagrange Hunter per mappare l'interazione dei campi durante l'avvicinamento lunare.",
+        "desc": "La navicella Artemis II (Orion + modulo di servizio, ~26 tonnellate) in crociera translunare passiva (\"motors off\"). Scenario eliocentrico reale con il Sole al centro cartesiano e Terra e Luna che gli orbitano attorno, ideale per mostrare la transizione degli spazi gravitazionali efficaci.",
         "dt": "1.0"
     },
     "Sistema Gioviano Completo": {
-        "desc": "Giove e le sue 13 lune principali, divise tra lune interne, galileiane in risonanza e lune irregolari esterne.\nTIDAL STRESS GUIDE: Premi H fino ad attivare la Tidal Map (Mappa delle Forze di Marea). Potrai osservare chiaramente l'intenso stress gravitazionale esercitato da Giove sulle lune più interne, in particolare su Io: questa continua azione mareale è la causa diretta del suo eccezionale vulcanismo (il corpo geologicamente più attivo del Sistema Solare).",
+        "desc": "Giove e le sue 13 lune principali, divise tra lune interne, galileiane in risonanza e lune irregolari esterne.",
         "dt": "60.0"
     },
     "Approccio alla Velocità della Luce (ART) [0.999c -> c] - 20 gb RAM ver": {
-        "desc": "Il Sole lanciato a 0.999c con Accelerazione Relativistica Artificiale (ART) che viola il freno fisico. Man mano che v->c, i campi si schiacchiano e la coda causale L0->L1->L2 collassa in una singolarità ottica. Richiede 20 GB di RAM di picco in fase di costruzione (10 GB operativi) a causa dell'enorme buffer di storici necessari a coprire 320 anni luce di storia causale. SOLO la heatmap Phi (potenziale scalare) possiede il ramo relativistico che gestisce la distorsione in questo contesto.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
+        "desc": "Il Sole lanciato a 0.999c con Accelerazione Relativistica Artificiale (ART) che viola il freno fisico. Man mano che v->c, i campi si schiacchiano e la coda causale L0->L1->L2 collassa in una singolarità ottica. Richiede 20 GB di RAM di picco in fase di costruzione (10 GB operativi) a causa dell'enorme buffer di storici necessari a coprire 320 anni luce di storia causale. SOLO la heatmap Phi (potenziale scalare) possiede il ramo relativistico che gestisce la distorsione in questo contesto.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premere TAB o effettuare un doppio click sul Sole per monitorare la velocità in tempo reale. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.16"
     },
     "Approccio alla Velocità della Luce (ART) [0.9c -> c] - LIGHT 10 gb RAM ver": {
-        "desc": "Versione alleggerita dello scenario relativistico che parte da una velocità inferiore (0.9c) consentendo di osservare la progressiva distorsione del campo. Richiede 10 GB di RAM di picco in fase di costruzione (5 GB operativi) coprendo ben 1742 anni luce di storia causale con DT=1.6. SOLO la heatmap Phi possiede il ramo relativistico che gestisce la distorsione in questo contesto.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
+        "desc": "Versione alleggerita dello scenario relativistico che parte da una velocità inferiore (0.9c) consentendo di osservare la progressiva distorsione del campo. Richiede 10 GB di RAM di picco in fase di costruzione (5 GB operativi) coprendo ben 1742 anni luce di storia causale con DT=1.6. SOLO la heatmap Phi possiede il ramo relativistico che gestisce la distorsione in questo contesto.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premere TAB o effettuare un doppio click sul Sole per monitorare la velocità in tempo reale. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "1.6"
     },
     "Approccio alla Velocità della Luce (ART) [0.7c -> c] - ULTRA-LIGHT 5 gb RAM ver": {
-        "desc": "Versione ultra-alleggerita dello scenario relativistico. Partendo da 0.7c, permette di apprezzare la transizione dinamica da un campo gravitazionale sferico al disco piatto di Liénard-Wiechert man mano che v si approssima a c. Richiede solo 5 GB di RAM di picco in fase di costruzione (2.5 GB operativi) coprendo ben 8710 anni luce di storia causale con DT=16.0. SOLO la heatmap Phi gestisce questo ramo relativistico.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premi TAB o fai doppio click sul Sole per monitorare la velocità in tempo reale.",
+        "desc": "Versione ultra-alleggerita dello scenario relativistico. Partendo da 0.7c, permette di apprezzare la transizione dinamica da un campo gravitazionale sferico al disco piatto di Liénard-Wiechert man mano che v si approssima a c. Richiede solo 5 GB di RAM di picco in fase di costruzione (2.5 GB operativi) coprendo ben 8710 anni luce di storia causale con DT=16.0. SOLO la heatmap Phi gestisce questo ramo relativistico.\nConsigliato: Utilizzare molto i tasti da 1 a 5 per regolare la velocità di simulazione. Premere TAB o effettuare un doppio click sul Sole per monitorare la velocità in tempo reale. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "16.0"
     },
     "Stelle di Neutroni Binarie: Eccentricità Estrema": {
-        "desc": "Due stelle di neutroni gemelle (~1.5 M\u2609) in orbite estremamente eccentriche attorno al comune baricentro. Il baricentro orbitale corrisponde esattamente alla metà della loro separazione al pericentro (200 km), con le orbite che si intrecciano velocemente.\nConsigliato: DPHI per osservare l'onda quadrupolare impulsiva al pericentro.",
+        "desc": "Due stelle di neutroni gemelle (~1.5 M\u2609) in orbite estremamente eccentriche attorno al comune baricentro. Il baricentro orbitale corrisponde esattamente alla metà della loro separazione al pericentro (200 km), con le orbite che si intrecciano velocemente.\nConsigliato: DPHI o GW Strain per osservare l'onda quadrupolare impulsiva al pericentro. Anche la Topologia di Roche è molto informativa. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.000001"
     },
     "Stelle di Neutroni Binarie: Orbita Stabile": {
-        "desc": "Due stelle di neutroni (~1.5 M\u2609) in orbita circolare stabile a 40.000 km. Stato di riferimento pre-inspiral. L'irraggiamento di onde gravitazionali a questa distanza produce un decadimento orbitale reale ma lento, con fusione prevista su scala di secoli.\nConsigliato: DPHI per l'onda quadrupolare pura del sistema binario.",
+        "desc": "Due stelle di neutroni (~1.5 M\u2609) in orbita circolare stabile a 40.000 km. Stato di riferimento pre-inspiral. L'irraggiamento di onde gravitazionali a questa distanza produce un decadimento orbitale reale ma lento, con fusione prevista su scala di secoli.\nConsigliato: DPHI o GW Strain per l'onda quadrupolare pura del sistema binario. Anche la Topologia di Roche è molto informativa. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.001"
     },
     "Stelle di Neutroni Binarie: Pre-Collisione": {
-        "desc": "Late Inspiral di due stelle di neutroni separate da soli 375 km. Il collasso finale e la fusione avvengono in circa 60 secondi di tempo simulato.\nGUIDA OPERATIVA: La modalità DPHI (onde gravitazionali) è obbligatoria. Premi P per posizionare la sonda LIGO sullo schermo (non troppo vicina al centro per evitarne la distruzione prematura). Per salvare il dump NPY dei dati prima della collisione, premi nuovamente P (disattivando la sonda) o chiudi la simulazione tornando al launcher. Usa i tasti da 1 a 5 per accelerare la simulazione, ma NON PREMERE T o Y: la fisica relativistica 2.5PN è tarata sul DT iniziale (1e-6) e alterarlo rovinerebbe irrimediabilmente il chirp ondulatorio.",
+        "desc": "Late Inspiral di due stelle di neutroni separate da soli 375 km. Il collasso finale e la fusione avvengono in circa 60 secondi di tempo simulato.\nGUIDA OPERATIVA: La modalità DPHI (onde gravitazionali) è obbligatoria. Premere P per posizionare la sonda LIGO sullo schermo (non troppo vicino al centro per evitarne la distruzione prematura). Per salvare il dump NPY dei dati prima della collisione, premere nuovamente P (disattivando la sonda) o chiudi la simulazione tornando al launcher. Utilizzare i tasti da 1 a 5 per accelerare la simulazione, ma NON PREMERE T o Y: la fisica relativistica 2.5PN è tarata sul DT iniziale (1e-6) e alterarlo rovinerebbe irrimediabilmente il chirp ondulatorio. Anche la Topologia di Roche è molto informativa. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.000001"
     },
     "GW170817: Merger Stelle di Neutroni": {
-        "desc": "Replica dell'evento GW170817 a f_GW = 50 Hz. Il collasso gravitazionale e la conseguente kilonova avvengono in circa 14 secondi di tempo simulato.\nGUIDA OPERATIVA: La visualizzazione DPHI è obbligatoria. Premi P per posizionare la sonda LIGO a debita distanza dal baricentro orbitale per catturarne lo strain. Salva il dump dei dati disattivando la sonda con P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocità tramite i tasti 1-5, ma evita rigorosamente i tasti T e Y per non compromettere le correzioni relativistiche calibrate sul DT di partenza.",
+        "desc": "Replica dell'evento GW170817 a f_GW = 50 Hz. Il collasso gravitazionale e la conseguente kilonova avvengono in circa 14 secondi di tempo simulato.\nGUIDA OPERATIVA: La visualizzazione DPHI è obbligatoria. Premere P per posizionare la sonda LIGO a debita distanza dal baricentro orbitale per catturarne lo strain. Salvare il dump dei dati disattivando la sonda con P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regolare la velocità tramite i tasti 1-5, ma evitare rigorosamente i tasti T e Y per non compromettere le correzioni relativistiche calibrate sul DT di partenza. Anche la Topologia di Roche è molto informativa. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.000001"
     },
     "GW150914: Merger Buchi Neri": {
-        "desc": "Il primo storico segnale di onde gravitazionali rilevato da LIGO. Due buchi neri da 36 e 29 M\u2609 (source frame) si fondono in circa 52 secondi di tempo simulato (52.034 s misurati, contro i ~55 attesi da Peters e dalla relativit\u00e0 numerica SXS; errore medio del chirp vs NR: 1.27%).\nGUIDA OPERATIVA: Usa la mappa DPHI (tasto H) per tracciare i fronti d'onda concentrici. Distribuisci la sonda LIGO premendo P a distanza adeguata (non troppo vicina). Salva premendo di nuovo P o chiudendo la simulazione tornando al launcher per eseguire l'analisi spettrale nel LIGO Analyzer. Regola i passi dell'engine con i tasti 1-5 ma NON alterare il DT con T o Y per preservare la calibrazione del chirp relativistico.",
+        "desc": "Il primo storico segnale di onde gravitazionali rilevato da LIGO. Due buchi neri da 36 e 29 M\u2609 (source frame) si fondono in circa 52 secondi di tempo simulato (52.034 s misurati, contro i ~55 attesi da Peters e dalla relativit\u00e0 numerica SXS; errore medio del chirp vs NR: 1.27%).\nGUIDA OPERATIVA: Utilizzare la mappa DPHI (tasto H) per tracciare i fronti d'onda concentrici. Distribuire la sonda LIGO premendo P a distanza adeguata (non troppo vicina). Salvare premendo di nuovo P o chiudendo la simulazione tornando al launcher per eseguire l'analisi spettrale nel LIGO Analyzer. Regolare i passi dell'engine con i tasti 1-5 ma NON alterare il DT con T o Y per preservare la calibrazione del chirp relativistico. Anche la Topologia di Roche è molto informativa. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.000001"
     },
     "GW190814: Merger Asimmetrico (Mass Gap)": {
-        "desc": "Il merger pi\u00f9 asimmetrico osservato all'epoca (q = 0.112): un buco nero da 23 M\u2609 ingoia un oggetto misterioso da 2.6 M\u2609 nel 'mass gap', la stella di neutroni pi\u00f9 pesante o il buco nero pi\u00f9 leggero mai rilevato, senza controparte elettromagnetica. La coalescenza avviene in circa 20 secondi di tempo simulato (inizializzazione Peters a T-20s, f_GW iniziale ~15 Hz, ISCO a ~162 Hz).\nGUIDA OPERATIVA: Usa DPHI (tasto H) o GW Strain (tasto L con corpo bloccato) per il chirp asimmetrico. Premi P per posizionare la sonda LIGO a debita distanza; salva il dump premendo di nuovo P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocit\u00e0 con i tasti 1-5 ma NON usare T o Y: la fisica 2.5PN \u00e8 tarata sul DT iniziale (1e-6).",
+        "desc": "Il merger pi\u00f9 asimmetrico osservato all'epoca (q = 0.112): un buco nero da 23 M\u2609 ingoia un oggetto misterioso da 2.6 M\u2609 nel 'mass gap', la stella di neutroni pi\u00f9 pesante o il buco nero pi\u00f9 leggero mai rilevato, senza controparte elettromagnetica. La coalescenza avviene in circa 20 secondi di tempo simulato (inizializzazione Peters a T-20s, f_GW iniziale ~15 Hz, ISCO a ~162 Hz).\nGUIDA OPERATIVA: Utilizzare DPHI (tasto H) o GW Strain (tasto L con corpo bloccato) per il chirp asimmetrico. Premere P per posizionare la sonda LIGO a debita distanza; salvare il dump premendo di nuovo P prima dell'impatto o chiudendo la simulazione tornando al launcher. Regola la velocit\u00e0 con i tasti 1-5 ma NON utilizzare T o Y: la fisica 2.5PN \u00e8 tarata sul DT iniziale (1e-6).",
         "dt": "0.000001"
     },
     "Alpha Centauri + Sistema Polyphemus (Avatar)": {
-        "desc": "Sistema triplo reale (\u03b1 Cen A+B+Proxima) con il Sistema Polyphemus da Avatar (gigante gassoso + Pandora + 4 lune in phase-locking). Sfasamenti angolari forzati a multipli di 45\u00b0 per garantire la stabilità.\nConsigliato: Roche per le sfere di Hill stellari, Phi Scalare per i tre campi sovrapposti.",
-        "dt": "2.0"
+        "desc": "Sistema triplo reale (\u03b1 Cen A+B+Proxima) con il Sistema Polyphemus da Avatar (gigante gassoso + Pandora + 4 lune in phase-locking). Sfasamenti angolari forzati a multipli di 45\u00b0 per garantire la stabilità.",
+        "dt": "150.0"
     },
     "Laboratorio Orbite Estreme": {
-        "desc": "Laboratorio didattico con un buco nero centrale (1000 M\u2609) e 5 particelle test su corsie separate: Circolare (e=0), Ellittica (e=0.6), Alta Eccentricit\u00e0 (e=0.95), Iperbolica (fuga), Retrograda Circolare.\nConsigliato: Phi Scalare per osservare le deformazioni e la precessione delle isolinee di potenziale.",
+        "desc": "Laboratorio didattico con un buco nero centrale (1000 M\u2609) e 5 particelle test su corsie separate: Circolare (e=0), Ellittica (e=0.6), Alta Eccentricit\u00e0 (e=0.95), Iperbolica (fuga), Retrograda Circolare.",
         "dt": "0.2"
     },
     "EMRI: Plunge Relativistico": {
-        "desc": "Extreme Mass Ratio Inspiral: un buco nero da 10 M\u2609 spiraleggia verso un BH da 1000 M\u2609 (rapporto 1:100). Il collasso e il plunge finale avvengono in esattamente 13 giorni e 10 ore di tempo simulato. Se al posto del buco nero minore vi fosse una stella comune, verrebbe fatta a pezzi dalle forze mareali estreme già alla prima rivoluzione (fenomeno osservabile attivando la Tidal Heatmap).\nConsigliato: Usa la modalità DPHI (tasto H) per seguire le onde concentriche ed accelera la simulazione con i tasti 4 e 5 per coprire l'intera durata del plunge.",
+        "desc": "Extreme Mass Ratio Inspiral: un buco nero da 10 M\u2609 spiraleggia verso un BH da 1000 M\u2609 (rapporto 1:100). Il collasso e il plunge finale avvengono in esattamente 13 giorni e 10 ore di tempo simulato. Se al posto del buco nero minore vi fosse una stella comune, verrebbe fatta a pezzi dalle forze mareali estreme già alla prima rivoluzione (fenomeno innescato dallo stress gravitazionale).\nConsigliato: Utilizzare le modalità DPHI o GW Strain per seguire le onde concentriche, o la Topologia di Roche. Accelerare la simulazione con i tasti 4 e 5. Nota: Se le scie orbitali diventano invasive, è possibile nasconderle premendo R.",
         "dt": "0.05"
     },
     "Scontro fra Galassie Nane": {
-        "desc": "Due galassie nane (65.000 M\u2609 + 100 stelle ciascuna) in collisione quasi-frontale. Ciano vs Magenta per tracciare la rimescolazione stellare durante la fusione.\nGUIDA PERFORMANCE: A causa del grandissimo numero di interazioni (202 corpi), ottimizza i frame rate premendo H per spegnere le heatmap. Usa T (riduzione DT) e Y (aumento DT) con parsimonia per controllare la stabilità dell'engine, e usa i moltiplicatori di velocità 1-5 con attenzione per evitare scatti durante lo scontro.",
+        "desc": "Due galassie nane (65.000 M\u2609 + 100 stelle ciascuna) in collisione quasi-frontale. Ciano vs Magenta per tracciare la rimescolazione stellare durante la fusione.\nGUIDA PERFORMANCE: A causa del grandissimo numero di interazioni (202 corpi), ottimizzare i frame rate premendo H per spegnere le heatmap. Utilizzare T (riduzione DT) e Y (aumento DT) con parsimonia per controllare la stabilità dell'engine, e utilizzare i moltiplicatori di velocità 1-5 con attenzione per evitare scatti durante lo scontro. Nota: Se le scie stellari diventano troppo invasive, è possibile nasconderle premendo R.",
         "dt": "150.0"
     },
     "Scenario Vuoto (Blank)": {
-        "desc": "Universo completamente vuoto con parametri di default. Nessun corpo pre-esistente. Ideale per costruire scenari personalizzati.\nGUIDA CREAZIONE: Premi il tasto N per attivare lo Spawner Orbitale. Usa i tasti 0 e 5 per sfogliare le categorie di corpi celesti e 1-4 per selezionare l'oggetto. Successivamente, scegli la modalità di orbita (Stazionaria, Circolare/Eccentrica attorno alla massa maggiore o al corpo più vicino, o seleziona la modalità Punti di Lagrange per inserire il corpo stabilmente co-rotante su L1-L5).",
+        "desc": "Universo completamente vuoto con parametri di default. Nessun corpo pre-esistente. Ideale per costruire scenari personalizzati.\nGUIDA CREAZIONE: Premere il tasto N per attivare lo Spawner Orbitale. Utilizzare i tasti 0 e 5 per sfogliare le categorie di corpi celesti e 1-4 per selezionare l'oggetto. Successivamente, scegliere la modalità di orbita (Stazionaria, Circolare/Eccentrica attorno alla massa maggiore o al corpo più vicino, o selezionare la modalità Punti di Lagrange per inserire il corpo stabilmente co-rotante su L1-L5).",
         "dt": "1.0"
     }
 }
 
-# ==============================================================================
 # MAIN LAUNCHER APP
-# ==============================================================================
 class LauncherApp(tk.Tk):
     def __init__(self):
+        """Costruisce l'interfaccia pre-simulazione: la root Tk creata qui vive per
+        l'intera sessione, mai distrutta né ricreata (§12 di ARCHITECTURE_DEEP_DIVE.md,
+        il rimedio all'interprete Tcl singleton per processo)."""
         super().__init__()
-        self.title("Astro Causal Sim - Pre-Flight Launcher")
+        self.title("AstroCausal Engine - Pre-Flight Launcher")
         self.geometry("750x780")
         self.configure(bg="#1E1E1E")
         self.resizable(False, False)
@@ -196,7 +193,7 @@ class LauncherApp(tk.Tk):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- TITOLO ---
-        title_label = ttk.Label(main_frame, text="Astro Causal Physics Engine", style='Header.TLabel')
+        title_label = ttk.Label(main_frame, text="AstroCausal Engine", style='Header.TLabel')
         title_label.pack(pady=(0, 5))
         subtitle_label = ttk.Label(main_frame, text="Numba JIT | CPU-Driven | Float64 Precision", foreground="#888888", font=('Segoe UI', 10))
         subtitle_label.pack(pady=(0, 20))
@@ -280,6 +277,11 @@ class LauncherApp(tk.Tk):
         self.on_preset_change()
 
     def launch_ligo(self):
+        """Nasconde il launcher e lancia `ligo_analyzer.py` come sottoprocesso
+        completamente isolato (`subprocess.run`, bloccante), lo stesso schema di
+        `launch_simulation`: evita di ricreare una root Tk nello stesso processo
+        dopo averne già una attiva. La finestra riappare al ritorno del figlio,
+        anche se questo termina con un errore."""
         print(f"===========================================================")
         print(f"[LAUNCHER] Avvio LIGO Analyzer Kernel Interface...")
         print(f"===========================================================")
@@ -294,6 +296,10 @@ class LauncherApp(tk.Tk):
         self.deiconify()
 
     def on_preset_change(self, event=None):
+        """Ripopola il pannello info col preset selezionato. I numeri mostrati
+        (corpi totali, raggio causale, DT ideale) non sono statici: derivano dalla
+        costruzione reale del preset fatta una volta all'avvio del launcher
+        (`__main__` in fondo al file), non da un ricalcolo qui."""
         selected = self.preset_var.get()
         if selected in PRESETS_DB:
             info = PRESETS_DB[selected]
@@ -316,6 +322,11 @@ class LauncherApp(tk.Tk):
             self.lbl_step.config(text=f"Ideal Step Speed: {info.get('ideal_step', 1)}x")
 
     def launch_simulation(self):
+        """Costruisce il comando completo per `main_gui.py` (preset, risoluzione
+        fino a schermo intero, DT opzionale), nasconde il launcher e lo lancia come
+        sottoprocesso isolato, bloccante su `subprocess.run`. Un exit code diverso
+        da zero (`check=True`) diventa un dialogo d'errore invece di un crash del
+        launcher stesso, che resta pronto a rilanciare (§12)."""
         preset = self.preset_var.get()
         res_str = self.res_var.get()
         dt_str = self.dt_var.get()

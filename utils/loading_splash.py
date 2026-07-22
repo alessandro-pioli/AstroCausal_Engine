@@ -112,7 +112,7 @@ def show_splash_and_load(preset_name, gstate, dt_val):
 
     # --- Finestra ---
     root = tk.Tk()
-    root.title("Astro Causal Physics Engine — Inizializzazione")
+    root.title("AstroCausal Engine — Inizializzazione")
     root.geometry("520x240")
     root.configure(bg="#0D0D1A")
     root.resizable(False, False)
@@ -155,6 +155,10 @@ def show_splash_and_load(preset_name, gstate, dt_val):
         pct_var.set(f"{pct}%")
 
     def _poll():
+        """Ricicla se stesso ogni 80 ms via `root.after`: è il solo modo sicuro di
+        far avanzare la barra di progresso da dati prodotti su un thread diverso
+        senza toccare i widget Tkinter fuori dal main thread. Si autodistrugge sulla
+        finestra solo su "done" o "error" letti dalla coda, altrimenti si riarma."""
         try:
             while True:
                 kind, msg, pct = progress_q.get_nowait()
