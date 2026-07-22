@@ -1,4 +1,4 @@
-# Astro Causal Sim — Sandbox Gravitazionale Interattivo e Laboratorio Orbitale 2D
+# AstroCausal Engine — Sandbox Gravitazionale Interattivo e Laboratorio Orbitale 2D
 
 > Un laboratorio di astronomia e meccanica celeste in tempo reale, con scenari che spaziano dal sistema solare completo al merge di stelle a neutroni fino agli impatti tra galassie nane (200+ corpi). Controlla vettori e telemetria, spawner orbitale interattivo per orbite kepleriane e punti di Lagrange, suite completa di heatmap gravitazionali e simulazione della gravità a propagazione causale (dove l'informazione gravitazionale viaggia sempre alla velocità della luce c) con la manifestazione visiva emergente di onde gravitazionali analoghe.
 
@@ -15,7 +15,7 @@
 2. [Panoramica](#panoramica)
 3. [Fenomeni Emergenti nel Modello](#fenomeni-emergenti-nel-modello)
 4. [Scenari Preimpostati](#scenari-preimpostati)
-5. [Controlli di Gioco](#controlli-di-gioco)
+5. [Controlli della Simulazione](#controlli-della-simulazione)
 6. [Installazione](#installazione)
 7. [Modalità di Visualizzazione del Campo](#modalità-di-visualizzazione-del-campo)
 8. [Modello Fisico](#modello-fisico)
@@ -32,9 +32,9 @@
 |:---:|:---:|:---:|
 | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Spirali causali dΦ/dt di una binaria di stelle di neutroni"> | <img src="docs/img/GWH_EMRI_peri.png" width="100%" alt="Impulso di strain quadrupolare al pericentro di un EMRI"> | <img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Deformazione di Liénard-Wiechert del campo a velocità relativistiche"> |
 
-| Lobi di Roche (what-if Terra→Giove) | Sistema Solare (potenziale Φ) |
-|:---:|:---:|
-| <img src="docs/gif/earth_swap_jupiter.gif" width="100%" alt="Topologia di Roche: la Luna dopo la sostituzione della Terra con Giove"> | <img src="docs/img/solar_system_1.png" width="100%" alt="Heatmap del potenziale Φ del sistema solare interno"> |
+| Caos causale: stelle di neutroni attorno a Sag A* (dΦ/dt) | Topologia di Roche (Alpha Centauri AB) | Pattern a conchiglia (BNS doppia eccentricità) |
+|:---:|:---:|:---:|
+| <video src="https://github.com/user-attachments/assets/03e80460-fa52-413f-8dbc-311698c9bd78" controls="controls" width="100%"></video> | <img src="docs/img/Alpha_Roche.png" width="100%" alt="Topologia di Roche della coppia Alpha Centauri AB"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Schema a conchiglia dalla sovrapposizione delle scie in una BNS a doppia eccentricità estrema"> |
 
 **In sintesi:**
 - **Gravità causale vera**: le forze viaggiano a velocità finita *c*, non istantanee, tramite buffer storici a più livelli di risoluzione.
@@ -47,17 +47,17 @@
 
 ## Panoramica
 
-**Astro Causal Sim** è un simulatore gravitazionale interattivo e un laboratorio di meccanica celeste 2D. Progettato come un "sandbox" astronomico, permette l'esplorazione delle dinamiche orbitali stabili in scala reale (dal Sistema Solare a sistemi di lune e satelliti) e lo studio di fenomeni fisici di frontiera attraverso un modello gravitazionale nativamente **causale**: le forze non agiscono istantaneamente, ma si propagano alla velocità della luce *c* attraverso un sistema di buffer storici circolari ottimizzati.
+**AstroCausal Engine** è un simulatore gravitazionale interattivo e un laboratorio di meccanica celeste 2D. Progettato come un "sandbox" astronomico, permette l'esplorazione delle dinamiche orbitali stabili in scala reale (dal Sistema Solare a sistemi di lune e satelliti) e lo studio di fenomeni fisici di frontiera attraverso un modello gravitazionale nativamente **causale**: le forze non agiscono istantaneamente, ma si propagano alla velocità della luce *c* attraverso un sistema di buffer storici circolari ottimizzati.
 
-La scelta architetturale fondamentale del progetto è operare in **2D euclideo su spazio piatto** senza risolvere le equazioni di campo della Relatività Generale. Questa semplificazione geometrica consente al simulatore di girare **in tempo reale su qualsiasi PC consumer** stressando la CPU per calcolare la fisica in virgola mobile a doppia precisione (`float64`) tramite parallelizzazione JIT.
+La scelta architetturale fondamentale del progetto è operare in **2D euclideo su spazio piatto** senza risolvere le equazioni di campo della Relatività Generale. Questa semplificazione geometrica consente al motore di girare **in tempo reale su qualsiasi PC consumer** stressando la CPU per calcolare la fisica in virgola mobile a doppia precisione (`float64`) tramite parallelizzazione JIT.
 
-Sul nucleo causale (la gravità newtoniana valutata al tempo ritardato $t - r/c$) il motore innesta la reazione di radiazione reale di ordine 2.5PN (Post-Newtoniano, l'ordine perturbativo a cui compare la perdita di energia per onde gravitazionali), e fa emergere dinamicamente comportamenti qualitativamente coerenti con la relatività reale (aberrazione causale, contrazione del campo alla Liénard-Wiechert per sorgenti prossime a $c$, ossia la stessa deformazione che subisce il campo di una carica elettrica in moto rapido, chirp e onde gravitazionali analoghe misurate da una sonda LIGO virtuale), offrendo un laboratorio didattico per esplorare e confrontare la meccanica classica e la dinamica causale a ritardo finito.
+Sul nucleo causale (la gravità newtoniana valutata al tempo ritardato $t - r/c$) il motore innesta la reazione di radiazione reale di ordine 2.5PN (Post-Newtoniano, l'ordine perturbativo a cui compare la perdita di energia per onde gravitazionali) e fa emergere dinamicamente comportamenti qualitativamente coerenti con la relatività reale (aberrazione causale, contrazione del campo simil Liénard-Wiechert per sorgenti prossime a $c$, ossia la stessa deformazione che subisce il campo di una carica elettrica in moto rapido, chirp e onde gravitazionali analoghe misurate da una sonda LIGO virtuale), offrendo un laboratorio didattico per esplorare e confrontare la meccanica classica e la dinamica causale a ritardo finito.
 
 L'equilibrio tra fedeltà fisica e fluidità grafica è in larga parte **nelle mani dell'utente**: il motore propone un bilanciamento ma lascia regolare in tempo reale il passo temporale, la velocità di calcolo e la risoluzione delle heatmap.
 
 ### Caratteristiche Principali
 
-- **Sandbox Interattivo & Spawner**: Inserimento dinamico di corpi celesti in tempo reale con impostazione istantanea di orbite kepleriane stabili, traiettorie eccentriche, collisioni (plunge) o posizionamento nei punti di Lagrange dinamici L1–L5.
+- **Sandbox Interattivo & Spawner**: Inserimento dinamico di corpi celesti in tempo reale con impostazione istantanea di orbite kepleriane stabili, traiettorie eccentriche, collisioni (plunge) o posizionamento nei punti di Lagrange L1–L5.
 - **Preset di Sistemi Celesti**: Ampio catalogo di scenari pronti all'uso, tra cui il Sistema Solare completo (con 26 lune), il sistema di Giove, la Terra con satelliti in orbita bassa (ISS, Hubble) ed eventi cosmici estremi come buchi neri binari e collisioni galattiche.
 - **Heatmap Gravitazionali in Tempo Reale**: Rendering dinamico dei campi fisici sullo sfondo, inclusi il potenziale gravitazionale scalare $\Phi$, le onde scalari $d\Phi/dt$ (onde analoghe), lo stress di marea Hessiano, la topologia dei lobi di Roche nel sistema co-rotante e lo **strain quadrupolare proiettato (GW Strain)** con le spirali radiative causali delle binarie compatte.
 - **Flessibilità e Controllo**: Regolazione dinamica del passo temporale ($DT$), moltiplicatori di velocità per i calcoli fisici, switch istantaneo tra gravità newtoniana e causale (tasto C), tracciamento delle orbite e sonda LIGO virtuale per registrare lo strain gravitazionale.
@@ -70,15 +70,22 @@ L'equilibrio tra fedeltà fisica e fluidità grafica è in larga parte **nelle m
 
 Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergono naturalmente dalla dinamica e dal dead reckoning (l'estrapolazione della posizione da posizione e velocità note) dell'interazione gravitazionale causale:
 
-- **Propagazione causale visibile a occhio nudo**: Distruggendo o creando istantaneamente un corpo, l'informazione gravitazionale si propaga visivamente alla velocità della luce. I corpi lontani continuano a "sentire" il corpo distrutto finché il fronte di assenza non li raggiunge (e, viceversa, un nuovo corpo rimane invisibile ai corpi distanti fino all'arrivo del fronte causale).
-- **Analogia visiva delle onde gravitazionali**: Nella heatmap dΦ/dt, le binarie compatte in fase di inspiral (l'avvicinamento progressivo a spirale prima del merger) producono fronti d'onda concentrici con frequenza ed ampiezza crescenti, in perfetta analogia visiva con le onde gravitazionali reali emesse dai merger.
-- **Punti di Lagrange L1–L5**: Emergono nel sistema Terra-Luna e sono visualizzabili dinamici nel Lagrange Hunter.
-- **Respirazione dei Lobi di Roche**: L'espansione e contrazione periodica del lobo di Roche lunare in fase con la sua eccentricità orbitale (il lobo si espande all'apogeo e si contrae al perigeo).
-- **Distorsione di Liénard-Wiechert**: La contrazione geometrica causale delle isolinee del potenziale $\Phi$ trasversalmente alla direzione di moto per sorgenti ad alte velocità.
-- **Chirp Gravitazionale**: Il progressivo aumento in frequenza ed ampiezza dei fronti d'onda del potenziale emessi da binarie compatte in inspiral guidato da dissipazione di quadrupolo.
-- **Validazione BNS parameter-free**: La sonda LIGO virtuale (che registra lo strain raccogliendo nel ring buffer il proxy cinematico $(v_x^2 - v_y^2) \cdot m / r$) valida l'implementazione fisica 2.5PN all'ordine dominante. Rispetto all'analitica di Peters, l'errore medio della massa chirp stimata nello scenario BNS (binaria di stelle di neutroni, GW170817) scende allo 0.97% operando in modalità *parameter-free* (ossia basata unicamente su equazioni fisiche da principi primi, senza alcun parametro libero di taratura o coefficiente di aggiustamento ad hoc). Il confronto diretto con lo strain reale osservato (H1) registra uno scarto dell'8.45% (molto vicino al limite teorico dello stimatore spettrale, pari all'8.23%).
-- **Emergenza dell'ISCO e del plunge**: Nello scenario BBH (binaria di buchi neri, GW150914), la separazione orbitale decade finché le masse non raggiungono la soglia dell'ISCO, l'Innermost Stable Circular Orbit, l'ultima orbita circolare stabile sotto la quale ogni traiettoria precipita (frequenza teorica di 62.06 Hz). A questo punto, il sistema innesca spontaneamente la caduta rapida a spirale (plunge) a una frequenza di 62.40 Hz senza alcuna forzatura nel codice.
-- **Aderenza alla relatività numerica su GW150914**: la traccia del chirp simulato segue la curva NR di riferimento (SXS:BBH:0305) con un errore medio dell'**1,27%** lungo tutto l'inspiral, contro il 7,48% della formula analitica di Peters all'ordine dominante ([dettagli e grafici in §6.6.2 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)).
+<small>Le thumbnail sono cliccabili e aprono la cartella con tutti i media disponibili. Ogni fenomeno qui elencato è approfondito, equazioni e grafici di validazione inclusi, nella [Guida Fisica e agli Scenari](PHYSICS_AND_SCENARIO_GUIDE.md).</small>
+
+| | |
+|---|:---:|
+| **Propagazione causale visibile a occhio nudo**: Distruggendo o creando istantaneamente un corpo, l'informazione gravitazionale si propaga visivamente alla velocità della luce. I corpi lontani continuano a "sentire" il corpo distrutto finché il fronte di assenza non li raggiunge (e, viceversa, un nuovo corpo rimane invisibile ai corpi distanti fino all'arrivo del fronte causale). | <a href="docs/gif/"><img src="docs/gif/Sun_causal_birth.gif" width="400"></a> |
+| **Analogia visiva delle onde gravitazionali**: Nella heatmap dΦ/dt, le binarie compatte in fase di inspiral (l'avvicinamento progressivo a spirale prima del merger) producono fronti d'onda concentrici con frequenza ed ampiezza crescenti, in perfetta analogia visiva con le onde gravitazionali reali emesse dai merger. | <a href="docs/gif/"><img src="docs/gif/dphi_spirale_binaria.gif" width="400"></a> |
+| **Punti di Lagrange L1–L5**: Emergono nel sistema Terra-Luna e sono visualizzabili dinamici nel Lagrange Hunter. | <a href="docs/img/"><img src="docs/img/lagrM.png" width="400"></a> |
+| **Respirazione dei Lobi di Roche**: L'espansione e contrazione periodica del lobo di Roche lunare in fase con la sua eccentricità orbitale (il lobo si espande all'apogeo e si contrae al perigeo). | <a href="docs/img/"><img src="docs/img/moon_earth_roche.png" width="400"></a> |
+| **Distorsione di Liénard-Wiechert**: La contrazione geometrica causale delle isolinee del potenziale $\Phi$ trasversalmente alla direzione di moto per sorgenti ad alte velocità. | <a href="docs/gif/"><img src="docs/gif/07_to_c_fast.gif" width="400"></a> |
+| **Chirp Gravitazionale**: Il progressivo aumento in frequenza ed ampiezza dei fronti d'onda del potenziale emessi da binarie compatte in inspiral guidato da dissipazione di quadrupolo. | <a href="docs/img/"><img src="docs/img/GW150914_STFT_STRAIN.png" width="400"></a> |
+| **Validazione BNS parameter-free su formula di Peters**: nello scenario GW170817 (binaria di stelle di neutroni), la massa chirp stimata dalla pipeline spettrale della sonda LIGO virtuale cade allo **0,97%** dall'analitica di Peters, in modalità *parameter-free* (solo equazioni da principi primi, nessun coefficiente di taratura). [Dettagli, grafici e limiti in §6.6.1 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#661-lo-scenario-bns-gw170817-peters-vs-relatività-numerica-sxs). | <a href="docs/img/"><img src="docs/img/confronto_sxs_gw170817_bns.png" width="400"></a> |
+| **Emergenza dell'ISCO e del plunge**: Nello scenario BBH (binaria di buchi neri, GW150914), la separazione orbitale decade finché le masse non raggiungono la soglia dell'ISCO, l'Innermost Stable Circular Orbit, l'ultima orbita circolare stabile sotto la quale ogni traiettoria precipita (frequenza teorica di 62.06 Hz). A questo punto, il sistema innesca spontaneamente la caduta rapida a spirale (plunge) a una frequenza di 62.40 Hz senza alcuna forzatura nel codice. | <a href="docs/gif/"><img src="docs/gif/BBH_GWH_demo.gif" width="400"></a> |
+| **Validazione BBH parameter-free su NR SXS**: nello scenario GW150914 (binaria di buchi neri), la traccia del chirp simulato segue la curva di relatività numerica di riferimento (SXS:BBH:0305) con un errore medio dell'**1,27%** lungo tutto l'inspiral, contro il 7,48% della formula analitica di Peters all'ordine dominante ([dettagli e grafici in §6.6.2 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)). | <a href="docs/img/"><img src="docs/img/confronto_sxs_gw150914.png" width="400"></a> |
+| **Il dipolo del corpo singolo in dΦ/dt**: la derivata temporale del potenziale di un corpo in moto produce da sola un fronte dipolare, blu davanti e rosso dietro, la base su cui si innestano poi le spirali della coppia binaria. | <a href="docs/gif/"><img src="docs/gif/dphi_dipolo_giove.gif" width="400"></a> |
+| **Il passaggio al perielio negli EMRI**: nelle prime fasi dell'inspiral, ogni pericentro rilascia un impulso isolato di strain che si propaga come un guscio concentrico a velocità $c$, separato dal successivo da ampie regioni di silenzio. | <a href="docs/img/"><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="400"></a> |
+| **Precessione apsidale in campo forte**: nelle orbite compatte (es. EMRI) l'orbita precessa a rosetta non per una routine dedicata, ma per la correzione di Paczyński-Wiita al pericentro, rinforzata dal residuo del dead reckoning oltre il 2° ordine. | <a href="docs/gif/"><img src="docs/gif/EMRI_rosetta.gif" width="400"></a> |
 
 ---
 
@@ -89,9 +96,9 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 | Scenario | Corpi | DT | Raggio Causale | Descrizione |
 |---|:---:|:---:|:---:|---|
 | **Sistema Solare Completo** | 36 | 150 s | 64 AU | Sole, 8 pianeti, Plutone e 26 lune principali |
-| **Sistema Solare (Leggero)** | 10 | 512 s | 64 AU | Solo Sole e 9 pianeti, stabilità kepleriana a lungo termine |
+| **Sistema Solare (Leggero)** | 10 | 512 s | 64 AU | Solo Sole e 9 pianeti, senza lune: DT più alto senza perdere fedeltà kepleriana, orbite esterne osservabili in tempi ragionevoli |
 | **Orbita Galattica (Sgr A\*)** | 11 | 512 s | 64 AU | Sistema Solare in orbita a 230 km/s attorno a Sagittarius A\* |
-| **Ammasso Caotico** | 100 | 1 s | 64 AU | Stress-test N-body con BH centrale da 1000 M☉ |
+| **Ammasso Caotico** | 100 | 64 s | 64 AU | Stress-test N-body con BH centrale da 1000 M☉ |
 | **Terra - Luna - ISS - Hubble** | 4 | 1 s | 1 AU | Regime geocentrico con ISS e Hubble in orbita LEO |
 | **Sole - Terra - Luna - Artemis II** | 4 | 0.16 s | 1 AU | Crociera translunare passiva di Orion su vettori reali JPL Horizons, fino al flyby free-return |
 | **Sistema Gioviano Completo** | 14 | 60 s | 1 AU | Giove e 13 lune (interne, galileiane, irregolari) |
@@ -104,7 +111,7 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 | **GW170817** | 2 | 1 μs | 3 AU | Replica del primo evento multi-messaggero (merger in ~13,9 s simulati) |
 | **GW150914** | 2 | 1 μs | 3 AU | Primo evento GW rilevato da LIGO (merger in 52,034 s simulati, inizializzato teoricamente a T-60s) |
 | **GW190814** | 2 | 1 μs | 3 AU | Il merger più asimmetrico (q = 0,112): BH da 23 M☉ e oggetto del mass gap da 2,6 M☉ (inizializzato a T-20s via Peters) |
-| **Alpha Centauri + Polyphemus** | 9 | 2 s | 32 AU | Sistema triplo reale + sistema fittizio da *Avatar* |
+| **Alpha Centauri + Polyphemus** | 9 | 150 s | 32 AU | Sistema triplo reale + sistema fittizio da *Avatar* |
 | **Laboratorio Orbite Estreme** | 6 | 0.2 s | 2 AU | BH centrale + 5 particelle test (e=0 → iperbolica) |
 | **EMRI: Plunge Relativistico** | 2 | 0.05 s | 1200 AU | Extreme Mass Ratio Inspiral: un buco nero leggero spiraleggia in uno molto più massiccio (rapporto 1:100) |
 | **Scontro fra Galassie Nane** | 202 | 150 s | 64 AU | Collisione quasi-frontale di due galassie da 100 stelle |
@@ -112,7 +119,7 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 
 ---
 
-## Controlli di Gioco
+## Controlli della Simulazione
 
 ### Navigazione
 
@@ -130,9 +137,9 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 | Tasto | Azione |
 |:---:|---|
 | `SPAZIO` | Pausa / Riprendi |
-| `1-5` | Moltiplicatore TPS: 1×, 10×, 100×, 1000×, 10000× step fisici per frame |
-| `T` | Dimezza il DT: più preciso e più lento nel tempo simulato, più RAM |
-| `Y` | Raddoppia il DT: meno preciso e più veloce nel tempo simulato, meno RAM |
+| `1-5` | Moltiplicatore TPS: 1×, 10×, 100×, 1000×, 10000× step fisici per frame, regola velcità di simulazione senza incidere sulla precisione del modello |
+| `T` | Dimezza il DT: più preciso, dimezza la velocità di simulazione, più RAM utilizzata|
+| `Y` | Raddoppia il DT: meno preciso, raddoppia la velocità di simulazione, meno RAM utilizzata|
 | `C` | Switch Newtoniano ↔ Causale (ricostruzione completa) |
 | `BACKSPACE` | Chiudi e torna al launcher |
 
@@ -144,7 +151,7 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 | `L` | Cicla le heatmap di coppia: Lagrange Hunter → Topologia di Roche [newtoniani] → GW Strain [causale] → Φ (richiede corpo con lock e attrattore dominante) |
 | `R` | Mostra/nascondi scie orbitali |
 | `G` | Cicla risoluzione heatmap: AUTO → 1/1 → 1/2 → 1/4 → ... → AUTO |
-| `M` | Toggle legenda (in Tidal) o marcatori Lagrange teorici (in Lagrange Hunter, per confronto con i punti emergenti dalla heatmap) |
+| `M` | Toggle legenda (in Tidal) o marcatori Lagrange teorici (in Lagrange Hunter) o orbita ideale circolare (nella Topologia di Roche) |
 | `F` | Legenda tasti (overlay) |
 
 ### Strumenti
@@ -180,7 +187,7 @@ scipy
 ```bash
 # Clona il repository
 git clone <url-del-repo>
-cd astro_causal_sim
+cd AstroCausal_Engine
 
 # Installa le dipendenze
 pip install -r requirements.txt
@@ -189,7 +196,7 @@ pip install -r requirements.txt
 python launcher.py
 ```
 
-> **Nota**: Al primo avvio Numba compila i kernel fisici e grafici e li salva in cache su disco (quindi solo la prima volta). La compilazione è rapida, ma può produrre brevi **stutter** la prima volta che si attiva una funzione non ancora compilata durante l'uso (per esempio al primo ciclo tra le heatmap): è normale e sparisce subito dopo.
+> **Nota**: Al primo avvio Numba compila i kernel fisici e grafici e li salva in cache su disco (quindi solo la prima volta). La compilazione è rapida, ma può produrre brevi **stutter** la prima volta che si attiva una funzione non ancora compilata durante l'uso (per esempio al primo ciclo tra le heatmap). È normale e sparisce subito dopo.
 
 ---
 
@@ -236,6 +243,8 @@ La visualizzazione più sofisticata del campo dinamico: mappa lo **strain gravit
 
 ## Modello Fisico
 
+Il modello è **2+1D con tempo assoluto**: tutta la dinamica vive nelle due dimensioni del piano (una fetta di universo 3D, con le leggi $1/r^2$ della fisica tridimensionale) mentre un unico orologio universale scandisce il tempo per ogni corpo. È il punto di vista di un **osservatore lontano** dal sistema, senza dilatazione temporale né metrica curva. La relatività entra dal lato delle interazioni, con la causalità a velocità finita $c$ e le correzioni descritte sotto ([inquadramento completo nel §1 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#1-inquadramento-il-modello-causale-e-lapprossimazione-2d)).
+
 ### Equazione fondamentale
 
 L'interazione tra ogni coppia di corpi segue la legge di gravitazione universale di Newton:
@@ -270,7 +279,7 @@ dove $M$ è la massa totale della coppia, $\mu$ è la massa ridotta, $\hat{n}$ �
 
 ### Schema di Integrazione: Velocity Verlet
 
-Per garantire la conservazione dell'energia orbitale e la stabilità a lungo termine dei sistemi gravitazionali complessi, il simulatore adotta uno schema di integrazione di tipo **Velocity Verlet** (implementato nei kernel Numba JIT in `kernel_single.py`, `kernel_double.py` e `kernel_triple.py`; l'analisi dell'errore di troncamento è in [§4 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#4-metodi-numerici-velocity-verlet-errore-di-troncamento-e-dt)). Ciascuno step di integrazione fisica segue questa precisa sequenza temporale:
+Per garantire la conservazione dell'energia orbitale e la stabilità a lungo termine dei sistemi gravitazionali complessi, il motore adotta uno schema di integrazione di tipo **Velocity Verlet** (implementato nei kernel Numba JIT in `kernel_single.py`, `kernel_double.py` e `kernel_triple.py`; l'analisi dell'errore di troncamento è in [§4 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#4-metodi-numerici-velocity-verlet-errore-di-troncamento-e-dt)). Ciascuno step di integrazione fisica segue questa precisa sequenza temporale:
 
 1. **Primo "Half-Kick" delle velocità** (con warm-start delle accelerazioni al tempo $t=0$ precalcolate in fase di rebuild via broadcasting NumPy):
    $$\vec{v}\left(t + \frac{\Delta t}{2}\right) = \vec{v}(t) + \frac{1}{2} \vec{a}(t) \Delta t$$
@@ -283,13 +292,13 @@ Per garantire la conservazione dell'energia orbitale e la stabilità a lungo ter
 5. **Correzione relativistica dell'inerzia**:
    Sotto la soglia di $v^2 = 0.5\,c^2$ (≈ 0.707 c) l'accelerazione resta invariata. Sopra quella soglia viene riscalata dal fattore di Lorentz inverso, che la sopprime man mano che $v \to c$:
    $$\vec{a}_{eff}(t + \Delta t) = \vec{a}(t + \Delta t) \cdot \sqrt{1 - \frac{v^2}{c^2}}$$
-   Oltre $0.999\,c$ l'accelerazione viene azzerata del tutto: in condizioni ordinarie un corpo non può più essere spinto oltre quel limite. Il cap è però valutato sulla velocità a inizio tick, quindi un singolo impulso catastrofico vicino a una singolarità (con un $\Delta t$ troppo grande) può comunque oltrepassarlo in un solo passo, come nel plunge EMRI.
+   Oltre la soglia $v^2 = 0.999\,c^2$ (circa $0{,}9995\,c$) l'accelerazione viene azzerata del tutto: in condizioni ordinarie un corpo non può più essere spinto oltre quel limite. Il cap è però valutato sulla velocità a inizio tick, quindi un singolo impulso catastrofico vicino a una singolarità (con un $\Delta t$ troppo grande) può comunque oltrepassarlo in un solo passo, come nel plunge EMRI.
 6. **Secondo "Half-Kick" delle velocità**:
    $$\vec{v}(t + \Delta t) = \vec{v}\left(t + \frac{\Delta t}{2}\right) + \frac{1}{2} \vec{a}_{eff}(t + \Delta t) \Delta t$$
 
 ### Il Ruolo Determinante di DT (Passo Temporale)
 
-Il parametro **DT** ($\Delta t$) è la costante fondamentale che governa la discretizzazione temporale del simulatore. La sua scelta è il fattore più determinante nel bilanciamento tra accuratezza fisica, capacità di campionamento e risorse di sistema, per via di tre dinamiche concorrenti:
+Il parametro **DT** ($\Delta t$) è la costante fondamentale che governa la discretizzazione temporale del modello. La sua scelta è il fattore più determinante nel bilanciamento tra accuratezza fisica, capacità di campionamento e risorse di sistema, per via di tre dinamiche concorrenti:
 
 #### 1. Precisione dell'Integrazione Numerica
 Come passo temporale dell'algoritmo Velocity Verlet, $\Delta t$ definisce l'errore di troncamento locale della traiettoria ($O(\Delta t^4)$ per le posizioni). 
@@ -307,7 +316,7 @@ Questa relazione mostra come la richiesta di RAM sia inversamente proporzionale 
 - **Negli Approcci relativistici a *c* (es. a 0.999c)**: L'elevatissimo consumo di RAM (**~20 GB**) è una scelta di progettazione deliberata. Per tracciare l'effetto cumulativo della propagazione d'onda ed evidenziare nella heatmap ben **320 anni di storia di emissione** del segnale gravitazionale compresso geometricamente dalle deformazioni relativistiche di Liénard-Wiechert, è necessaria una profondità temporale del buffer enorme, che fa impennare l'uso della memoria.
 
 #### 3. Frequenza di Calcolo (TPS)
-A parità di prestazioni hardware (TPS - Ticks Per Second), un $\Delta t$ più piccolo rallenta la progressione del tempo reale simulato rispetto al tempo reale di clock dell'utente. Il simulatore compensa questo effetto moltiplicando i calcoli per frame (tramite il moltiplicatore di velocità in-game `1-5`), ma a costo di un carico di calcolo lineare aggiuntivo sulla CPU.
+A parità di prestazioni hardware (TPS - Ticks Per Second), un $\Delta t$ più piccolo rallenta la progressione del tempo reale simulato rispetto al tempo reale di clock dell'utente. Il motore compensa questo effetto moltiplicando i calcoli per frame (tramite il moltiplicatore di velocità in-game `1-5`), ma a costo di un carico di calcolo lineare aggiuntivo sulla CPU.
 
 ### Il Ruolo del Raggio di Simulazione (Sim Radius)
 
@@ -323,7 +332,7 @@ Per una simulazione ideale, il raggio di simulazione deve essere impostato a un 
 ## Architettura Software
 
 ```
-astro_causal_sim/
+AstroCausal_Engine/
 ├── launcher.py              # GUI Tkinter di lancio (preset, DT, risoluzione)
 ├── main_gui.py              # Loop principale Pygame (eventi, fisica, rendering)
 ├── ligo_analyzer.py         # Post-processing LIGO (spettrogrammi, massa chirp)
@@ -385,33 +394,24 @@ launcher.py  ──(subprocess)──►  main_gui.py
 
 ## Limiti del Modello e Gestione delle Prestazioni
 
-Astro Causal Sim è uno strumento didattico e di esplorazione numerica. Presenta le seguenti limitazioni fisiche rispetto alla relatività generale formale:
+AstroCausal Engine è uno strumento didattico e di esplorazione numerica. Presenta le seguenti limitazioni fisiche rispetto alla relatività generale formale:
 
 - **Spazio piatto (Euclideo)**: Non c'è curvatura dello spaziotempo (nessuna metrica). Il campo gravitazionale è modellato come un campo di forze scalare/vettoriale classico sovrapposto a uno sfondo euclideo piatto.
 - **Approssimazione 2D**: La simulazione avviene su un piano bidimensionale. Questo altera la cinematica radiale 3D reale e il bilancio energetico dei sistemi reali.
-- **Onde gravitazionali analoghe**: ciò che si vede non è un'onda tensoriale reale. La heatmap calcola, per ogni pixel, la variazione temporale del potenziale scalare $d\Phi/dt$ a partire dalle posizioni *passate* dei corpi: sono quindi i pixel stessi a generare i fronti d'onda concentrici, ed è **propagazione causale reale di un campo scalare** a produrre l'analogia visiva (la sonda, in parallelo, campiona il proxy cinematico del quadrupolo $(v_x^2 - v_y^2)$). Mancano però la struttura tensoriale di spin-2 (le polarizzazioni $h_+$ e $h_\times$ reali) e le derivate temporali seconde del momento di quadrupolo di massa: l'analogia è visiva e cinematica, non una soluzione delle equazioni di campo.
+- **Onde gravitazionali analoghe (due livelli di astrazione)**: nessuna visualizzazione risolve le equazioni di campo di Einstein. Il primo livello, la heatmap $d\Phi/dt$, mostra la propagazione causale reale di un campo scalare: i fronti a spirale e il chirp sono un analogo visivo e cinematico, senza struttura tensoriale. Il secondo livello, la heatmap **GW Strain**, implementa la classica formula del quadrupolo (approssimazione di campo debole) proiettata pixel per pixel al tempo ritardato: riproduce la reale simmetria angolare di spin-2 con i quattro lobi alternati, eliminando i contributi dipolari spuri. Restano fuori la coppia di polarizzazioni indipendenti $h_+$/$h_\times$ (qui esiste una sola polarizzazione proiettata efficace) e il termine in accelerazione della formula completa, escluso per stabilità numerica ([il quadro completo è nel §7.7 della guida fisica](PHYSICS_AND_SCENARIO_GUIDE.md#77-la-natura-delle-onde-del-simulatore-livelli-di-astrazione)).
 - **Costo computazionale $O(N^2)$**: Il calcolo delle forze è brute-force coppia-coppia. Il costo scala quadraticamente col numero di corpi: raddoppiare $N$ quadruplica i calcoli per tick. Inoltre, l'accuratezza numerica e la stima della massa chirp dipendono dalla scelta del passo temporale $DT$: ridurre il $DT$ (fino al microsecondo per i merger) aumenta la precisione a scapito del consumo di RAM.
 - **Carattere simbolico delle collisioni e del merger**: La fisica orbitale dinamica e la dissipazione causale si applicano rigorosamente fino al momento dell'impatto geometrico (per corpi solidi/ordinari) o all'ingresso nella rispettiva ISCO / orizzonte degli eventi (per i buchi neri). Il momento esatto della collisione (merger) e la successiva unione in un unico corpo sono modellati in modo puramente cinetico e simbolico (conservazione della quantità di moto, fusione istantanea delle masse e perdita di massa empirica). Vengono completamente omesse le reali complessità della magnetoidrodinamica relativistica, le emissioni di neutrini, la deformazione strutturale dei corpi e la complessa fase di assestamento (*ringdown*) dello spaziotempo post-merger.
-- **Assenza di disgregazione mareale**: i corpi cambiano massa e stato solo per **collisione geometrica**, mai per stress di marea. Una stella che supera abbondantemente il limite di Roche, e che nella realtà verrebbe fatta a pezzi a distanza, qui resta intatta: questo può produrre occasionali fionde pseudo-relativistiche che fisicamente non avverrebbero, perché il corpo sarebbe già stato distrutto prima. Come mitigazione visiva, la **Tidal Map** (con la sua scala di colori e la legenda) permette di riconoscere a occhio quando un corpo verrebbe disgregato a distanza e quando no.
+- **Assenza di disgregazione mareale**: i corpi cambiano massa e stato solo per **collisione geometrica**, mai per stress di marea. Una stella che supera abbondantemente il limite di Roche, e che nella realtà verrebbe fatta a pezzi a distanza, qui resta intatta. Questo può produrre occasionali fionde pseudo-relativistiche che fisicamente non avverrebbero, perché il corpo sarebbe già stato distrutto prima. Come mitigazione visiva, la **Tidal Map** (con la sua scala di colori e la legenda) permette di riconoscere a occhio quando un corpo verrebbe disgregato a distanza e quando no.
 
 ### Bottleneck Computazionale e Ottimizzazioni Grafiche (CPU Rendering)
 
 Far girare una simulazione fisica interattiva a **60 FPS** (i fotogrammi o *frame* generati per ogni secondo) significa avere a disposizione un budget massimo di **16.6 ms per frame**. In questo intervallo di tempo, la CPU deve eseguire sequenzialmente sia il motore fisico che il rendering delle heatmap del campo gravitazionale sullo sfondo.
 
-Va chiarito subito che questa formula descrive il **caso peggiore teorico, non la normalità**: il carico reale è in larga parte **nelle mani dell'utente**. Il motore propone un equilibrio ma lo lascia regolare in tempo reale, e si può strozzare deliberatamente o il **lato grafica** (risoluzione alta con molti corpi in scena) o il **lato fisica** (molti corpi a moltiplicatore alto).
+Il carico reale è in larga parte **nelle mani dell'utente**. Il motore propone un equilibrio ma lo lascia regolare in tempo reale: si può strozzare deliberatamente o il **lato grafica** (risoluzione alta con molti corpi in scena) o il **lato fisica** (molti corpi a moltiplicatore alto).
 
-I due estremi: con più di una ventina di corpi al moltiplicatore `5` (10000×: il motore punta a 10.000 tick di fisica per ogni fotogramma) è normale scendere sotto i 10 FPS, ed è una scelta dell'utente, perché serve quando si vuole il massimo avanzamento fisico (più TPS, a potenziale costo massiccio degli FPS). All'opposto, nei merger compatti a $\Delta t = 1\,\mu\text{s}$ servono pochi corpi: lì il simulatore regge **600.000 TPS e 60 FPS stabili anche con la heatmap dΦ/dt a risoluzione nativa 2K**, e i moltiplicatori alti girano senza colli di bottiglia. Diversi preset usano infatti $\Delta t = 1\,\mu\text{s}$ con l'evento atteso a 15 secondi simulati o oltre: a 600.000 TPS si scorre la simulazione a circa **0,6 secondi simulati per ogni secondo reale**, abbastanza per raggiungere in fretta l'intorno dell'evento, prima di abbassare il moltiplicatore e rallentare di ordini di grandezza fino a osservare i singoli microsecondi in super slow-motion. L'equilibrio è insomma imboccato dal motore ma resta interattivo: le strategie qui sotto servono a governarlo consapevolmente, non a sopravvivere all'uso quotidiano.
+I due estremi: con più di una ventina di corpi al moltiplicatore `5` (10000×: il motore punta a 10.000 tick di fisica per ogni fotogramma) è normale scendere sotto i 10 FPS. È una scelta dell'utente, perché serve quando si vuole il massimo avanzamento del tempo simulato (più TPS, a potenziale costo massiccio degli FPS). All'opposto, nei merger compatti a $\Delta t = 1\,\mu\text{s}$ servono pochi corpi: lì il motore regge **600.000 TPS e 60 FPS stabili anche con la heatmap dΦ/dt a risoluzione nativa 2K** e i moltiplicatori alti girano senza colli di bottiglia. Diversi preset usano infatti $\Delta t = 1\,\mu\text{s}$ con l'evento atteso a 15 secondi simulati o oltre: a 600.000 TPS si scorre la simulazione a circa **0,6 secondi simulati per ogni secondo reale**, abbastanza per raggiungere in fretta l'intorno dell'evento, prima di abbassare il moltiplicatore e rallentare di ordini di grandezza fino a osservare i singoli microsecondi in super slow-motion. L'equilibrio è insomma imboccato dal motore ma resta interattivo: le strategie qui sotto servono a governarlo consapevolmente, non a sopravvivere all'uso quotidiano.
 
-La complessità computazionale teorica massima (caso peggiore) per ogni singolo fotogramma è descritta dalla notazione Big-O:
-$$\text{Costo Computazionale per Frame} = O(S \cdot N^2) + O(W \cdot H \cdot N)$$
-Dove:
-* $S$ è lo *Speed Multiplier* (moltiplicatore di velocità configurabile in-game tramite i tasti **1-5**, corrispondenti rispettivamente a **1, 10, 100, 1000 o 10000** tick fisici eseguiti per frame).
-* $N$ è il numero di corpi celesti attivi.
-* $W \times H$ è la risoluzione (larghezza e altezza in pixel) della griglia della heatmap gravitazionale sullo sfondo.
-
-I **TPS (Ticks Per Second)**, ovvero la velocità effettiva di avanzamento fisico della simulazione, sono legati direttamente al framerate reale della grafica ($FPS$) dalla relazione:
-$$\text{TPS} = S \times \text{FPS}$$
-Il motore grafico adotta un target predefinito di **60 FPS** (sbloccabile o modificabile nel file `.ini`). Di conseguenza, in condizioni di massima fluidità a 60 FPS e con moltiplicatore impostato a `5` ($S = 10.000$), il simulatore raggiunge un tetto teorico di **600.000 TPS** (come nei preset dei merger compatti a 2 corpi). Negli scenari molto affollati (es. scontri galattici con $N \approx 200$), il peso del calcolo della fisica $O(N^2)$ abbassa gli FPS reali, trascinando proporzionalmente verso il basso anche il valore dei TPS complessivi.
+L'analisi asintotica del costo per frame (fisica contro rendering per pixel, con la formula del caso peggiore) è documentata nei [§2.3](ARCHITECTURE_DEEP_DIVE.md#23-il-lato-visualizzato-il-graphics-kernel) e [§3](ARCHITECTURE_DEEP_DIVE.md#3-il-rendering-delle-heatmap-e-la-gestione-degli-fps) di ARCHITECTURE_DEEP_DIVE.md. Ai fini pratici basta una relazione: i **TPS (Ticks Per Second)**, la velocità effettiva di avanzamento fisico, sono il prodotto dei tick per frame del moltiplicatore (tasti **1-5**: 1, 10, 100, 1000 o 10000) per gli FPS reali. Il motore adotta un target predefinito di **60 FPS** (sbloccabile o modificabile nel file `.ini`): a 60 FPS con moltiplicatore `5` il tetto teorico è di **600.000 TPS** (come nei preset dei merger compatti a 2 corpi). Negli scenari molto affollati (es. scontri galattici con ~200 corpi), il peso della fisica abbassa gli FPS reali, trascinando proporzionalmente verso il basso anche i TPS.
 
 **Esempio concreto (Sistema Solare completo, 36 corpi, sull'hardware di riferimento).** La sola fisica regge un tetto di circa **75.000 TPS**. Poiché il moltiplicatore non chiede TPS ma **tick per fotogramma**, l'effetto è il seguente:
 * **Moltiplicatore `5`** (10.000 tick/frame): per restare a 60 FPS servirebbero 600.000 TPS, molto oltre il tetto. Il motore esegue comunque i 10.000 tick richiesti a ogni frame, quindi gli FPS scendono a $75.000 / 10.000 = 7{,}5$ FPS.
@@ -421,13 +421,11 @@ La regola pratica è $\text{FPS} = \min(60,\ \text{tetto TPS} / \text{tick per f
 
 Esiste poi una leva **ortogonale** al moltiplicatore: se serve accelerare il tempo simulato **senza perdere FPS**, basta raddoppiare il DT (tasto `Y`). Ogni tick avanza del doppio del tempo simulato a parità di costo di calcolo, quindi la velocità del tempo raddoppia senza sacrificare un solo fotogramma. Qui il prezzo non sono gli FPS ma la precisione numerica, perciò conviene solo dove il contesto fisico lo consente (orbite stabili, lontane dai regimi relativistici che richiedono un DT microscopico).
 
-Il secondo termine $O(W \cdot H \cdot N)$ (il calcolo del potenziale o delle onde per ogni singolo pixel per tutti i corpi) rappresenta il vero **bottleneck grafico** su CPU del simulatore. Per evitare rallentamenti e ottimizzare le prestazioni, il motore adotta tre strategie di contenimento:
+Il calcolo delle heatmap pixel per pixel è il carico grafico dominante su CPU. Per contenerlo il motore usa tre leve:
 
-1. **Risoluzione della finestra contenuta (default 1200x800)**: Il simulatore viene avviato di default a risoluzione ridotta rispetto agli standard dei monitor moderni (1080p o superiore). Questo limita nativamente il numero iniziale di pixel $W \times H$. L'avvio a schermo intero (fullscreen) scala la griglia e richiede risorse CPU notevolmente superiori.
-2. **Scalatura dinamica della griglia (Auto-Tuner o Tasto G)**: Se il framerate scende sotto i 30 FPS, l'Auto-Tuner riduce progressivamente la risoluzione della griglia della heatmap fino a un fattore di $1/16$ per asse (abbattendo il carico di rendering fino a 256 volte):
-   $$O(W \cdot H \cdot N) \longrightarrow O\left(\frac{W}{16} \cdot \frac{H}{16} \cdot N\right)$$
-   Questa impostazione può essere gestita anche manualmente dall'utente ciclando tra i diversi fattori di scala tramite il tasto **G**.
-3. **Esclusione delle masse minori**: Durante il calcolo della heatmap del potenziale $\Phi$, l'engine esclude dal rendering tutti i corpi la cui massa è inferiore di 6 ordini di grandezza ($10^{-6}$) rispetto al corpo più massiccio presente (es. ignorando le lune minori se è presente un pianeta gigante), riducendo di fatto il numero di corpi graficamente attivi da $N$ a $(N-x)$.
+1. **Risoluzione della finestra contenuta (default 1200x800)**: la risoluzione ridotta limita nativamente il numero di pixel da calcolare. L'avvio a schermo intero scala la griglia e richiede risorse CPU notevolmente superiori.
+2. **Scalatura dinamica della griglia (Auto-Tuner o tasto G)**: se il framerate scende sotto i 30 FPS, l'Auto-Tuner riduce progressivamente la risoluzione della griglia fino a 1/16 per asse (fino a 256 volte meno pixel da calcolare). La stessa scala si può ciclare manualmente col tasto **G**.
+3. **Esclusione delle masse minori**: nella heatmap del potenziale $\Phi$ i corpi di massa trascurabile rispetto al corpo dominante vengono esclusi automaticamente dal rendering (es. le lune minori accanto a un gigante gassoso); soglia e meccanismo sono nel [§2.3 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#23-il-lato-visualizzato-il-graphics-kernel).
 
 **Sommario: come recuperare FPS e accelerare la simulazione**
 
@@ -442,27 +440,10 @@ Il secondo termine $O(W \cdot H \cdot N)$ (il calcolo del potenziale o delle ond
 
 ### Gestione della Memoria e Struttura dei 3 Buffer
 
-La propagazione causale richiede l'accesso a stati passati arbitrariamente profondi nel tempo. Per evitare l'esplosione dell'occupazione della RAM e proteggere la cache della CPU (evitando pesanti cache-miss durante la traversata dei buffer), il simulatore implementa una struttura di ring-buffer circolari a **tre livelli gerarchici di risoluzione**:
-
-1. **Buffer L0 (Risoluzione Massima)**:
-   - **Passo Temporale**: $1 \times \Delta t$ (campiona ogni singolo step fisico).
-   - **Scopo**: Calcola con precisione millimetrica le interazioni ravvicinate e ad alta velocità (es. vicino ai merger).
-2. **Buffer L1 (Compressione Intermedia)**:
-   - **Passo Temporale**: $32 \times \Delta t$ ($2^5$ o `STRIDE_L1_SHIFT = 5`).
-   - **Scopo**: Copre distanze orbitali medie risparmiando il 97% di memoria rispetto a un buffer L0 equivalente. Viene scritto solo quando `(head_0 & 31) == 0`.
-3. **Buffer L2 (Risoluzione di Lungo Raggio)**:
-   - **Passo Temporale**: $256 \times \Delta t$ ($2^8$ o `STRIDE_L2_SHIFT = 8`).
-   - **Scopo**: Consente la simulazione causale su scale interplanetarie o interstellari. Viene scritto solo quando `(head_0 & 255) == 0`.
-
-Non tutti e tre i livelli sono sempre allocati: il `SimulationManager` sceglie a runtime tra modalità **SINGLE** (solo L0), **DOUBLE** (L0 + L1) o **TRIPLE** (L0 + L1 + L2), confrontando l'ingombro stimato dei buffer con la cache L3 fisica della CPU (rilevata all'avvio), così da mantenere il buffer caldo L0 in cache su qualsiasi macchina. I dettagli completi della selezione sono nel documento [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
-
-Il sistema adotta inoltre un'architettura **placeholder ultra-ECO**:
-- All'importazione del modulo `core.data`, tutti gli array sono allocati con dimensione minima (1 elemento) per velocizzare i tempi di caricamento.
-- Durante l'inizializzazione di un preset, `ensure_capacity()` espande gli array on-demand.
-- `SimulationManager.rebuild_simulation()` calcola e alloca i buffer storici in base al raggio simulativo, al DT e al numero di corpi, offrendo una protezione OOM (Out Of Memory) con dialoghi grafici di errore.
+La propagazione causale richiede l'accesso a stati passati arbitrariamente profondi nel tempo. Per evitare l'esplosione della RAM e proteggere la cache della CPU, lo storico è un sistema di ring buffer a **tre livelli gerarchici di risoluzione**: L0 campiona ogni singolo tick per le interazioni ravvicinate, L1 e L2 campionano il passato remoto a risoluzione via via più rada. Non tutti i livelli sono sempre allocati: a ogni avvio il motore sceglie la combinazione (solo L0, L0+L1 o tutti e tre) confrontando l'ingombro stimato con la cache L3 della CPU rilevata sulla macchina, quindi la stessa simulazione può allocare buffer diversi su PC diversi. Se la memoria richiesta eccede quella disponibile, una protezione OOM (Out Of Memory) intercetta l'errore e lo mostra con un dialogo grafico invece di chiudere il programma.
 
 #### I dettagli implementativi (rimando)
-La meccanica fine dei buffer è documentata per intero nel **[§2 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**, dove si trovano: la struttura dati 3D `[corpo, slot, 5 parametri]` con dimensioni a potenza di 2 e indici gestiti via **bitmask AND** (per eliminare il costo della divisione modulo nei loop caldi); la **interrogazione causale a cascata** L0 → L1 → L2 con l'esempio numerico completo Terra-Sole; il **doppio ritrovamento causale** (due letture in cascata per risolvere l'equazione implicita del tempo di volo); e la ricostruzione delle **accelerazioni storiche per differenze finite** (i buffer non le memorizzano, per risparmiare memoria).
+La meccanica fine dei buffer è documentata per intero nel **[§2 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**, dove si trovano: la struttura dati 3D `[corpo, slot, 5 parametri]` con dimensioni a potenza di 2 e indici gestiti via **bitmask AND** (per eliminare il costo della divisione modulo nei loop caldi); gli **stride di campionamento** di L1 (32 tick) e L2 (256 tick) con i criteri di scelta della modalità; l'**allocazione placeholder ultra-ECO** con la protezione OOM; la **interrogazione causale a cascata** L0 → L1 → L2 con l'esempio numerico completo Terra-Sole; il **doppio ritrovamento causale** (due letture in cascata per risolvere l'equazione implicita del tempo di volo); e la ricostruzione delle **accelerazioni storiche per differenze finite** (i buffer non le memorizzano, per risparmiare memoria).
 
 ---
 
@@ -501,38 +482,26 @@ dove $f$ è la frequenza istantanea rilevata e $\dot{f} = df/dt$ la sua derivata
 
 > [!WARNING]
 > ### Disclaimer di Validazione
-> Non sono un fisico né un matematico di mestiere. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle); non ci sono più coefficienti liberi di taratura — la precedente euristica `m_chirp_mult` è stata rimossa quando ho implementato la reazione $2.5\text{PN}$ reale (la storia è in [PHYSICS_AND_SCENARIO_GUIDE.md](PHYSICS_AND_SCENARIO_GUIDE.md) §6.5) — e oggi il motore gira **parameter-free**. La formalizzazione è stata costruita con l'aiuto di modelli linguistici e di riferimenti standard, e gioverebbe molto di uno sguardo da professionisti del settore: aspetto già nella **Roadmap** qui sotto.
->
-> Il confronto a posteriori con la curva analitica di Peters su GW170817 mostra un accordo dello **$0{,}97\%$** senza alcun parametro di taratura libero, e un errore dell'**$8{,}45\%$** rispetto allo strain reale osservato (H1). Lo scenario BBH GW150914 è invece confrontato direttamente con la relatività numerica del catalogo SXS (waveform SXS:BBH:0305): l'errore medio è dell'**$1{,}27\%$** dalla NR lungo tutto l'inspiral, contro il **$7{,}48\%$** di Peters all'ordine dominante, con coalescenza in **52,034 s** (attesi $\approx 55$ s). Resta un confine non valicato negli ultimi $\sim 10$ ms prima del merger, dove nessuna formulazione PN classica converge (dettagli in [PHYSICS_AND_SCENARIO_GUIDE.md](PHYSICS_AND_SCENARIO_GUIDE.md) §6.6.2).
-
-La scelta progettuale è rendere tutto rigorosamente **causale**: le forze viaggiano a velocità finita $c$ e ogni corpo reagisce al passato degli altri. Da questa singola regola emergono, senza essere programmati, fenomeni che nella fisica reale appartengono al regime relativistico:
-
-- i **fronti d'onda visibili in $d\Phi/dt$**, e — ancora più diretti — i fronti d'onda *causali* che si vedono nella mappa $\Phi$ quando un corpo viene rimosso o aggiunto: la sua impronta gravitazionale non scompare (né appare) istantaneamente, ma si propaga a $c$ in un anello visibile. Non ho programmato un'animazione, ho solo scritto "leggi il passato";
-- la forma del **chirp** $f(t)$ che ricalca la curva di Peters allo $0{,}97\%$ (§6.6 della guida);
-- le orbite **a rosetta degli EMRI** (*Extreme Mass Ratio Inspiral*: la spirale lenta di un corpo piccolo attorno a un buco nero molto più massiccio, in cui la precessione del periastro disegna petali che non si chiudono mai prima del merger).
-
-Le formule scritte qui sono quelle che ho davvero usato; molti degli effetti che si vedono non sono calcolati, ma conseguenze del sistema.
+> Non sono un fisico né un matematico di mestiere. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle); non ci sono più coefficienti liberi di taratura e il motore gira **parameter-free**. La formalizzazione è stata costruita con l'aiuto di modelli linguistici e di riferimenti standard e gioverebbe molto di uno sguardo da professionisti del settore, un aspetto già tracciato nella **Roadmap** qui sotto.
 
 ### Roadmap & To-Do List
 
 - [ ] **Offloading Grafico su GPU (GLSL/Shader)**: Attualmente, il calcolo e il rendering delle heatmap (potenziale, onde, stress di marea) sono eseguiti interamente su CPU, limitando la risoluzione visuale in tempo reale. L'obiettivo futuro è delegare l'intero rendering alla GPU tramite shader GLSL in modo asincrono, mantenendo rigorosamente il calcolo fisico e i buffer storici in doppia precisione (`float64`) su CPU per evitare deriva ed errori numerici. Effetto collaterale rilevante: una volta che i kernel di rendering (oggi parallelizzati con `prange` sull'asse `width`, vedi `core/jit_kernels/graphics_kernel.py`) lasciano la CPU, i core liberati restituiscono millisecondi per tick al loop fisico `O(N²)`, aprendo un budget di calcolo oggi inesistente per i termini post-newtoniani conservativi (voce successiva).
-- [ ] **Termine 1PN conservativo (precessione del perielio quantitativa)**: Oggi la simulazione produce già progressione del perielio, ma per via *qualitativa*, generata dallo pseudo-potenziale di Paczyński-Wiita (il termine $1/(r\,(r-r_s)^2)$) e non da un'espansione 1PN calibrata; la magnitudo quindi non riproduce il coefficiente GR esatto $6\pi GM/(c^2 a(1-e^2))$. La reazione di radiazione $2.5\text{PN}$ (il termine dissipativo che governa l'inspiral) è invece già implementata. L'aggiunta di un termine **1PN EIH** porterebbe la precessione a precisione da effemeride, ma va inquadrata con due vincoli di progetto, non di pura performance:
-  - **Non è gateabile come il 2.5PN.** Il termine $2.5\text{PN}$ vive solo nel regime di merger (`is_gw`), mentre il 1PN conservativo conta per *tutte* le orbite legate: entrerebbe nel loop caldo `O(N²)` per ogni coppia a ogni tick. Pochi FLOP per coppia (gli ingredienti `rdot`, `gm_over_r`, `inv_sep`, potenze di `inv_c` sono già precalcolati nello scaffold 2.5PN), ma comunque costo costante moltiplicato per tutte le coppie. È il motivo per cui questa voce è subordinata all'offloading GPU di cui sopra.
-  - **Va *sostituito*, non *sommato*.** Il 1PN contiene già l'effetto di ritardo dominante e PW codifica già l'avanzamento del periastro in campo forte: stratificare un 1PN esplicito sopra ritardo causale + PW produrrebbe doppio conteggio dei termini velocità-dipendenti. La scelta pulita è una logica di switch che usi il 1PN EIH su posizioni istantanee nel regime debole-campo e disattivi PW/Liénard-Wiechert per quella coppia, anziché un'addizione cieca. Il 2PN dà rendimenti decrescenti (conta solo molto vicino, dove PW già domina) ed è rimandabile salvo casi specifici.
-- [ ] **Chiudere l'ultimo millisecondo pre-merger BBH**: L'aderenza alla relatività numerica SXS su GW150914 è già all'$1{,}27\%$ medio lungo l'inspiral, ma resta un confine non valicato negli ultimi $\sim 10$ ms prima del merger, dove la dinamica entra nel regime non perturbativo e serve relatività numerica vera (dove la regione interna all'orizzonte viene rimossa dal dominio di calcolo) o un modello surrogato calibrato sulla NR (famiglia EOB/Phenom).
 - [ ] **Generazione dei Kernel via Template (da studiare)**: Valutare un generatore di codice a build-time (es. `jinja2` o `string.Template`) che da un unico kernel astratto produca i file specifici single/double/triple e parallelo/sequenziale, con le costanti dei buffer espanse staticamente. Manterrebbe il loop caldo senza `if` (è il template a incollare il codice giusto per ogni variante, prima della compilazione) eliminando la duplicazione manuale dello scaffolding.
 - [ ] **Iniezione Artificiale di Energia Direzionale ("Pilotaggio" dei corpi)**: Valutare l'introduzione di input direzionali per innescare spinta o accelerazione pilotata su un corpo selezionato, permettendo all'utente di deviare attivamente le traiettorie orbitali e studiare le onde emergenti da manovre attive.
-- [ ] **SciML Emulator basato su Relatività Numerica (NR)**: Apertura a collaborazioni accademiche per individuare correzioni dissipative euristiche atte ad allineare perfettamente le traiettorie a quelle dei supercomputer (database SXS). L'obiettivo è addestrare un emulatore di Machine Learning (SciML) basato sulle curve della vera Relatività Numerica.
+- [ ] **Valutazione esperta del potenziale quantitativo del modello**: Cercare il confronto con professionisti del settore per capire se questo motore possa fungere da base quantitativa per qualcosa di più della divulgazione: esperimenti di terzi mirati sulla causalità gravitazionale, nuove famiglie di heatmap, o un eventuale potenziale come base per modelli surrogati. Con la piena consapevolezza che potrebbe non prestarsi a nessuna di queste speculazioni e rimanere, con dignità, nel reame visuale e didattico.
 - [ ] **Stabilizzazione del Strain di Quadrupolo Reale**: Risolvere l'instabilità numerica che si genera implementando lo strain basato sulle derivate seconde del momento di quadrupolo di massa ($\ddot{I}$), che attualmente fluttua e diverge vicino al merger rispetto al proxy cinematico basato sulle velocità relative.
 
 ---
 
 ## Licenza
 
-Da definire.
+Questo progetto è distribuito sotto licenza **GNU GPL v3.0**. In sintesi: chiunque può studiare, usare e modificare il codice, ma ogni ridistribuzione, anche modificata, deve restare open source sotto la stessa licenza e riconoscere l'origine. Il testo completo è nel file [LICENSE](LICENSE).
+
+Copyright © 2026 Alessandro Pioli
 
 ---
 
 ## Autore
 
-Sviluppato da **Alessandro**. Progetto indipendente di simulazione e visualizzazione di fisica gravitazionale causale emergente.
+Sviluppato da **Alessandro Pioli**. Progetto indipendente di simulazione e visualizzazione di fisica gravitazionale causale emergente.
