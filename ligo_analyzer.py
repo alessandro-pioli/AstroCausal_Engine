@@ -271,8 +271,13 @@ class LigoTelemetryReportWindow(tk.Toplevel):
 def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None):
     """Pipeline di analisi del segnale LIGO: filtraggio, spettrogrammi, tracciamento Hilbert della frequenza e stima della massa chirp."""
     base_name = os.path.basename(filename)
-    dt_str = base_name.split('DT_')[1].replace('.npy', '').split('_')[0]
-    dt = float(dt_str)
+    if 'DT_' not in base_name:
+        raise ValueError(f"'{base_name}' non contiene il pattern 'DT_<valore>' nel nome: impossibile risalire al passo di campionamento. Rinominare il file preservando quella parte, o riesportarlo dal simulatore.")
+    try:
+        dt_str = base_name.split('DT_')[1].replace('.npy', '').split('_')[0]
+        dt = float(dt_str)
+    except (IndexError, ValueError):
+        raise ValueError(f"'{base_name}' ha un pattern 'DT_' non valido: impossibile leggere il passo di campionamento.")
     fs = 1.0 / dt
 
     log_lines = []
@@ -284,7 +289,12 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     log(f"File: {base_name} | DT: {dt} | FS: {fs} Hz")
 
     # Carica i dati e rimuove gli zeri iniziali
-    data = np.load(filename)
+    try:
+        data = np.load(filename)
+    except Exception as e:
+        raise ValueError(f"'{base_name}' non e' un file .npy leggibile: {e}")
+    if data.ndim != 1 or not np.issubdtype(data.dtype, np.floating):
+        raise ValueError(f"'{base_name}' ha una struttura non compatibile (atteso un array 1D di float, trovato shape={data.shape} dtype={data.dtype}): non sembra un dump della sonda LIGO.")
     first_valid = np.argmax(data != 0.0)
     if first_valid > 0 or data[0] != 0.0:
         data = data[first_valid:]
@@ -629,7 +639,7 @@ class LigoLauncherApp(tk.Tk):
         file_frame = tk.LabelFrame(main_frame, text=" Selezione Sim-Dump (.npy) ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
         file_frame.pack(fill=tk.X, pady=(10, 10))
         
-        search_path = os.path.join("ligo_output", "data_npy", "*DT_*.npy")
+        search_path = os.path.join("ligo_output", "data_npy", "*.npy")
         self.file_list = glob.glob(search_path)
         
         if self.file_list:
@@ -694,8 +704,11 @@ class LigoLauncherApp(tk.Tk):
             try:
                 expected_m = float(raw_chirp)
             except ValueError:
-                messagebox.showwarning("Attenzione", "Massa Chirp non valida. L'analisi procederà senza confronto teorico.")
-                self.chirp_var.set("")
+                try:
+                    expected_m = float(raw_chirp.replace(',', '.'))
+                except ValueError:
+                    messagebox.showwarning("Attenzione", "Massa Chirp non valida. L'analisi procederà senza confronto teorico.")
+                    self.chirp_var.set("")
                 
         print(f"Lancio: File={sel_file}, Mode={sys_type}, Chirp={expected_m}")
         

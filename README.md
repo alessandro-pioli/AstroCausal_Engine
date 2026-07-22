@@ -1,6 +1,6 @@
-# AstroCausal Engine — Sandbox Gravitazionale Interattivo e Laboratorio Orbitale 2D
+# AstroCausal Engine: sandbox interattivo di gravità causale e meccanica orbitale 2D
 
-> Un laboratorio di astronomia e meccanica celeste in tempo reale, con scenari che spaziano dal sistema solare completo al merge di stelle a neutroni fino agli impatti tra galassie nane (200+ corpi). Controlla vettori e telemetria, spawner orbitale interattivo per orbite kepleriane e punti di Lagrange, suite completa di heatmap gravitazionali e simulazione della gravità a propagazione causale (dove l'informazione gravitazionale viaggia sempre alla velocità della luce c) con la manifestazione visiva emergente di onde gravitazionali analoghe.
+> Un laboratorio in tempo reale dove la gravità è ricreata come fenomeno genuinamente causale: l'informazione gravitazionale viaggia sempre a velocità finita c. Attorno a questo nucleo si osservano scenari che spaziano dal sistema solare completo al merge di buchi neri fino agli impatti tra galassie nane, con vettori e telemetria, spawner orbitale interattivo per orbite kepleriane e punti di Lagrange, suite completa di heatmap gravitazionali e la manifestazione visiva emergente di onde gravitazionali analoghe.
 
 **Come orientarsi nella documentazione.** Il progetto è raccontato da tre documenti complementari, ciascuno per un lettore diverso:
 - **Questo README**: per chi vuole *usare* il simulatore. Installazione, scenari, controlli, modalità di visualizzazione, gestione delle prestazioni.
@@ -28,7 +28,7 @@
 
 ## Anteprima
 
-| Spirali dΦ/dt (binaria NS) | GW Strain al pericentro (EMRI) | Liénard-Wiechert (0,7c → c) |
+| Spirali dΦ/dt (binaria NS) | GW Strain al pericentro (EMRI) | Liénard-Wiechert (0,7c → c) (*what if* estremo) |
 |:---:|:---:|:---:|
 | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Spirali causali dΦ/dt di una binaria di stelle di neutroni"> | <img src="docs/img/GWH_EMRI_peri.png" width="100%" alt="Impulso di strain quadrupolare al pericentro di un EMRI"> | <img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Deformazione di Liénard-Wiechert del campo a velocità relativistiche"> |
 
@@ -49,9 +49,9 @@
 
 **AstroCausal Engine** è un simulatore gravitazionale interattivo e un laboratorio di meccanica celeste 2D. Progettato come un "sandbox" astronomico, permette l'esplorazione delle dinamiche orbitali stabili in scala reale (dal Sistema Solare a sistemi di lune e satelliti) e lo studio di fenomeni fisici di frontiera attraverso un modello gravitazionale nativamente **causale**: le forze non agiscono istantaneamente, ma si propagano alla velocità della luce *c* attraverso un sistema di buffer storici circolari ottimizzati.
 
-La scelta architetturale fondamentale del progetto è operare in **2D euclideo su spazio piatto** senza risolvere le equazioni di campo della Relatività Generale. Questa semplificazione geometrica consente al motore di girare **in tempo reale su qualsiasi PC consumer** stressando la CPU per calcolare la fisica in virgola mobile a doppia precisione (`float64`) tramite parallelizzazione JIT.
+La scelta architetturale fondamentale del progetto è operare in uno spaziotempo **2+1D** (due dimensioni spaziali più il tempo come asse esplicito) su sfondo euclideo piatto, senza risolvere le equazioni di campo della Relatività Generale. Le leggi restano però quelle della fisica tridimensionale reale ( $1/r^2$ , non l'$1/r$ di una gravità intrinsecamente bidimensionale) e il tempo è assoluto nel senso preciso del tempo coordinato di un **osservatore lontano** dal sistema, la stessa convenzione con cui si cronometrano nella realtà pulsar binarie e onde gravitazionali. Questa semplificazione geometrica consente al motore di girare **in tempo reale su qualsiasi PC consumer** stressando la CPU per calcolare la fisica in virgola mobile a doppia precisione (`float64`) tramite parallelizzazione JIT.
 
-Sul nucleo causale (la gravità newtoniana valutata al tempo ritardato $t - r/c$) il motore innesta la reazione di radiazione reale di ordine 2.5PN (Post-Newtoniano, l'ordine perturbativo a cui compare la perdita di energia per onde gravitazionali) e fa emergere dinamicamente comportamenti qualitativamente coerenti con la relatività reale (aberrazione causale, contrazione del campo simil Liénard-Wiechert per sorgenti prossime a $c$, ossia la stessa deformazione che subisce il campo di una carica elettrica in moto rapido, chirp e onde gravitazionali analoghe misurate da una sonda LIGO virtuale), offrendo un laboratorio didattico per esplorare e confrontare la meccanica classica e la dinamica causale a ritardo finito.
+Sul nucleo causale (la gravità newtoniana valutata al tempo ritardato $t - r/c$), al verificarsi di determinate condizioni, il motore innesta la reazione di radiazione reale di ordine 2.5PN (Post-Newtoniano, l'ordine perturbativo a cui compare la perdita di energia per onde gravitazionali) e fa emergere dinamicamente comportamenti qualitativamente coerenti con la relatività reale (aberrazione causale, contrazione del campo simil Liénard-Wiechert per sorgenti prossime a $c$, ossia la stessa deformazione che subisce il campo di una carica elettrica in moto rapido, chirp e onde gravitazionali analoghe misurate da una sonda LIGO virtuale), offrendo un laboratorio didattico per esplorare e confrontare la meccanica classica e la dinamica causale a ritardo finito.
 
 L'equilibrio tra fedeltà fisica e fluidità grafica è in larga parte **nelle mani dell'utente**: il motore propone un bilanciamento ma lascia regolare in tempo reale il passo temporale, la velocità di calcolo e la risoluzione delle heatmap.
 
@@ -186,7 +186,7 @@ scipy
 
 ```bash
 # Clona il repository
-git clone <url-del-repo>
+git clone https://github.com/alessandro-pioli/AstroCausal_Engine.git
 cd AstroCausal_Engine
 
 # Installa le dipendenze
@@ -292,7 +292,7 @@ Per garantire la conservazione dell'energia orbitale e la stabilità a lungo ter
 5. **Correzione relativistica dell'inerzia**:
    Sotto la soglia di $v^2 = 0.5\,c^2$ (≈ 0.707 c) l'accelerazione resta invariata. Sopra quella soglia viene riscalata dal fattore di Lorentz inverso, che la sopprime man mano che $v \to c$:
    $$\vec{a}_{eff}(t + \Delta t) = \vec{a}(t + \Delta t) \cdot \sqrt{1 - \frac{v^2}{c^2}}$$
-   Oltre la soglia $v^2 = 0.999\,c^2$ (circa $0{,}9995\,c$) l'accelerazione viene azzerata del tutto: in condizioni ordinarie un corpo non può più essere spinto oltre quel limite. Il cap è però valutato sulla velocità a inizio tick, quindi un singolo impulso catastrofico vicino a una singolarità (con un $\Delta t$ troppo grande) può comunque oltrepassarlo in un solo passo, come nel plunge EMRI.
+   Oltre la soglia $v^2 = 0.999\,c^2$ (circa $0{,}9995\,c$) l'accelerazione viene azzerata del tutto: in condizioni ordinarie un corpo non può più essere spinto oltre quel limite.
 6. **Secondo "Half-Kick" delle velocità**:
    $$\vec{v}(t + \Delta t) = \vec{v}\left(t + \frac{\Delta t}{2}\right) + \frac{1}{2} \vec{a}_{eff}(t + \Delta t) \Delta t$$
 
@@ -482,11 +482,11 @@ dove $f$ è la frequenza istantanea rilevata e $\dot{f} = df/dt$ la sua derivata
 
 > [!WARNING]
 > ### Disclaimer di Validazione
-> Non sono un fisico né un matematico di mestiere. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle); non ci sono più coefficienti liberi di taratura e il motore gira **parameter-free**. La formalizzazione è stata costruita con l'aiuto di modelli linguistici e di riferimenti standard e gioverebbe molto di uno sguardo da professionisti del settore, un aspetto già tracciato nella **Roadmap** qui sotto.
+> L'autore non è né un fisico né un matematico di mestiere. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle); non ci sono più coefficienti liberi di taratura e il motore gira **parameter-free**. La formalizzazione è stata costruita con l'aiuto di modelli linguistici e di riferimenti standard e gioverebbe molto di uno sguardo da professionisti del settore, un aspetto già tracciato nella **Roadmap** qui sotto.
 
 ### Roadmap & To-Do List
 
-- [ ] **Offloading Grafico su GPU (GLSL/Shader)**: Attualmente, il calcolo e il rendering delle heatmap (potenziale, onde, stress di marea) sono eseguiti interamente su CPU, limitando la risoluzione visuale in tempo reale. L'obiettivo futuro è delegare l'intero rendering alla GPU tramite shader GLSL in modo asincrono, mantenendo rigorosamente il calcolo fisico e i buffer storici in doppia precisione (`float64`) su CPU per evitare deriva ed errori numerici. Effetto collaterale rilevante: una volta che i kernel di rendering (oggi parallelizzati con `prange` sull'asse `width`, vedi `core/jit_kernels/graphics_kernel.py`) lasciano la CPU, i core liberati restituiscono millisecondi per tick al loop fisico `O(N²)`, aprendo un budget di calcolo oggi inesistente per i termini post-newtoniani conservativi (voce successiva).
+- [ ] **Offloading Grafico su GPU (GLSL/Shader)**: Attualmente, il calcolo e il rendering delle heatmap (potenziale, onde, stress di marea) sono eseguiti interamente su CPU, limitando la risoluzione visuale in tempo reale. L'obiettivo futuro è delegare l'intero rendering alla GPU tramite shader GLSL in modo asincrono, mantenendo rigorosamente il calcolo fisico e i buffer storici in doppia precisione (`float64`) su CPU per evitare deriva ed errori numerici. Effetto collaterale rilevante: una volta che i kernel di rendering (oggi parallelizzati con `prange` sull'asse `width`, vedi `core/jit_kernels/graphics_kernel.py`) lasciano la CPU, i core liberati restituiscono millisecondi per tick al loop fisico `O(N²)`, aprendo un budget di calcolo oggi inesistente che potrebbe permettere il calcolo dei termini post-newtoniani conservativi (1PN, 2PN).
 - [ ] **Generazione dei Kernel via Template (da studiare)**: Valutare un generatore di codice a build-time (es. `jinja2` o `string.Template`) che da un unico kernel astratto produca i file specifici single/double/triple e parallelo/sequenziale, con le costanti dei buffer espanse staticamente. Manterrebbe il loop caldo senza `if` (è il template a incollare il codice giusto per ogni variante, prima della compilazione) eliminando la duplicazione manuale dello scaffolding.
 - [ ] **Iniezione Artificiale di Energia Direzionale ("Pilotaggio" dei corpi)**: Valutare l'introduzione di input direzionali per innescare spinta o accelerazione pilotata su un corpo selezionato, permettendo all'utente di deviare attivamente le traiettorie orbitali e studiare le onde emergenti da manovre attive.
 - [ ] **Valutazione esperta del potenziale quantitativo del modello**: Cercare il confronto con professionisti del settore per capire se questo motore possa fungere da base quantitativa per qualcosa di più della divulgazione: esperimenti di terzi mirati sulla causalità gravitazionale, nuove famiglie di heatmap, o un eventuale potenziale come base per modelli surrogati. Con la piena consapevolezza che potrebbe non prestarsi a nessuna di queste speculazioni e rimanere, con dignità, nel reame visuale e didattico.
