@@ -85,9 +85,7 @@ class EventHandler:
                     callback(event)
 
 
-# ==========================================
 # ESEMPIO DI UTILIZZO
-# ==========================================
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((400, 300))

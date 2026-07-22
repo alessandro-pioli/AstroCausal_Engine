@@ -21,9 +21,7 @@ VEL_FAST_SQ = 5.0
 FLAG_ALIVE = 1
 FLAG_DYING = 2
 
-## ==============================================================================
 # MOTORE DI COLLISIONE INLINE (SEQUENZIALE & SICURO)
-# ==============================================================================
 @njit(fastmath=True, cache=True)
 def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_arr, flags_arr, void_val, g_const, rs_factor, dt, collision_cooldown):
     """
@@ -301,9 +299,7 @@ def resolve_collisions_step(n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_a
         if ccd_cap < safe_ticks: safe_ticks = ccd_cap
         if safe_ticks > 10000: safe_ticks=10000
         collision_cooldown[0]=safe_ticks
-# ==============================================================================
 # HELPER: SCIE ADATTIVE (Zero Divisioni)
-# ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
 def update_trail_logic(i, pos_x, pos_y, vel_x, vel_y, radius, trail_buf, trail_heads, trail_last_pos, force_write):
     """
@@ -395,9 +391,46 @@ def solve_retarded_time(dx, dy, vx, vy, a_term):
     return (d_dot_v + math.sqrt(delta_reduced)) / a_term
 
 
-# ==============================================================================
+# HELPER: TELEMETRIA GW (Formattazione manuale stringhe Numba)
+@njit(inline='always', fastmath=True, cache=True)
+def _print_gw_telemetry(tick_counter, dt, dist, v_rel_sq, r_s):
+    """Stampa un rigo di telemetria (tempo, distanza, velocità relativa, frequenza GW)
+    solo al superamento di una soglia periodica, non a ogni tick: il periodo scende da
+    0.25 s a 0.001 s vicino al contatto (dist sotto 120 km o 6 R_s) per non perdere
+    l'endgame senza inondare la console nelle fasi lente. Girando in codice nopython,
+    tutti i numeri sono formattati a mano (niente f-string/format supportati da Numba)."""
+    telemetry_period = 0.001 if dist < max(120.0, r_s * 6.0) else 0.25
+    if int(tick_counter / telemetry_period) != int((tick_counter - dt) / telemetry_period):
+        f_gw = math.sqrt(v_rel_sq) / (math.pi * dist)
+        int_part = int(f_gw)
+        frac_part = int(round((f_gw - int_part) * 100))
+        if frac_part >= 100:
+            int_part += 1
+            frac_part -= 100
+        if frac_part < 10:
+            f_gw_str = str(int_part) + ".0" + str(frac_part)
+        else:
+            f_gw_str = str(int_part) + "." + str(frac_part)
+        d_str = str(int(dist))
+        v_str = str(int(math.sqrt(v_rel_sq)))
+        # Timestamp di simulazione a 4 decimali (0.1 ms), formattato a mano
+        # perche' Numba in nopython non supporta f-string/format.
+        t_int_part = int(tick_counter)
+        t_frac_part = int(round((tick_counter - t_int_part) * 10000.0))
+        if t_frac_part >= 10000:
+            t_int_part += 1
+            t_frac_part -= 10000
+        if t_frac_part < 10:
+            t_str = str(t_int_part) + ".000" + str(t_frac_part)
+        elif t_frac_part < 100:
+            t_str = str(t_int_part) + ".00" + str(t_frac_part)
+        elif t_frac_part < 1000:
+            t_str = str(t_int_part) + ".0" + str(t_frac_part)
+        else:
+            t_str = str(t_int_part) + "." + str(t_frac_part)
+        print("T: " + t_str + " s | D: " + d_str + " km | V_rel: " + v_str + " km/s | F_GW: " + f_gw_str + " Hz")
+
 # HELPER: CALCOLO FORZA RELATIVISTICA (Paczyński-Wiita + 2.5PN Radiation Reaction)
-# ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
 def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, src_vx, src_vy, src_ax, src_ay, src_mass, src_rad, src_px, src_py, mass_arr, inv_c, c_sq, g_const, rs_factor, m_chirp_mult, my_idx, tick_counter, dt):
     """Calcola la forza gravitazionale relativistica integrando il potenziale di Paczynski-Wiita e la reazione di radiazione 2.5PN."""
@@ -479,36 +512,7 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
         # per non lasciare cieca la spazzolata finale. Soglia scale-aware: 120 km
         # copre le NS, 6*r_s i buchi neri (il loro contatto e' a centinaia di km).
         if my_idx == 0:
-            telemetry_period = 0.001 if dist < max(120.0, r_s * 6.0) else 0.25
-            if int(tick_counter / telemetry_period)!= int((tick_counter - dt) / telemetry_period):
-                f_gw = math.sqrt(v_rel_sq) / (math.pi * dist)
-                int_part = int(f_gw)
-                frac_part = int(round((f_gw - int_part) * 100))
-                if frac_part >= 100:
-                    int_part += 1
-                    frac_part -= 100
-                if frac_part < 10:
-                    f_gw_str = str(int_part) + ".0" + str(frac_part)
-                else:
-                    f_gw_str = str(int_part) + "." + str(frac_part)
-                d_str = str(int(dist))
-                v_str = str(int(math.sqrt(v_rel_sq)))
-                # Timestamp di simulazione a 4 decimali (0.1 ms), formattato a mano
-                # perche' Numba in nopython non supporta f-string/format.
-                t_int_part = int(tick_counter)
-                t_frac_part = int(round((tick_counter - t_int_part) * 10000.0))
-                if t_frac_part >= 10000:
-                    t_int_part += 1
-                    t_frac_part -= 10000
-                if t_frac_part < 10:
-                    t_str = str(t_int_part) + ".000" + str(t_frac_part)
-                elif t_frac_part < 100:
-                    t_str = str(t_int_part) + ".00" + str(t_frac_part)
-                elif t_frac_part < 1000:
-                    t_str = str(t_int_part) + ".0" + str(t_frac_part)
-                else:
-                    t_str = str(t_int_part) + "." + str(t_frac_part)
-                print("T: " + t_str + " s | D: " + d_str + " km | V_rel: " + v_str + " km/s | F_GW: " + f_gw_str + " Hz")
+            _print_gw_telemetry(tick_counter, dt, dist, v_rel_sq, r_s)
                 
         inv_c5 = inv_c * inv_c * inv_c * inv_c * inv_c
 
@@ -542,9 +546,7 @@ def compute_relativistic_force(my_x, my_y, my_vx, my_vy, my_rad, src_x, src_y, s
 
     return ax, ay
 
-# ==============================================================================
 # HELPER: CALCOLO POTENZIALE (PHI) UNIFICATO
-# ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
 def calculate_potential_contribution(
     # Coordinate Target
@@ -560,7 +562,7 @@ def calculate_potential_contribution(
     c_sq, c_threshold_sq, inv_c, inv_dt, void_val
 ):
     """
-    Calcola il contributo al potenziale (GM/r) con supporto Deep Space Accelerato.
+    Calcola il contributo al potenziale (GM/r) con supporto Deep Space.
     """
     
     # 1. Check Relativistico & Delay
@@ -655,9 +657,7 @@ def calculate_potential_contribution(
     return ret_mass / lw_denom
 
 
-# ==============================================================================
 # HELPER: CALCOLO ONDE (DPHI/DT) - DEEP SPACE INERZIALE
-# ==============================================================================
 @njit(inline='always', fastmath=True, cache=True)
 def calculate_dphi_contribution(
     target_x, target_y,
@@ -893,21 +893,8 @@ def calculate_gw_contribution(
             ret_mass = h_L2[i, ptr, 4]
             valid_est = True
     else:
-        is_history_full = False
-        if len_L2 > 0:
-            ptr_tail = (heads_L2[i] + 1) & mask_L2
-            if h_L2[i, ptr_tail, 0] > void_val: is_history_full = True
-        elif len_L1 > 0:
-            ptr_tail = (heads_L1[i] + 1) & mask_L1
-            if h_L1[i, ptr_tail, 0] > void_val: is_history_full = True
-        elif len_L0 > 0:
-            ptr_tail = (heads_L0[i] + 1) & mask_L0
-            if h_L0[i, ptr_tail, 0] > void_val: is_history_full = True
-
-        if is_history_full:
-            ret_x = px
-            ret_y = py
-            valid_est = True
+        # Niente deep space per le onde gravitazionali
+        return 0.0
 
     if not valid_est: 
         return 0.0
@@ -939,9 +926,8 @@ def calculate_gw_contribution(
         ret_x, ret_y = h_L2[i, ptr, 0], h_L2[i, ptr, 1]
         ret_mass = h_L2[i, ptr, 4]
     else:
-        if len_L0 > 0:
-            last_ptr = (heads_L0[i] - 1) & mask_L0
-            ret_vx, ret_vy = h_L0[i, last_ptr, 2], h_L0[i, last_ptr, 3]
+        # Niente deep space per le onde gravitazionali
+        return 0.0
 
     dx_final = target_x - ret_x
     dy_final = target_y - ret_y

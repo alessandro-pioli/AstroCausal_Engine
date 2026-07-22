@@ -251,6 +251,8 @@ def _get_cpu_details(default_l3=16.0):
                 pass
 
             def read_sysfs_cache(index_str):
+                """Legge la dimensione di una cache Linux da /sys e la normalizza sempre
+                in KB, qualunque sia il suffisso (K/M/G) scritto nel file."""
                 try:
                     with open(f"/sys/devices/system/cpu/cpu0/cache/{index_str}/size", "r") as f:
                         size_str = f.read().strip().upper()
@@ -654,6 +656,8 @@ def _restore_bodies(snapshots: list, backups: dict, active_dt: float, old_dt: fl
             filename = os.path.join(output_dir, f"ligo_dump_DT_{old_dt}_{timestamp}.npy")
 
             def _dump_task(data_arr, fname):
+                """Salva il buffer della sonda LIGO su disco in un thread daemon separato,
+                per non bloccare il rebuild sull'I/O di un array potenzialmente grande."""
                 try:
                     np.save(fname, data_arr)
                     print(f"[LIGO PROBE] Previous history saved in {fname}")
@@ -807,7 +811,7 @@ def _prime_initial_accelerations() -> None:
     """
     from core.jit_kernels.kernel_helper_inline import SOFTENING_SQ
 
-    alive = np.where(((data.FLAGS & data.FLAG_ALIVE) != 0) & (data.MASS > 0.0))[0]
+    alive = np.where(((data.FLAGS & data.FLAG_ALIVE) != 0) & ((data.FLAGS & data.FLAG_DYING) == 0) & (data.MASS > 0.0))[0]
     n = len(alive)
     if n < 2:
         return

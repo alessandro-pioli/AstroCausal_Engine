@@ -12,7 +12,11 @@ class BodyRenderer:
             if body.pos[0] <= data.VOID_VAL:
                 continue
             if not (math.isfinite(body.pos[0]) and math.isfinite(body.pos[1]) and math.isfinite(body.vel[0])):
+                # Quarantena immediata: senza svuotare lo storico, l'inf/NaN appena scritto
+                # nel buffer causale resterebbe leggibile da chiunque faccia un lookup
+                # retardato su questo corpo, contagiando anche loro al tick successivo.
                 body.set_dying()
+                body.void_causal_history()
                 continue
                 
             sx, sy = camera.world_to_screen(body.pos)

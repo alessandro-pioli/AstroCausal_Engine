@@ -3,3 +3,4 @@ matplotlib
 pygame-ce
 numba
 scipy
+# opencv-python  # Opzionale: decommentare per migliorare le performance di upscaling delle heatmap a basse risoluzioni

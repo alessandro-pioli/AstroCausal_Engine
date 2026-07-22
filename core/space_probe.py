@@ -9,6 +9,9 @@ class SpaceProbeController:
     Non 'crea' nulla in RAM, gestisce solo gli array pre-allocati in data.py.
     """
     def __init__(self):
+        """Non possiede dati (tutti vivono in data.py, §7 di ARCHITECTURE_DEEP_DIVE.md):
+        si limita a garantire che all'avvio la sonda sia parcheggiata a VOID_VAL, così
+        nessun calcolo accidentale produce strain spurio prima della prima attivazione."""
         # All'avvio del programma, ci assicuriamo che la sonda sia disattiva e nel VOID
         if not data.PROBE_ACTIVE[0]:
             data.PROBE_POS[:] = data.VOID_VAL

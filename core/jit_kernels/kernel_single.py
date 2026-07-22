@@ -7,25 +7,30 @@ FLAG_ALIVE = 1
 FLAG_DYING = 2
 # --- COSTANTI DI COMPRESSIONE (STRIDES) ---
 
-# ==============================================================================
-# MAIN KERNEL TRIPLE
-# ==============================================================================
+# MAIN KERNEL SINGLE
 @njit(parallel=True, fastmath=True, cache=True)
 def update_step_single_par(
     n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_arr, flags_arr,
     hist_L0, heads_L0, mask_L0, len_L0,
-    
+
     # ARGOMENTI PER SCIE
     trail_buf, trail_heads, trail_last_pos,
-    
+
     # --- INIEZIONE SONDA LIGO ---
-    probe_buf, probe_head, probe_pos, probe_active, probe_mask, 
-    
+    probe_buf, probe_head, probe_pos, probe_active, probe_mask,
+
     dt, g_const, inv_c, inv_c_dt, c_sq, rs_factor, threshold_solver_sq, VOID_VAL,
     steps, active_indices, num_active, art_engine, m_chirp_mult, sim_time,
     collision_cooldown,
 ):
-    
+    """Variante monolitica del tick fisico per la modalità SINGLE (solo buffer L0,
+    l'intero storico entra in Cache L3): esegue in sequenza, per `steps` sotto-tick,
+    Fase 1 (Verlet drift + scrittura del ring buffer, sempre sequenziale per la
+    barriera read-after-write), Fase 1.5 (collisioni), Fase 2+3 (forze causali via
+    doppio ritrovamento su prange, campionamento sonda LIGO). Selezionata da
+    `refresh_kernel()` quando N supera la soglia di ~35 corpi che rende conveniente
+    il parallelismo; sotto quella soglia si usa `update_step_single_seq`."""
+
     for step_idx in range(steps):
         force_trail_write = False
         if n_bodies == 2:
@@ -181,9 +186,7 @@ def update_step_single_par(
                 force_trail_write
             )
             
-        # =========================================================================
         # FASE 3: SONDA LIGO (Versione Parallela Triple)
-        # =========================================================================
         kernel_helper_inline.update_ligo_probe_step(
                     n_bodies, pos_arr, vel_arr, mass_arr, flags_arr,
                     probe_active, probe_pos, probe_buf, probe_head, probe_mask
@@ -201,6 +204,9 @@ def update_step_single_seq(
     steps, active_indices, num_active, art_engine, m_chirp_mult, sim_time,
     collision_cooldown,
 ):
+    """Gemella sequenziale di `update_step_single_par`, stessa logica senza `prange`:
+    selezionata sotto la soglia di N in cui l'overhead di lancio dei thread supera
+    il guadagno dell'O(N²) parallelizzato (vedi `refresh_kernel()` in engine.py)."""
     # Logica Sequenziale (copia esatta della parallela senza prange)
     for step_idx in range(steps):
         force_trail_write = False
@@ -336,9 +342,7 @@ def update_step_single_seq(
                 force_trail_write
             )
             
-        # =========================================================================
         # FASE 3: SONDA LIGO (Versione Sequenziale Triple)
-        # =========================================================================
         kernel_helper_inline.update_ligo_probe_step(
                     n_bodies, pos_arr, vel_arr, mass_arr, flags_arr,
                     probe_active, probe_pos, probe_buf, probe_head, probe_mask

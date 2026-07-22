@@ -7,6 +7,11 @@ class DeathTracker:
         self.logged_deaths = set()
 
     def check_deaths(self, bodies, current_sim_time):
+        """Stampa un log d'impatto una sola volta per corpo, nella finestra tra la
+        morte fisica (`FLAG_DYING` in testa) e l'estinzione causale (coda del buffer
+        più profondo ancora non `VOID_VAL`): usa `logged_deaths` per non ripetere il
+        log a ogni tick durante quella finestra, e lo ripulisce quando il corpo esce
+        dal limbo (coda spenta, dominio del GC asincrono, o tornato vivo)."""
         for b in bodies:
             idx = b.idx
             

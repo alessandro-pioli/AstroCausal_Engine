@@ -8,17 +8,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import tkinter.scrolledtext as st
 
-# ==============================================================================
 # PHYSICAL CONSTANTS (SI units)
-# ==============================================================================
 G_SI   = 6.674e-11   # Gravitational constant [m^3 kg^-1 s^-2]
 C_SI   = 2.998e8     # Speed of light [m/s]
 M_SUN  = 1.989e30    # Solar mass [kg]
 
 
-# ==============================================================================
 # SIGNAL PROCESSING & PHYSICAL MODELS
-# ==============================================================================
 def apply_high_pass_filter(data, fs, cutoff=5.0, order=4):
     """Applica un filtro passa-alto Butterworth per isolare lo strain relativistico."""
     nyquist = 0.5 * fs
@@ -61,9 +57,7 @@ def peters_chirp_mass_from_freq(f_hz, tau_s):
     return (C_SI**3 / G_SI) / (bracket ** (8.0 / 5.0))
 
 
-# ==============================================================================
 # TELEMETRY POPUP WINDOW & SCONTRINO (RECEIPT)
-# ==============================================================================
 class LigoTelemetryReportWindow(tk.Toplevel):
     """Mostra i risultati dell'analisi in una finestra di telemetria in stile terminale."""
     def __init__(self, parent, results, raw_logs):
@@ -182,6 +176,10 @@ class LigoTelemetryReportWindow(tk.Toplevel):
         tk.Button(btn_panel, text="CHIUDI", bg="#4B5563", fg="white", font=('Segoe UI', 11), bd=0, padx=18, pady=8, command=self.destroy).pack(side=tk.RIGHT, padx=18, pady=12)
 
     def generate_receipt(self, results, raw_logs):
+        """Compone lo "scontrino" testuale monospace della telemetria: la sezione
+        centrale si biforca per modalità (SPECTRAL: checkpoint del chirp tracker
+        e stima della massa chirp; RADIOMETRIC: soglie di energia cumulativa), il
+        resto del referto è identico in entrambi i casi."""
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         lines = [
             "/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\",
@@ -269,9 +267,7 @@ class LigoTelemetryReportWindow(tk.Toplevel):
                 messagebox.showerror("Errore", f"Impossibile salvare il file:\n{e}")
 
 
-# ==============================================================================
 # MAIN ANALYSIS PIPELINE
-# ==============================================================================
 def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None):
     """Pipeline di analisi del segnale LIGO: filtraggio, spettrogrammi, tracciamento Hilbert della frequenza e stima della massa chirp."""
     base_name = os.path.basename(filename)
@@ -409,9 +405,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     ax1.axvline(vline_idx, color='#ff003c', linestyle='--', linewidth=1.5, alpha=0.8, label=merger_label)
     ax1.legend(loc='upper right', facecolor=ax_bg, edgecolor='none', labelcolor='white')
 
-    # ==========================================================
     # RADIOMETRIC MODE: CUMULATIVE ENERGY INTEGRATION
-    # ==========================================================
     if system_type == 'RADIOMETRIC':
         power = data**2
         energy_cumulative = np.cumsum(power) * dt
@@ -441,9 +435,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         ax_energy.set_xlim(zoom_start, zoom_end)
         ax1.set_xlabel(x_label, color='white')
 
-    # ==========================================================
     # SPECTRAL MODE: SPECTROGRAM & HILBERT TRACKER
-    # ==========================================================
     else:
         nperseg = int(fs / 20.0)
         nperseg = max(128, min(nperseg, len(data) // 8))
@@ -599,9 +591,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     plt.show()
 
 
-# ==============================================================================
 # ENTRY POINT & LAUNCHER APPLICATION
-# ==============================================================================
 class LigoLauncherApp(tk.Tk):
     """Applicazione launcher per selezionare il dump LIGO, la modalità di analisi e avviare la pipeline."""
     def __init__(self):
@@ -679,6 +669,10 @@ class LigoLauncherApp(tk.Tk):
         ttk.Button(main_frame, text="ESEGUI ANALISI LIGO", style='Launch.TButton', command=self.on_launch).pack(fill=tk.X, ipady=15)
         
     def on_launch(self):
+        """Avvia `analyze_ligo_dump` nello stesso processo (non isolato via
+        `subprocess` come fa il launcher principale con questa stessa finestra,
+        vedi §12 di ARCHITECTURE_DEEP_DIVE.md): nasconde solo la finestra durante
+        l'analisi bloccante e la ripristina sempre, anche in caso di eccezione."""
         if not self.file_list:
             messagebox.showerror("Errore", "Nessun file LIGO presente in ligo_output/data_npy.")
             return

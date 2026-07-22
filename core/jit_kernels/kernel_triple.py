@@ -11,9 +11,7 @@ STRIDE_L1_MASK  = 31
 STRIDE_L2_SHIFT = 8      
 STRIDE_L2_MASK  = 255    
 
-# ==============================================================================
 # MAIN KERNEL TRIPLE
-# ==============================================================================
 @njit(parallel=True, fastmath=True, cache=True)
 def update_step_triple_par(
     n_bodies, pos_arr, vel_arr, acc_arr, mass_arr, rad_arr, flags_arr,
@@ -31,7 +29,11 @@ def update_step_triple_par(
     steps, active_indices, num_active, art_engine, m_chirp_mult, sim_time,
     collision_cooldown,
 ):
-    
+    """Variante monolitica del tick fisico per la modalità TRIPLE (cascata L0+L1+L2,
+    quando anche L0+L1 eccedono la Cache L3): stessa struttura a fasi di
+    `update_step_single_par`, con la cascata di ritrovamento causale completa fino
+    a L2 (stride 256) per i ritardi più profondi. Selezionata da `refresh_kernel()`
+    sopra la soglia di ~35 corpi; sotto quella soglia si usa `update_step_triple_seq`."""
     for step_idx in range(steps):
         force_trail_write = False
         if n_bodies == 2:
@@ -272,9 +274,7 @@ def update_step_triple_par(
                 force_trail_write
             )
             
-        # =========================================================================
         # FASE 3: SONDA LIGO (Versione Parallela Triple)
-        # =========================================================================
         kernel_helper_inline.update_ligo_probe_step(
                     n_bodies, pos_arr, vel_arr, mass_arr, flags_arr,
                     probe_active, probe_pos, probe_buf, probe_head, probe_mask
@@ -295,6 +295,9 @@ def update_step_triple_seq(
     steps, active_indices, num_active, art_engine, m_chirp_mult, sim_time,
     collision_cooldown,
 ):
+    """Gemella sequenziale di `update_step_triple_par`, stessa logica senza `prange`:
+    selezionata sotto la soglia di N in cui l'overhead di lancio dei thread supera
+    il guadagno dell'O(N²) parallelizzato."""
     # Logica Sequenziale (copia esatta della parallela senza prange)
     for step_idx in range(steps):
         force_trail_write = False
@@ -519,9 +522,7 @@ def update_step_triple_seq(
                 force_trail_write
             )
             
-        # =========================================================================
         # FASE 3: SONDA LIGO (Versione Sequenziale Triple)
-        # =========================================================================
         kernel_helper_inline.update_ligo_probe_step(
                     n_bodies, pos_arr, vel_arr, mass_arr, flags_arr,
                     probe_active, probe_pos, probe_buf, probe_head, probe_mask

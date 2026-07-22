@@ -16,16 +16,8 @@ YELLOW = (255, 204, 0)
 BLUE = (50, 150, 255)
 RED = (255, 50, 50)
 
-
-# =====================================================================
-# --- Helper matematici orbitali ---
-# =====================================================================
-
+# Helper matematici orbitali 
 from utils.orbital_math import solve_pw_circular_velocity, solve_pair_circular_velocity, solve_velocity_from_apocenter, solve_velocity_from_pericenter, solve_escape_velocity
-
-# =====================================================================
-# =====================================================================
-
 
 def get_preset(name="Sistema Solare Completo"):
     """
@@ -422,7 +414,7 @@ def _make_random_cluster(n):
 
         bodies.append(CelestialBody(i, mass, [pos_x, pos_y], [vel_x, vel_y], rad, col, pre_existed=random.choice([True, False]), name=f"Body n.{i}"))
         
-    ideal_dt = DEFAULT_DT
+    ideal_dt = 64.0
     ideal_sim_radius = DEFAULT_RADIUS
     ideal_step = 100
     return bodies, ideal_dt, ideal_sim_radius, ideal_step
@@ -854,7 +846,7 @@ def _make_alpha_centauri_avatar():
         bodies.append(CelestialBody(idx, m_m, p_m, v_m, r_m, c_m, pre_existed=True, name=name))
         idx += 1
 
-    ideal_dt = 2.0
+    ideal_dt = 150.0
     ideal_sim_radius = 32 * AU_IN_KM
     ideal_step = 250
     
@@ -1167,6 +1159,10 @@ def _make_dual_cluster_collision():
     idx += 1
 
     def spawn_cluster(bh_pos, bh_vel, bh_mass, n, color_theme):
+        """Genera `n` corpi in orbita quasi-circolare attorno al nucleo, con caos
+        dinamico deliberato: 15% di probabilità di controrotazione, dispersione
+        angolare ±0,15 rad e velocità scalata 0,7-1,3× per evitare un disco perfetto
+        e innescare vere collisioni allo scontro tra i due cluster."""
         nonlocal idx
         for _ in range(n):
             dist_km = random.uniform(1.5, 20.0) * AU_IN_KM

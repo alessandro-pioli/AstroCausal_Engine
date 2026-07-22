@@ -1,5 +1,9 @@
 class PerformanceManager:
     def __init__(self):
+        """Auto-tuner della risoluzione della heatmap: isteresi (soglie di discesa e
+        salita diverse, §4 di ARCHITECTURE_DEEP_DIVE.md), streak di stabilità e
+        cooldown prima di un upgrade, più una memoria per-configurazione che blocca
+        un upgrade già fallito in passato con lo stesso carico."""
         self.FPS_LOW_LIMIT = 30   # Soglia di FPS minimi per l'adattamento della risoluzione
         self.FPS_HIGH_LIMIT = 58  # Soglia di FPS alti per incrementare la risoluzione
         self.COOLDOWN_MS = 5000
@@ -18,6 +22,14 @@ class PerformanceManager:
         self.last_canceled_signature = None
     
     def update_auto_tuner(self, now, gstate, current_fps, current_body_count, resolution_div, speed_multiplier, current_dt):
+        """Decide se cambiare `resolution_div`, girando ogni frame ma agendo raramente.
+        Reset totale della memoria su cambio DT o numero di corpi (il carico è cambiato
+        strutturalmente); tre view_mode (0, 3, 5) restano fuori dalla logica normale
+        (OFF non ha griglia da scalare, Lagrange/Tidal sono forzati a div=1 per non
+        perdere dettagli fini), Roche è cappato a div=2. Sotto FPS_LOW_LIMIT il
+        downgrade è immediato; sopra FPS_HIGH_LIMIT serve una streak di 3 cicli oltre
+        il cooldown, e anche allora la memoria può cancellare l'upgrade se quella
+        stessa configurazione aveva già dato FPS bassi in passato."""
         if current_dt != self.last_dt_auto_tune:
             self.perf_memory.clear()
             self.last_dt_auto_tune = current_dt

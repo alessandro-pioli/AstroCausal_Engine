@@ -115,9 +115,26 @@ class CelestialBody:
 
     def set_dying(self):
         """Attiva la morte causale tramite bitmask."""
-        data.FLAGS[self.idx] |= data.FLAG_DYING 
+        data.FLAGS[self.idx] |= data.FLAG_DYING
         data.ACC[self.idx, 0] = 0.0
         data.ACC[self.idx, 1] = 0.0
+
+    def void_causal_history(self):
+        """
+        Azzera immediatamente lo storico causale (L0/L1/L2) a VOID_VAL.
+        Da usare SOLO per una rimozione amministrativa (es. corpo soppiantato
+        da uno spawn sovrapposto), non per una morte fisica reale: a differenza
+        di set_dying() da solo, che lascia lo storico intatto apposta (il
+        "fantasma del campo" che si propaga a c, vedi ARCHITECTURE_DEEP_DIVE.md §8),
+        qui si vuole impedire che un corpo appena spawnato nello stesso punto
+        interagisca con la traiettoria storica congelata di quello sostituito.
+        """
+        if data.HISTORY_L0 is not None:
+            data.HISTORY_L0[self.idx, :, :].fill(data.VOID_VAL)
+        if data.HISTORY_L1 is not None:
+            data.HISTORY_L1[self.idx, :, :].fill(data.VOID_VAL)
+        if data.HISTORY_L2 is not None:
+            data.HISTORY_L2[self.idx, :, :].fill(data.VOID_VAL)
 
 
     # --- PROPERTIES ---

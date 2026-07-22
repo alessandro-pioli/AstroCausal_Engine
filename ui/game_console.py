@@ -6,6 +6,10 @@ from utils.formatting import format_time
 
 class GameConsole:
     def __init__(self, original_stdout):
+        """Proxy su `sys.stdout` (§10 di ARCHITECTURE_DEEP_DIVE.md, pattern Duck
+        Typing + Proxy): intercetta ogni `print()` del progetto senza che nessun
+        modulo debba conoscere l'esistenza della console in-game, inoltrando sempre
+        anche al terminale reale tramite `original_stdout`."""
         self.original_stdout = original_stdout
         self.messages = []
         self.expanded = True
@@ -15,6 +19,13 @@ class GameConsole:
         self.max_messages = 1000
         
     def write(self, msg):
+        """Chiamato da ogni `print()` del progetto. Inoltra sempre al terminale
+        originale, poi ripulisce i codici ANSI di colore (utili al terminale,
+        sporcherebbero il rendering pygame) e prepende il **tempo simulato**
+        corrente, non quello di sistema: un impatto all'anno 2.150.847 della
+        simulazione riporta esattamente quell'anno in log. Il buffer è circolare
+        (tronca a `max_messages`) e lo scroll resta ancorato in fondo se
+        `auto_scroll` è attivo."""
         self.original_stdout.write(msg)
         text = str(msg).strip()
         if text:
@@ -34,6 +45,10 @@ class GameConsole:
                 self.scroll_y = 999999
 
     def get_msg_color(self, text):
+        """Colora ogni riga per parole chiave nel testo, non per una categoria
+        esplicita passata dal chiamante: l'ordine dei controlli è significativo,
+        il secondo blocco (warning/collisione, GC, radar) sovrascrive il primo,
+        così un log di collisione resta rosso anche se contenesse anche "DESTROYED"."""
         text_up = text.upper()
         color = UITheme.COLOR_WHITE
         
@@ -59,6 +74,11 @@ class GameConsole:
         self.original_stdout.flush()
 
     def handle_event(self, event, width):
+        """Due modalità: collassata (un'intestazione cliccabile in alto a destra) ed
+        espansa (pannello scrollabile al 90% della finestra). Lo scroll manuale
+        disattiva `auto_scroll`; riattivarlo richiede di scrollare fino in fondo,
+        non un semplice tasto, così la vista non salta via da sotto l'utente mentre
+        legge un log vecchio anche se ne arrivano di nuovi."""
         screen = pygame.display.get_surface()
         win_w, win_h = screen.get_size() if screen else (1280, 720)
         

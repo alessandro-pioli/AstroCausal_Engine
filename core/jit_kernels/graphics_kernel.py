@@ -22,6 +22,10 @@ def render_frame_kernel(
     c_sq, void_val, inv_c, inv_dt,
     min_exp, max_exp, inv_cutoff_sq
 ):
+    """Renderizza la heatmap del potenziale Φ: per ogni pixel somma la prima lettura
+    causale (§2.2 di ARCHITECTURE_DEEP_DIVE.md) di tutti i corpi attivi, poi comprime
+    su scala log10 dinamica (min_exp/max_exp ricalcolati per frame sul range corrente)
+    e converte in colore su una rampa a tre tratti (blu → arancio → bianco)."""
     range_exp = max_exp - min_exp
     if range_exp < 0.1: range_exp = 0.1
     inv_range_exp = 1.0 / range_exp
@@ -44,15 +48,7 @@ def render_frame_kernel(
                 vy = p_vel[k, 1]
                 mass = p_mass[k]
                 
-                if px <= void_val:
-                    last_ptr = (heads_L0[i] - 1) & mask_L0
-                    hx = h_L0[i, last_ptr, 0]
-                    if hx <= void_val: continue
-                    px = hx
-                    py = h_L0[i, last_ptr, 1]
-                    vx = h_L0[i, last_ptr, 2]
-                    vy = h_L0[i, last_ptr, 3]
-                    mass = h_L0[i, last_ptr, 4]
+
                         
                 phi_contrib = kernel_helper_inline.calculate_potential_contribution(
                             w_x, w_y,
@@ -104,8 +100,11 @@ def probe_field_value(
     h_L2, heads_L2, mask_L2, len_L2,
     c_sq, void_val, inv_c, inv_dt, g
 ):
+    """Valuta Φ in un solo punto invece che sull'intera griglia: usata dall'ispezione
+    a doppio-click sui pixel (§7.3 della Guida alla Fisica), stessa fisica causale di
+    `render_frame_kernel` ma senza il costo O(W·H) del rendering completo."""
     total_phi = 0.0
-    c_threshold_sq = 0.25 * c_sq 
+    c_threshold_sq = 0.25 * c_sq
     num_active = len(p_idx)
 
     for k in range(num_active):
@@ -116,15 +115,7 @@ def probe_field_value(
         vy = p_vel[k, 1]
         mass = p_mass[k]
         
-        if px <= void_val:
-            last_ptr = (heads_L0[i] - 1) & mask_L0
-            hx = h_L0[i, last_ptr, 0]
-            if hx <= void_val: continue
-            px = hx
-            py = h_L0[i, last_ptr, 1]
-            vx = h_L0[i, last_ptr, 2]
-            vy = h_L0[i, last_ptr, 3]
-            mass = h_L0[i, last_ptr, 4]
+
         phi_contrib = kernel_helper_inline.calculate_potential_contribution(
             probe_x, probe_y,
             px, py, 
@@ -149,6 +140,8 @@ def probe_dphi_at_point(
     h_L2, heads_L2, mask_L2, len_L2,
     c_sq, void_val, inv_c, inv_dt, g
 ):
+    """Valuta dΦ/dt in un solo punto (doppio ritrovamento causale completo, §2.2),
+    la controparte puntuale di `render_dphi_dt_kernel` per l'ispezione a doppio-click."""
     dphi_total = 0.0
     num_active = len(p_idx)
 
@@ -158,13 +151,7 @@ def probe_dphi_at_point(
         py = p_pos[k, 1]
         mass = p_mass[k]
         
-        if px <= void_val:
-            last_ptr = (heads_L0[i] - 1) & mask_L0
-            hx = h_L0[i, last_ptr, 0]
-            if hx <= void_val: continue
-            px = hx
-            py = h_L0[i, last_ptr, 1]
-            mass = h_L0[i, last_ptr, 4]
+
             
         dphi_contrib = kernel_helper_inline.calculate_dphi_contribution(
             probe_x, probe_y,
@@ -189,8 +176,12 @@ def render_dphi_dt_kernel(
     h_L1, heads_L1, mask_L1, len_L1,
     h_L2, heads_L2, mask_L2, len_L2,
     c_sq, void_val, inv_c, inv_dt,
-    sensitivity 
+    sensitivity
 ):
+    """Renderizza la heatmap dΦ/dt: per ogni pixel esegue il doppio ritrovamento
+    causale completo (§2.2) sommando il contributo di ogni corpo, poi comprime con
+    tanh (hard clipping, a differenza dell'asinh di GW Strain) e colora a dipolo
+    (blu = avvicinamento, rosso = allontanamento)."""
     cx = width >> 1
     cy = height >> 1
 
@@ -198,7 +189,7 @@ def render_dphi_dt_kernel(
         w_x = (x - cx) * cam_scale + cam_off_x
         for y in range(height):
             w_y = (y - cy) * cam_scale + cam_off_y
-            
+
             dphi_total = 0.0
             
             for k in range(num_active):
@@ -207,13 +198,7 @@ def render_dphi_dt_kernel(
                 py = p_pos[k, 1]
                 mass = p_mass[k]
                 
-                if px <= void_val:
-                    last_ptr = (heads_L0[i] - 1) & mask_L0
-                    hx = h_L0[i, last_ptr, 0]
-                    if hx <= void_val: continue
-                    px = hx
-                    py = h_L0[i, last_ptr, 1]
-                    mass = h_L0[i, last_ptr, 4]
+
                 
                 # --- CHIAMATA INLINE ---
                 dphi_contrib = kernel_helper_inline.calculate_dphi_contribution(
@@ -252,9 +237,15 @@ def render_roche_du_kernel(
     target_idx, attr_idx,
     G, max_F, inv_f_norm, contrast
 ):
+    """Renderizza la heatmap Topologia di Roche: gradiente e Hessiana del potenziale
+    efficace nel sistema co-rotante (gravità N-body più termine centrifugo, con la
+    velocità di trascinamento del riferimento sottratta via A_x/A_y). La luminosità
+    segue il modulo della forza netta, il colore il segno e la ripidità del
+    determinante dell'Hessiana D (rosso = sella, dominio gravitazionale; blu = cupola,
+    dominio centrifugo), tutto istantaneo, nessun buffer storico coinvolto."""
     cx = width >> 1
     cy = height >> 1
-    
+
     # 1. Coordinate Baricentrate e Frequenza Naturale Dinamica (Omega Quadrato)
     if target_idx < 0 or attr_idx < 0 or target_idx >= num_active or attr_idx >= num_active:
         C_x, C_y = 0.0, 0.0
@@ -531,9 +522,14 @@ def render_roche_lagrange_filter_kernel(
     target_idx, attr_idx,
     G, max_F, f_norm
 ):
+    """Renderizza la heatmap Lagrange Hunter: stessa Hessiana del potenziale efficace
+    co-rotante di `render_roche_du_kernel`, ma qui usata per uno stimatore di distanza
+    Newton-Raphson (r_est = |H⁻¹·∇Φ|) che accende un punto luminoso solo negli intorni
+    dei suoi zeri, i punti di Lagrange. Il segno del determinante D separa selle
+    instabili (L1-L3, rosso) da estremi stabili (L4-L5, blu)."""
     cx = width >> 1
     cy = height >> 1
-    
+
     # 1. Coordinate Baricentrate e Frequenza Naturale Dinamica (Omega Quadrato)
     if target_idx < 0 or attr_idx < 0 or target_idx >= num_active or attr_idx >= num_active:
         C_x, C_y = 0.0, 0.0
@@ -699,14 +695,19 @@ def render_tidal_stress_kernel(
     output_img, width, height, cam_scale, cam_off_x, cam_off_y,
     pos, mass, num_active, G, log_offset
 ):
+    """Renderizza la heatmap dello stress di marea: somma l'Hessiana del potenziale
+    di ogni corpo, poi mappa la differenza dei due autovalori (il massimo sforzo di
+    taglio) su soglie fisiche assolute fisse (limiti di Roche per materiali diversi),
+    non sul range della scena, così il colore ha lo stesso significato in ogni
+    scenario. Istantanea: nessun buffer storico, nessuna causalità."""
     cx = width >> 1
     cy = height >> 1
-    
+
     for x in prange(width):
         w_x = (x - cx) * cam_scale + cam_off_x
         for y in range(height):
             w_y = (y - cy) * cam_scale + cam_off_y
-            
+
             Phi_xx = 0.0
             Phi_yy = 0.0
             Phi_xy = 0.0
@@ -785,6 +786,8 @@ def probe_tidal_stress_at_point(
     w_x, w_y,
     pos, mass, active_indices, G, log_offset
 ):
+    """Valuta lo stress di marea in un solo punto, la controparte puntuale di
+    `render_tidal_stress_kernel` per l'ispezione a doppio-click."""
     Phi_xx = 0.0
     Phi_yy = 0.0
     Phi_xy = 0.0
@@ -823,8 +826,14 @@ def render_gw_strain_kernel(
     h_L2, heads_L2, mask_L2, len_L2,
     c_sq, void_val, inv_c, inv_dt,
     target_idx, attr_idx,
-    sensitivity 
+    sensitivity
 ):
+    """Renderizza la heatmap GW Strain: per ogni pixel esegue il doppio ritrovamento
+    causale completo (§2.2) su ciascun corpo della coppia selezionata separatamente
+    (non un quadrupolo globale unico, vedi §7.6.2 della Guida alla Fisica), sottrae
+    la velocità del centro di massa e proietta sul versore pixel-sorgente, poi
+    comprime con asinh (preserva i dettagli deboli in campo lontano senza saturare
+    i picchi vicino alla coppia, a differenza del tanh di dΦ/dt)."""
     cx = width >> 1
     cy = height >> 1
 

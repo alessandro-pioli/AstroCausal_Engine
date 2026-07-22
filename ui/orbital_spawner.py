@@ -6,6 +6,10 @@ from utils.orbital_math import get_lagrange_points, solve_lagrange_boot_velocity
 class OrbitalSpawner:
     """Gestore dell'interfaccia di spawn per inserire dinamicamente nuovi corpi in orbita durante la simulazione."""
     def __init__(self):
+        """Catalogo paginato dei template spawnabili (4 pagine, da micro-oggetti a
+        buchi neri ultramassivi), navigabile a runtime senza toccare il motore fisico:
+        lo spawner calcola solo posizione e velocità, `intercept_spawner` in
+        input_controller.py fa da adattatore verso `rebuild_simulation()`."""
         self.active = False
         self.state = 0 # 0: Inactive, 1: Choose Body, 2: Choose Orbit
         self.page = 1 # 0: Small, 1: Standard, 2: Massive
@@ -61,10 +65,12 @@ class OrbitalSpawner:
 
     @bodies.setter
     def bodies(self, value):
-        pass
+        pass  # no-op: la lista vera vive solo in ui_state, questo setter esiste solo per simmetria
 
     @property
     def top_body(self):
+        """Il corpo vivo di massa maggiore in scena, ricalcolato a ogni accesso: è
+        l'attrattore di default proposto allo stato 2 dello spawner."""
         bodies_list = self.bodies
         if not bodies_list:
             return None
@@ -80,6 +86,8 @@ class OrbitalSpawner:
 
     @property
     def closest_body(self):
+        """Il corpo vivo geometricamente più vicino al punto di spawn: l'alternativa
+        proposta a `top_body` quando l'attrattore locale conta più di quello globale."""
         bodies_list = self.bodies
         if not bodies_list:
             return None
@@ -93,18 +101,28 @@ class OrbitalSpawner:
         pass
         
     def activate(self, wx, wy, bodies):
+        """Apre la macchina a stati direttamente sullo stato 1 (scelta del corpo),
+        pagina 1 (Standard) di default, congelando le coordinate del punto di spawn."""
         self.active = True
         self.state = 1
         self.page = 1
         self.spawn_wx = wx
         self.spawn_wy = wy
-        
+
     def deactivate(self):
+        """Riporta la macchina a stati allo stato 0 e scarta la selezione in corso:
+        chiamato sia da ESC sia a fine spawn confermato."""
         self.active = False
         self.state = 0
         self.selected_template = None
-        
+
     def handle_event(self, event):
+        """Cuore della macchina a stati a cinque fasi (0-4). Ritorna `False` se lo
+        spawner è inattivo, altrimenti sempre `True` (consuma l'evento) tranne nel
+        caso di spawn confermato, dove ritorna direttamente il dizionario
+        `new_params` invece di un booleano: un protocollo di ritorno non ortodosso
+        ma deliberato (§9.2 di ARCHITECTURE_DEEP_DIVE.md), è `intercept_spawner` in
+        input_controller.py a riconoscerlo e a tradurlo in un rebuild vero."""
         if not self.active:
             return False
             
@@ -155,6 +173,12 @@ class OrbitalSpawner:
                 }
                 
                 def calc_orbit(attractor, eccentricity):
+                    """Calcola la velocità di lancio dato un attrattore e un codice di
+                    eccentricità: 0.0 = circolare, un valore in (0,1) = ellittica
+                    (assumendo il punto di spawn come apocentro), -1.0 = sentinella
+                    per il plunge (spinta radiale dominante, tangenziale ridotta al 20%
+                    della circolare, solo per non far collassare l'orbita a momento
+                    angolare esattamente nullo)."""
                     if not attractor or attractor.idx >= len(data.POS): return [0.0, 0.0]
                     ax, ay = data.POS[attractor.idx]
                     avx, avy = data.VEL[attractor.idx]
@@ -298,6 +322,9 @@ class OrbitalSpawner:
         return True # Intercepted anyway
         
     def draw(self, screen, width, height, font_main, font_title):
+        """Disegna la schermata modale corrispondente allo stato corrente (0-4) su
+        un overlay semitrasparente: nessuna logica di simulazione qui dentro, solo
+        la proiezione a schermo dello stato della macchina."""
         if not self.active: return
         
         # Transparent overlay
@@ -441,6 +468,9 @@ class OrbitalSpawner:
             screen.blit(nav_txt, (px + (pw - nav_txt.get_width())//2, py + ph - 40))
 
     def get_ghost_markers(self):
+        """Espone le cinque posizioni analitiche dei punti di Lagrange della coppia
+        selezionata, per l'anteprima live disegnata a schermo prima della conferma
+        (solo allo stato 4, il passo finale della diramazione Lagrange)."""
         if not self.active or self.state != 4: return None
         if getattr(self, 'lagrange_primary_idx', None) is not None and getattr(self, 'lagrange_secondary_idx', None) is not None:
             p_idx = self.lagrange_primary_idx

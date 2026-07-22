@@ -19,6 +19,9 @@ class InputController:
         self.last_click_time = 0
  
     def register(self, event_handler):
+        """Installa l'intera Interceptor Chain (§9.1 di ARCHITECTURE_DEEP_DIVE.md):
+        l'ordine di `add_interceptor` è l'ordine di priorità di consumo dell'evento,
+        tutorial e spawner bloccano la propagazione prima che arrivi alla camera."""
         event_handler.add_interceptor(self.intercept_tutorial)
         event_handler.add_interceptor(self.intercept_spawner)
         event_handler.add_interceptor(self.intercept_faders)
@@ -38,6 +41,12 @@ class InputController:
         return ui_state.tutorial_manager.update_events(event)
  
     def intercept_spawner(self, event):
+        """Adapter fra la macchina a stati "pura" di OrbitalSpawner e il motore: se
+        `handle_event` ritorna un dizionario (spawn confermato), uccide prima ogni
+        corpo già presente che si sovrappone al punto di spawn, poi salva per nome
+        (non per indice, che il rebuild compatta) il corpo agganciato dalla camera
+        e la coppia Lagrange attiva, richiama `rebuild_simulation()` e le riaggancia
+        per nome sui nuovi indici."""
         spawn_evt = ui_state.spawner.handle_event(event)
         if isinstance(spawn_evt, bool) and spawn_evt:
             return True
@@ -50,6 +59,7 @@ class InputController:
                     dist_sq = (bx - sx)**2 + (by - sy)**2
                     if math.sqrt(dist_sq) <= (b.radius + s_rad):
                         b.set_dying()
+                        b.void_causal_history()
                         print(f"[SPAWN] Corpo {b.name} marcato per la morte prima dell'inserimento.")
  
             locked_name = None
@@ -97,6 +107,10 @@ class InputController:
         return ui_state.game_console.handle_event(event, data.WIDTH)
  
     def intercept_camera(self, event):
+        """Quando la console è espansa, sopprime lo zoom della rotella (altrimenti
+        scorrimento e zoom scatterebbero insieme) e blocca drag/click della camera
+        se il mouse è dentro l'area della console, lasciando però propagare il click
+        se serve a un elemento interno alla console stessa (es. il tasto di chiusura)."""
         if ui_state.game_console.expanded:
             # Consumiamo l'evento (restituendo True) solo se è un input di scorrimento con la rotella del mouse.
             # Questo evita lo zoom simultaneo della telecamera mentre si scorre la console.
@@ -134,6 +148,11 @@ class InputController:
                 ui_state.locked_body_idx = None
  
     def on_mouse_button_down(self, event):
+        """Solo doppio-click (finestra 400 ms) fa qualcosa. Su un corpo, hit-test con
+        hitbox adattivo (minimo 15 px a schermo, altrimenti il raggio fisico scalato)
+        e aggancia la camera; sul vuoto, campiona il campo in quel punto (Φ, dΦ/dt,
+        stress di marea, e GW strain se una coppia è già selezionata) e lo stampa
+        in console: è la sonda di ispezione citata nel §7.3 della Guida alla Fisica."""
         if event.button != 1:
             return
  
@@ -240,6 +259,12 @@ class InputController:
  
 
     def on_key_down(self, event):
+        """Dispatcher centrale della tastiera. In testa, un cancello di conferma:
+        se un dialogo Y/N è in sospeso (deploy sonda LIGO, kill di un corpo, switch
+        causale/newtoniano), QUALSIASI altro tasto viene ignorato finché quello non
+        si risolve, e alla risoluzione la simulazione si sblocca automaticamente se
+        era stata messa in pausa solo per porre la domanda. Solo dopo quel cancello
+        seguono i tasti ordinari (moltiplicatore, DT, modalità heatmap, lock, quit)."""
         # --- GESTIONE CONFERMA LIGO ---
         if ui_state.ligo_confirm_active:
             if event.key == pygame.K_y:
@@ -472,6 +497,14 @@ class InputController:
             self._rebuild_dt(data.DT * 2.0, "riduzione precisione")
  
     def _update_lagrange_target_on_lock(self, new_locked_idx):
+        """Quando la camera si aggancia a un nuovo corpo in Lagrange Hunter o Roche DU,
+        prova ad aggiornare automaticamente la coppia target-attrattore su cui è
+        costruito l'overlay co-rotante. Caso speciale per veicoli di massa minuscola
+        (ISS, Artemis): non hanno un attrattore proprio significativo, quindi si
+        cerca un corpo celeste "fratello" che condivida lo stesso attrattore, o in
+        assenza si risale alla coppia attrattore-del-attrattore. Se non emerge
+        nessuna coppia valida, la heatmap resta sulla coppia precedente invece di
+        rompersi."""
         if new_locked_idx is None:
             return
         

@@ -92,9 +92,7 @@ ACTIVE_INDICES_LOD = np.zeros(0, dtype=np.int64)
 PHYS_ACTIVE_INDICES = np.zeros(MAX_BODIES, dtype=np.int32)
 
 
-# =====================================================================
-# --- SONDA LIGO (SPETTROGRAMMA E TELEMETRIA) ---
-# =====================================================================
+# SONDA LIGO (SPETTROGRAMMA E TELEMETRIA)
 # Usiamo 2^21 (20971522) per poter usare la bitmask efficiente
 # Costo RAM: ~16 Mb. RAW Data puro.
 PROBE_LEN = 2**21  
@@ -137,4 +135,4 @@ def ensure_capacity(needed_size):
         HEADS_L1 = np.concatenate([HEADS_L1, np.zeros(pad, dtype=np.int32)])
         HEADS_L2 = np.concatenate([HEADS_L2, np.zeros(pad, dtype=np.int32)])
         MAX_BODIES = needed_size
-
+

@@ -4,6 +4,9 @@ INITIAL_SCALE = 5000.0
 
 class Camera:
     def __init__(self, width, height):
+        """`scale` è km per pixel, non un moltiplicatore di zoom: più è grande, più
+        si è zoomati indietro. Il pavimento a 1.0 (1 px = 1 km) è il limite massimo
+        di zoom in, applicato sia allo zoom a rotella sia a quello da tastiera."""
         self.width = width
         self.height = height
         self.offset_x = 0.0
@@ -19,6 +22,10 @@ class Camera:
         return int(screen_x), int(screen_y)
 
     def handle_input(self, event):
+        """Zoom a rotella e pan a trascinamento (drag col tasto sinistro). Lo
+        spostamento del drag è scalato per `self.scale`: a zoom indietro (scale
+        grande) lo stesso movimento del mouse sposta molti più km, mantenendo la
+        sensazione di velocità di pan costante a schermo indipendentemente dallo zoom."""
         if event.type == pygame.MOUSEWHEEL:
             if event.y > 0: self.scale /= self.zoom_speed
             elif event.y < 0: self.scale *= self.zoom_speed
@@ -40,8 +47,11 @@ class Camera:
                 self.offset_y -= dy * self.scale
                 self.last_mouse_pos = (mx, my)
     
-    def update(self, keys): 
-        pan_speed = 10 * self.scale 
+    def update(self, keys):
+        """Pan e zoom da tastiera (WASD/frecce, +/-), stesso principio del drag: la
+        velocità di pan scala con `self.scale` per restare percettivamente costante
+        a qualunque livello di zoom."""
+        pan_speed = 10 * self.scale
         if keys[pygame.K_LEFT] or keys[pygame.K_a]: self.offset_x -= pan_speed
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]: self.offset_x += pan_speed
         if keys[pygame.K_UP] or keys[pygame.K_w]: self.offset_y -= pan_speed
