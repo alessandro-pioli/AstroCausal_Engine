@@ -1,1470 +1,1472 @@
-# Guida Fisica e agli Scenari di AstroCausal Engine
+# AstroCausal Engine Physics and Scenarios Guide
 
-Questo documento è il riferimento **fisico-matematico** del progetto: spiega le equazioni dietro la dinamica e le heatmap, collega ciascun blocco di teoria allo scenario che lo rende visibile e mostra con GIF, immagini e video quei fenomeni così come emergono realmente dal motore. Per le scelte *ingegneristiche* (buffer, kernel JIT, performance) si veda [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md). Per l'uso pratico, il [README.md](README.md).
+**🇬🇧 English**  ·  [🇮🇹 Italiano](PHYSICS_AND_SCENARIO_GUIDE.it.md)
+
+This document serves as the project’s **physics and mathematics** reference: it explains the equations behind the dynamics and heatmaps, links each theoretical concept to the scenario that illustrates it, and uses GIFs, images, and videos to show these phenomena as they actually emerge from the engine. For *engineering* decisions (buffers, JIT kernel, performance), see [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md). For practical use, see the [README.md](README.md).
 
 > [!WARNING]
-> **Nota dell'autore e invito alla collaborazione**
-> Questo simulatore è un progetto indipendente e non accademico: chi scrive **non è un fisico né un matematico di mestiere**. Le soluzioni fisiche implementate si appoggiano su una sintesi numerica di modelli standard della letteratura scientifica, tra cui la gravità a tempo ritardato, lo schema [Velocity Verlet](#41-lo-schema-di-integrazione), la reazione di radiazione gravitazionale [2.5PN](#62-cosa-sono-gli-ordini-post-newtoniani-e-il-25pn) e le formulazioni di [Liénard-Wiechert](#5-deformazione-di-li%C3%A9nard-wiechert) e [Paczyński-Wiita](#61-lo-pseudo-potenziale-di-paczy%C5%84ski-wiita).
-> Il motore è interamente **parameter-free** (privo di coefficienti liberi di taratura) ed è stato validato empiricamente rispetto ai dati osservativi reali e di relatività numerica.
-> Trattandosi di un'opera autonoma di divulgazione e simulazione, il codice e la formalizzazione teorica gioverebbero enormemente del confronto e dello sguardo di professionisti e accademici del settore (collaborazione già tracciata nella **roadmap** del [README.md](README.md)).
+> **Author’s Note and Call for Collaboration**
+> This simulator is an independent, non-academic project: the author **is neither a physicist nor a mathematician by profession**. The physical solutions implemented are based on a numerical synthesis of standard models from the scientific literature, including retarded time gravity, the [Velocity Verlet](#41-the-integration-scheme) scheme, the [2.5PN](#62-what-are-post-newtonian-orders-and-25pn), and the [Liénard-Wiechert](#5-liénard-wiechert-deformation) and [Paczyński-Wiita](#61-the-paczyński-wiita-pseudo-potential) formulations.
+> The engine is entirely **parameter-free** (free of arbitrary calibration coefficients) and has been empirically validated against real observational data and numerical relativity results.
+> As this is an independent project aimed at popular science and simulation, the code and theoretical formalization would greatly benefit from comparisons and input from professionals and academics in the field (collaboration already outlined in the **roadmap** of the [README.md](README.md)).
 
 > [!TIP]
-> Se un video *in-line* non si carica o appare rotto, di solito basta un refresh della pagina (F5) per risolvere.
+> If an *in-line* video fails to load or appears broken, refreshing the page (F5) usually resolves the issue.
 
-La scelta progettuale è rendere tutto rigorosamente **causale**: le forze viaggiano a velocità finita $c$ e ogni corpo reagisce al passato degli altri. Da questa singola regola emergono, senza essere programmati, fenomeni che nella fisica reale appartengono al regime relativistico:
+The design choice is to make everything strictly **causal**: forces travel at a finite speed $c$, and each body reacts to the past actions of the others. From this single rule, phenomena emerge (without being programmed) that in real physics belong to the relativistic regime:
 
-- i fronti d'onda del [chirp](#64-massa-chirp-e-formula-di-peters);
-- le orbite fortemente eccentriche che precessano e si stringono in una **rosetta** (l'esempio più chiaro è l'**[EMRI](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro)**, *Extreme Mass Ratio Inspiral*);
-- il **[cono di luce](#21-il-cono-di-luce-e-il-diagramma-di-minkowski) visibile a occhio**: se, grazie ai tool del simulatore, si fa apparire di colpo un corpo celeste, il suo campo (informazione, gravità) non si materializza ovunque all'istante, ma si propaga come un fronte sferico che viaggia a $c$ , perché i corpi oltre il fronte stanno ancora reagendo al passato in cui il nuovo corpo non c'era.
+- the wavefronts of the [chirp](#64-chirp-mass-and-peters-formula);
+- the highly eccentric orbits that precess and converge into a **rosette** (the clearest example is the **[EMRI](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter)**, *Extreme Mass Ratio Inspiral*);
+- the **[cone of light](#21-the-light-cone-and-the-minkowski-diagram) visible to the naked eye**: if, using the simulator’s tools, you suddenly make a celestial body appear, its field (information, gravity) does not materialize everywhere instantly, but propagates as a spherical front traveling at $c$, because bodies beyond the front are still reacting to the past when the new body was not there.
 
-In breve, molti degli effetti che si vedono non sono calcolati, ma conseguenze del sistema.
+In short, many of the effects you see are not calculated, but are consequences of the system.
 
-### Convenzioni e unità
+### Conventions and Units
 
-Il simulatore lavora interamente in **km, kg, secondi**:
-- $G = 6{,}674 \times 10^{-20}\ \text{km}^3\,\text{kg}^{-1}\,\text{s}^{-2}$ (la costante in unità del SI riscalata ai km);
+The simulator operates entirely in **km, kg, and seconds**:
+- $G = 6{,}674 \times 10^{-20}\ \text{km}^3\,\text{kg}^{-1}\,\text{s}^{-2}$ (the constant in SI units scaled to km);
 - $c = 299\,792{,}458\ \text{km/s}$ ;
-- $1\ \text{AU} = 149\,597\,870{,}7\ \text{km}$ .
+- $1\ \text{AU} = 149\,597\,870.7\ \text{km}$ .
 
-Tutti gli stati fisici sono in doppia precisione (`float64`). I vettori sono 2D nel piano della simulazione.
+All physical quantities are in double precision (`float64`). Vectors are 2D in the simulation plane.
 
-### Termini essenziali e Nomenclatura
+### Essential Terms and Nomenclature
 
-Per facilitare la consultazione del documento, di seguito vengono definiti i concetti fisici e le grandezze fondamentali impiegate all'interno della guida e del simulatore:
+To facilitate reading this document, the physical concepts and fundamental quantities used in this guide and the simulator are defined below:
 
-- **DT (passo di simulazione, $\Delta t$ )**: L'intervallo di tempo simulato che separa due aggiornamenti consecutivi della fisica: a ogni "tick" il motore fa avanzare l'universo di DT secondi. È il parametro numerico più importante dell'intero simulatore: più è piccolo, più l'integrazione è accurata e più lento scorre il tempo simulato; più è grande, più il tempo vola, a scapito della precisione ([§4](#4-metodi-numerici-velocity-verlet-errore-di-troncamento-e-dt)). Gli scenari relativistici lo spingono fino al microsecondo.
-- **Heatmap**: La "mappa di calore" che il simulatore sovrappone allo spazio. Per ogni pixel dello schermo viene calcolata una grandezza fisica reale (potenziale, marea, strain...) nel punto corrispondente dello spazio simulato, poi convertita in colore secondo una scala dichiarata. Non è un effetto grafico decorativo: ogni tinta e livello di luminosità corrisponde a un numero fisico ispezionabile ([§7](#7-la-matematica-delle-heatmap)).
-- **$\Phi$ (Potenziale Gravitazionale)**: Rappresenta la "profondità" del pozzo gravitazionale nello spazio. Analogamente alla deformazione prodotta da un peso su un telo elastico, il potenziale $\Phi$ misura in ogni punto la profondità del pozzo scalare indotto dalle masse presenti, senza dire in che direzione siano le sorgenti che lo generano.
-- **$d\Phi/dt$ (Variazione del Potenziale)**: Tasso di variazione temporale del potenziale gravitazionale in un punto fisso dello spazio. Il movimento di un corpo massiccio **approfondisce** il pozzo nella direzione di avanzamento (zona blu nella sua heatmap) e lo **rilassa** nella direzione opposta (zona rossa), generando una topologia a forma di **dipolo**.
-- **Onde Gravitazionali**: Perturbazioni e increspature della geometria dello spaziotempo che si propagano nel vuoto alla velocità della luce $c$ . L'accelerazione asimmetrica di masse (come in una coppia binaria in rotazione) genera queste oscillazioni che allungano e comprimono alternativamente le distanze fisiche lungo il loro percorso.
-- **Pericentro e Apocentro**: Rispettivamente il punto di minima (pericentro) e massima (apocentro) distanza di un corpo orbitante dal centro di massa (fuoco dell'orbita) del sistema. A seconda del corpo attrattore, la nomenclatura cambia suffisso: **Perielio / Afelio** (attorno al Sole), **Perigeo / Apogeo** (attorno alla Terra) o **Periastro / Afastro** (attorno a una stella generica).
-- **Orbita eccentrica e *plunge***: L'eccentricità misura quanto un'orbita legata si discosta dal cerchio perfetto ($e = 0$): al crescere di essa, pericentro e apocentro si allontanano tra loro. Il *plunge* è la caduta (quasi) diretta sul corpo centrale, con momento angolare (quasi) nullo: rappresenta il limite geometrico delle orbite legate quando l'eccentricità tende a 1 ($e \to 1$, in cui l'ellisse degenera in un segmento). In questo senso, il plunge è la forma di traiettoria legata più eccentrica possibile.
-- **Precessione apsidale**: La lenta rotazione, orbita dopo orbita, dell'asse maggiore di un'orbita ellittica (la linea che congiunge pericentro e apocentro). Impedisce all'orbita di richiudersi su se stessa: il tracciato disegna invece una rosetta che ruota nel tempo.
-- **Raggio di Schwarzschild ( $r_s$ )**: Il raggio che definisce l'orizzonte degli eventi di un buco nero sferico statico. Quando una massa viene compressa al di sotto di questa soglia critica, la velocità di fuga supera la velocità della luce $c$ , impedendo a qualsiasi materia o informazione di sfuggire all'esterno.
-- **ISCO (Innermost Stable Circular Orbit)**: L'ultima orbita circolare stabile consentita attorno a un buco nero. Al di sotto di questo limite di stabilità, le forze centrifughe non possono più bilanciare il richiamo gravitazionale e il corpo compatto passa da un regime di spiraleggiamento a una precipitazione diretta (*plunge*) verso l'orizzonte.
-- **BBH**: Acronimo standard per *Binary Black Hole* (coppia di buchi neri, es. GW150914)
-- **BNS**: Acronimo standard per *Binary Neutron Star* (coppia di stelle di neutroni, es. GW170817).
-- **Coalescenza / Merger (l'atto conclusivo dell'inspiral)**: i due corpi entrano in contatto e si fondono in un unico oggetto. Nel modello coincide con l'evento di collisione che assorbe il corpo minore nel maggiore. Ciò che nella realtà segue, il *ringdown*, non è modellato ([§8.6](#86-il-troncamento-netto-dello-strain-lassenza-del-ringdown)).
-- **Relatività Numerica (NR)**: La risoluzione numerica diretta delle Equazioni di Einstein complete tramite supercomputer. Necessaria nel regime di campo forte e dinamica non lineare in cui le approssimazioni analitiche perdono di validità, costituisce il *benchmark* di calibrazione ("verità di riferimento") per verificare l'accuratezza del modello.
-
----
-
-## Indice
-
-1. [Inquadramento: il modello causale e l'approssimazione 2D](#1-inquadramento-il-modello-causale-e-lapprossimazione-2d)
-   - 1.1 Cosa risolve davvero il motore
-2. [Propagazione causale e istante di emissione](#2-propagazione-causale-e-istante-di-emissione)
-   - 2.1 Il cono di luce e il diagramma di Minkowski
-3. [Aberrazione causale, Dead Reckoning e dinamica relativistica](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica)
-   - 3.1 Il problema dell'aberrazione
-   - 3.2 La compensazione: Dead Reckoning ibrido
-   - 3.3 L'equilibrio tra freno e spinta
-   - 3.4 Compressione relativistica dell'accelerazione
-4. [Metodi numerici: Velocity Verlet, errore di troncamento e DT](#4-metodi-numerici-velocity-verlet-errore-di-troncamento-e-dt)
-   - 4.1 Lo schema di integrazione
-   - 4.2 Errore di troncamento
-   - 4.3 DT, Nyquist-Shannon e l'emergenza del chirp
-   - 4.4 Una nota sul LOD dei buffer
-5. [Deformazione di Liénard-Wiechert](#5-deformazione-di-liénard-wiechert)
-   - 5.1 Il tempo di volo per sorgenti in moto rettilineo, formula chiusa
-   - 5.2 Il denominatore di Liénard-Wiechert e la contrazione di Lorentz
-   - 5.3 Showcase: Approccio a *c*
-6. [Gravità estrema: Paczyński-Wiita, 2.5PN e massa chirp](#6-gravità-estrema-paczyński-wiita-25pn-e-massa-chirp)
-   - 6.1 Lo pseudo-potenziale di Paczyński-Wiita
-   - 6.2 Cosa sono gli ordini post-newtoniani e il 2.5PN
-   - 6.3 Come viene usato il 2.5PN nel simulatore
-   - 6.4 Massa chirp e formula di Peters
-   - 6.5 La storia: da `m_chirp_mult` al 2.5PN reale
-   - 6.6 Le prove: confronto col dato reale
-     - 6.6.1 Lo scenario BNS (GW170817): Peters vs relatività numerica SXS
-     - 6.6.2 Lo scenario BBH (GW150914): confronto con la relatività numerica SXS
-   - 6.7 Le due validazioni a confronto
-7. [La matematica delle heatmap](#7-la-matematica-delle-heatmap)
-   - 7.1 Potenziale scalare Φ
-   - 7.2 Variazione temporale dΦ/dt
-   - 7.3 Stress di marea (e una nota sull'Hessiana)
-   - 7.4 Topologia di Roche (il segno del determinante)
-     - 7.4.1 Il potenziale efficace nel sistema co-rotante
-     - 7.4.2 Mappatura cromatica (segno e intensità di D)
-     - 7.4.3 Overlay [M]: Orbita circolare ideale
-     - 7.4.4 Lettura combinata delle tre informazioni
-     - 7.4.5 Caso di studio: La missione Artemis II
-   - 7.5 Lagrange Hunter (determinante e Hessiana inversa)
-   - 7.6 Deformazione proiettata (GW Strain Quadrupolare)
-     - 7.6.1 Formulazione matematica e proiezione
-     - 7.6.2 Causalità per-corpo: sorgente estesa contro quadrupolo puntiforme
-     - 7.6.3 La coalescenza e l'artefatto del quadrupolo nudo
-     - 7.6.4 Caso di studio: Il quadrupolo dinamico nell'EMRI all'apocentro
-     - 7.6.5 Caso di studio: BNS a doppia eccentricità estrema
-   - 7.7 La natura delle onde del simulatore (livelli di astrazione)
-   - 7.8 Riepilogo: come ogni heatmap converte la fisica in colore
-   - 7.9 Il doppio clic in scena: Pannello di Telemetria e sonda di campo (le unità di misura)
-8. [L'analizzatore LIGO/Virgo: dal proxy cinematico allo spettro](#8-lanalizzatore-ligovirgo-dal-proxy-cinematico-allo-spettro)
-   - 8.1 L'analogia con LIGO e Virgo sulla Terra
-   - 8.2 Cos'è il momento di quadrupolo di massa? (I due punti di vista sul quadrupolo)
-   - 8.3 La formula 3D "camuffata" e la proiezione ortogonale al piano
-   - 8.4 Cosa registra la sonda virtuale (Il proxy basato sulle velocità)
-   - 8.5 Il problema numerico dell'accelerazione e la regolarizzazione cinetica
-   - 8.6 Il troncamento netto dello strain (L'assenza del Ringdown)
-   - 8.7 Cos'è uno spettrogramma e come si ottiene
-   - 8.8 La pipeline di analisi dell'analizzatore (`ligo_analyzer.py`)
-9. [Inizializzazione degli scenari: calcolo analitico delle orbite](#9-inizializzazione-degli-scenari-calcolo-analitico-delle-orbite)
-   - 9.1 Velocità orbitale e di fuga nel potenziale di Paczyński-Wiita
-   - 9.2 Lancio all'apocentro o al pericentro
-   - 9.3 Velocità di lancio per binarie compatte (coppie strette)
-   - 9.4 Punti di Lagrange analitici (Problema dei tre corpi circolare ristretto)
-   - 9.5 Velocità co-rotante sui punti di Lagrange
-   - 9.6 Perché coesistono l'overlay teorico e la heatmap dinamica?
-10. [Fenomeni emergenti](#10-fenomeni-emergenti)
-    - 10.1 Caso di studio: GW190814, la sovradissipazione in campo profondo
-    - 10.2 Altri fenomeni emergenti
-    - 10.3 Il *wobble* del corpo di riferimento
-    - 10.4 La precessione spuria in campo debole (errore di troncamento in DT, non fisica)
+- **DT (simulation step, $\Delta t$ )**: The simulated time interval between two consecutive physics updates: at each “tick,” the engine advances the universe by DT seconds. It is the most important numerical parameter of the entire simulator: the smaller it is, the more accurate the integration and the slower simulated time passes; the larger it is, the faster time flies, at the expense of precision ([§4](#4-numerical-methods-velocity-verlet-truncation-error-and-dt)). Relativistic scenarios push this down to the microsecond range.
+- **Heatmap**: The “heatmap” that the simulator overlays on space. For each pixel on the screen, a real physical quantity (potential, tide, strain, etc.) is calculated at the corresponding point in simulated space, then converted to color according to a specified scale. This is not a decorative graphical effect: every hue and brightness level corresponds to a verifiable physical quantity ([§7](#7-the-mathematics-of-heatmaps)).
+- **$\Phi$ (Gravitational Potential)**: Represents the “depth” of the gravitational well in space. Similar to the deformation produced by a weight on an elastic sheet, the potential $\Phi$ measures at every point the depth of the scalar well induced by the present masses, without specifying the direction of the sources that generate it.
+- **$d\Phi/dt$ (Potential Change)**: Rate of change over time of the gravitational potential at a fixed point in space. The motion of a massive body **deepens** the well in the direction of motion (blue area in its heatmap) and **relaxes** it in the opposite direction (red area), generating a **dipole**-shaped topology.
+- **Gravitational Waves**: Perturbations and ripples in the geometry of spacetime that propagate through a vacuum at the speed of light $c$. The asymmetric acceleration of masses (such as in a rotating binary pair) generates these oscillations, which alternately stretch and compress physical distances along their path.
+- **Perihelion and Aphelion**: Respectively, the point of minimum (perihelion) and maximum (aphelion) distance of an orbiting body from the center of mass (focal point of the orbit) of the system. Depending on the attracting body, the terminology changes its suffix: **Perihelion / Aphelion** (around the Sun), **Perigee / Apogee** (around the Earth), or **Periast / Aphast** (around a generic star).
+- **Eccentric orbit and *plunge***: Eccentricity measures how much a bound orbit deviates from a perfect circle ($e = 0$); as it increases, the pericenter and apocenter move farther apart. A *plunge* is a (nearly) direct fall toward the central body, with (nearly) zero angular momentum: it represents the geometric limit of bound orbits when the eccentricity approaches 1 ($e \to 1$, where the ellipse degenerates into a line segment). In this sense, a plunge is the most eccentric possible form of a bound trajectory.
+- **Apsidal precession**: The slow rotation, orbit after orbit, of the major axis of an elliptical orbit (the line connecting the pericenter and apocenter). It prevents the orbit from closing in on itself; instead, the path draws a rosette that rotates over time.
+- **Schwarzschild radius ($r_s$)**: The radius that defines the event horizon of a static spherical black hole. When a mass is compressed below this critical threshold, the escape velocity exceeds the speed of light $c$, preventing any matter or information from escaping outward.
+- **ISCO (Innermost Stable Circular Orbit)**: The outermost stable circular orbit permitted around a black hole. Below this stability limit, centrifugal forces can no longer balance the gravitational pull, and the compact object transitions from a spiraling motion to a direct plunge toward the event horizon.
+- **BBH**: Standard acronym for *Binary Black Hole* (a pair of black holes, e.g., GW150914)
+- **BNS**: Standard acronym for *Binary Neutron Star* (a pair of neutron stars, e.g., GW170817).
+- **Coalescence / Merger (the final stage of inspiral)**: The two bodies come into contact and merge into a single object. In the model, this coincides with the collision event in which the smaller body is absorbed by the larger one. What actually follows (the *ringdown*) is not modeled ([§8.6](#86-the-sharp-truncation-of-the-strain-the-absence-of-ringdown)).
+- **Numerical Relativity (NR)**: The direct numerical solution of the full Einstein equations using supercomputers. Necessary in the strong-field regime and nonlinear dynamics where analytical approximations lose their validity, it serves as the calibration *benchmark* (“reference truth”) for verifying the model’s accuracy.
 
 ---
 
-## 1. Inquadramento: il modello causale e l'approssimazione 2D
+## Table of Contents
 
-### 1.1 Cosa risolve davvero il motore
-Il modello non risolve le equazioni di campo di Einstein. Al suo cuore integra una **gravità newtoniana scalare ( $GM/r^2$ ) resa interamente causale**, operante su uno sfondo euclideo piatto 2D. 
+1. [Background: The Causal Model and the 2D Approximation](#1-background-the-causal-model-and-the-2d-approximation)
+   - 1.1 What the engine actually solves
+2. [Causal Propagation and the Moment of Emission](#2-causal-propagation-and-the-moment-of-emission)
+   - 2.1 The Light Cone and the Minkowski Diagram
+3. [Causal Aberration, Dead Reckoning, and Relativistic Dynamics](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics)
+   - 3.1 The Problem of Aberration
+   - 3.2 Compensation: Hybrid Dead Reckoning
+   - 3.3 The Balance Between Drag and Thrust
+   - 3.4 Relativistic Compression of Acceleration
+4. [Numerical Methods: Velocity Verlet, Truncation Error, and DT](#4-numerical-methods-velocity-verlet-truncation-error-and-dt)
+   - 4.1 The integration scheme
+   - 4.2 Truncation error
+   - 4.3 DT, Nyquist-Shannon, and the emergence of chirp
+   - 4.4 A note on buffer LOD
+5. [Liénard-Wiechert deformation](#5-liénard-wiechert-deformation)
+   - 5.1 Time of flight for sources in rectilinear motion, closed-form formula
+   - 5.2 The Liénard-Wiechert denominator and Lorentz contraction
+   - 5.3 Showcase: Approaching *c*
+6. [Extreme Gravity: Paczyński-Wiita, 2.5PN, and chirp mass](#6-extreme-gravity-paczyński-wiita-25pn-and-chirp-mass)
+   - 6.1 The Paczyński-Wiita pseudopotential
+   - 6.2 What Are Post-Newtonian Orders and 2.5PN?
+   - 6.3 How 2.5PN Is Used in the Simulator
+   - 6.4 Chirp Mass and Peters’ Formula
+   - 6.5 The History: From `m_chirp_mult` to the Real 2.5PN
+   - 6.6 The Tests: Comparison with Real Data
+     - 6.6.1 The BNS scenario (GW170817): Peters vs. SXS numerical relativity
+     - 6.6.2 The BBH scenario (GW150914): Comparison with SXS numerical relativity
+   - 6.7 Comparing the Two Validations
+7. [The Mathematics of Heatmaps](#7-the-mathematics-of-heatmaps)
+   - 7.1 Scalar potential Φ
+   - 7.2 Time derivative dΦ/dt
+   - 7.3 Tidal stress (and a note on the Hessian)
+   - 7.4 Roche topology (the sign of the determinant)
+     - 7.4.1 The effective potential in the co-rotating frames
+     - 7.4.2 Color mapping (sign and intensity of D)
+     - 7.4.3 Overlay [M]: Ideal circular orbit
+     - 7.4.4 Combined interpretation of the three pieces of information
+     - 7.4.5 Case study: The Artemis II mission
+   - 7.5 Lagrange Hunter (determinant and inverse Hessian)
+   - 7.6 Projected strain (GW Quadrupole Strain)
+     - 7.6.1 Mathematical formulation and projection
+     - 7.6.2 Per-body causality: extended source versus point-like quadrupole
+     - 7.6.3 Coalescence and the Bare Quadrupole Artifact
+     - 7.6.4 Case Study: The Dynamic Quadrupole in the EMRI at Apocenter
+     - 7.6.5 Case Study: BNS with Extreme Double Eccentricity
+   - 7.7 The Nature of Simulator Waves (levels of abstraction)
+   - 7.8 Summary: How Every Heatmap Converts Physics into Color
+   - 7.9 Double-Click in Action: Telemetry Panel and Field Probe (Units of Measurement)
+8. [The LIGO/Virgo Analyzer: From Kinematic Proxy to Spectrum](#8-the-ligovirgo-analyzer-from-kinematic-proxy-to-spectrum)
+   - 8.1 The Analogy with LIGO and Virgo on Earth
+   - 8.2 What Is the Quadrupole Moment of Mass? (The Two Perspectives on the Quadrupole)
+   - 8.3 The “Disguised” 3D Formula and the Orthogonal Projection onto the Plane
+   - 8.4 What the Virtual Probe Records (The Velocity-Based Proxy)
+   - 8.5 The numerical problem of acceleration and kinetic regularization
+   - 8.6 The sharp truncation of the strain (The absence of ringdown)
+   - 8.7 What is a spectrogram and how is it obtained?
+   - 8.8 The analyzer’s analysis pipeline (`ligo_analyzer.py`)
+9. [Scenario Initialization: Analytical Calculation of Orbits](#9-initialization-of-scenarios-analytical-calculation-of-orbits)
+   - 9.1 Orbital and escape velocities in the Paczyński-Wiita potential
+   - 9.2 Launch at apocenter or pericenter
+   - 9.3 Launch velocities for compact binaries (close pairs)
+   - 9.4 Analytical Lagrange points (restricted circular three-body problem)
+   - 9.5 Co-rotating velocities at Lagrange points
+   - 9.6 Why do the theoretical overlay and the dynamic heatmap coexist?
+10. [Emergent phenomena](#10-emerging-phenomena)
+    - 10.1 Case Study: GW190814, Overdissipation in the Deep Field
+    - 10.2 Other Emerging Phenomena
+    - 10.3 The Reference Body’s *Wobble*
+    - 10.4 Spurious Precession in the Weak Field (Truncation Error in DT, Not Physical)
 
-**La natura dello spaziotempo simulato.** Il palcoscenico è uno spaziotempo **2+1D**: ogni grado di libertà vive nelle due dimensioni del piano, col tempo come asse esplicito attorno a cui è costruita l'intera architettura dei buffer causali. Le leggi restano però quelle della fisica tridimensionale ( $1/r^2$ , non l' $1/r$ della gravità intrinsecamente bidimensionale): il piano va letto come la fetta di un universo 3D in cui tutta la dinamica si svolge, la stessa idealizzazione dei sistemi orbitali reali quasi complanari. Il tempo è **assoluto**: un unico orologio universale scandisce lo stesso DT per ogni corpo, senza dilatazione gravitazionale né relatività della simultaneità. Anche questa scelta ha una lettura relativistica legittima: quell'orologio è il tempo coordinato di un **osservatore lontano** dal sistema, la stessa convenzione con cui si cronometrano nella realtà i segnali delle pulsar binarie e delle onde gravitazionali. Su questo sfondo fisso corrono la causalità a velocità $c$ e gli innesti relativistici elencati sotto, nessuno dei quali tocca il ticchettio degli orologi.
+---
 
-La caratteristica distintiva e fondante del motore è che **l'informazione in tutto lo spazio viaggia rigorosamente alla velocità della luce $c$**: ogni corpo risente dell'influenza gravitazionale degli altri leggendone la posizione e lo stato all'istante di emissione passato ([ $t_{\text{ret}} = t - r/c$ ](#2-propagazione-causale-e-istante-di-emissione)), calcolato individualmente in base al tempo di volo dell'interazione. Questo significa che ogni mutuo accoppiamento dinamico risente di un ritardo temporale finito ed è intrinsecamente reciproco e non-locale nel tempo. Per rendere sostenibile a livello computazionale questa complessa dinamica a ritardo, il motore si appoggia a un'architettura basata su **buffer storici a livelli di dettaglio (LOD)**, che consente lookup e interpolazioni temporali a costo costante $O(1)$ , compilati al volo in codice macchina nativo altamente ottimizzato (tramite **Numba / LLVM**) (il funzionamento concettuale, incluso il doppio recupero causale, è spiegato in apertura del **[§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica)**; i dettagli implementativi in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**).
+## 1. Background: The Causal Model and the 2D Approximation
 
-Al di sopra di questo nucleo causale, in regimi relativistici specifici il motore innesta logiche di ordine superiore, dissipative o fenomenologiche:
+### 1.1 What the engine actually solves
+The model does not solve Einstein’s field equations. At its core, it integrates a **scalar Newtonian gravity ($GM/r^2$) made entirely causal**, operating on a flat 2D Euclidean background. 
 
-- lo **[pseudo-potenziale di Paczyński-Wiita (§6.1)](#61-lo-pseudo-potenziale-di-paczy%C5%84ski-wiita)** per i buchi neri, che riproduce orizzonte e ISCO senza risolvere la metrica;
-- la **[correzione di Liénard-Wiechert](#5-deformazione-di-liénard-wiechert)** che comprime il campo delle sorgenti rapide vicino a $c$ , lo stesso effetto della **[contrazione di Lorentz](#5-deformazione-di-liénard-wiechert)** sul campo di una carica in moto;
-- la **[reazione di radiazione 2.5PN (§6)](#6-gravit%C3%A0-estrema-paczy%C5%84ski-wiita-25pn-e-massa-chirp)** che fa decadere le orbite compatte;
-- il **[freno d'inerzia relativistico (§3.4)](#34-compressione-relativistica-dellaccelerazione)** che rende $c$ un asintoto inavvicinabile.
+**The nature of the simulated spacetime.** The stage is a **2+1D** spacetime: each degree of freedom resides in the two dimensions of the plane, with time as the explicit axis around which the entire architecture of the causal buffers is constructed. The laws, however, remain those of three-dimensional physics ($1/r^2$, not the $1/r$ of intrinsically two-dimensional gravity): the plane should be interpreted as a slice of a 3D universe in which all dynamics unfold (the same idealization as that of real, nearly coplanar orbital systems. Time is **absolute**: a single universal clock marks the same DT for every body, without gravitational time dilation or relativity of simultaneity. This choice, too, has a legitimate relativistic interpretation: that clock is the coordinated time of an **observer distant** from the system) the same convention used in reality to time the signals from binary pulsars and gravitational waves. Against this fixed backdrop, causality travels at speed $c$, along with the relativistic effects listed below, none of which affect the ticking of the clocks.
 
-Tra le soluzioni determinanti per garantire la stabilità orbitale a lungo termine vanno citati l'**[integratore simplettico Velocity Verlet (§4.1)](#41-lo-schema-di-integrazione)** che conserva per sua natura l'energia totale (impedendo derive numeriche fittizie) e il **[dead reckoning di 2° ordine (§3.2)](#32-la-compensazione-dead-reckoning-ibrido)**, che estrapola lo stato della sorgente per annullare l'aberrazione spuria indotta dal ritardo causale della gravità.
+The distinctive and fundamental characteristic of the engine is that **information throughout space travels strictly at the speed of light $c$**: every body is affected by the gravitational influence of the others, reading their position and state at the past emission instant ([ $t_{\text{ret}} = t - r/c$ ](#2-causal-propagation-and-the-moment-of-emission)), calculated individually based on the interaction’s time of flight. This means that every mutual dynamic coupling is subject to a finite time delay and is inherently reciprocal and non-local in time. To make this complex delay-based dynamics computationally sustainable, the engine relies on an architecture based on **level-of-detail (LOD) history buffers**, which allow for lookups and temporal interpolations at a constant cost of $O(1)$, compiled on the fly into highly optimized native machine code (via **Numba / LLVM**) (the conceptual operation, including double causal recovery, is explained at the beginning of **[§3](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics)**; implementation details are in **[ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#2-the-ring-buffer-and-the-position-history)**).
+
+Above this causal core, in specific relativistic regimes, the engine incorporates higher-order, dissipative, or phenomenological logic:
+
+- the **[Paczyński-Wiita pseudopotential (§6.1)](#61-the-paczyński-wiita-pseudo-potential)** for black holes, which reproduces the event horizon and ISCO without solving the metric;
+- the **[Liénard-Wiechert correction](#5-liénard-wiechert-deformation)**, which compresses the field of rapid sources near $c$, the same effect as the **[Lorentz contraction](#5-liénard-wiechert-deformation)** on the field of a moving charge;
+- the **[2.5PN radiation reaction (§6)](#6-extreme-gravity-paczyński-wiita-25pn-and-chirp-mass)**, which causes compact orbits to decay;
+- the **[relativistic inertial braking (§3.4)](#34-relativistic-compression-of-acceleration)**, which makes $c$ an unreachable asymptote.
+
+Among the key solutions for ensuring long-term orbital stability are the **[Velocity-Verlet simpletic integrator (§4.1)](#41-the-integration-scheme)**, which by its very nature conserves total energy (preventing spurious numerical drifts), and the **[2nd-order dead reckoning (§3.2)](#32-compensation-hybrid-dead-reckoning)**, which extrapolates the source state to cancel out the spurious aberration induced by the causal delay of gravity.
 
 
 ---
 
-## 2. Propagazione causale e istante di emissione
+## 2. Causal Propagation and the Moment of Emission
 
-Il cuore del modello è che ogni corpo non sente la posizione *attuale* delle sorgenti, ma quella che avevano all'**istante di emissione** del segnale, il *tempo ritardato* dell'elettrodinamica classica:
+The core of the model is that each body does not perceive the *current* position of the sources, but rather the position they had at the **emission instant** of the signal, the *retarded time* of classical electrodynamics:
 
 $$t_{ret} = t - \frac{r}{c}$$
 
-dove $r$ è la distanza e $t_{ret}$ è il tempo ritardato (che rappresenta la coordinata temporale dell'istante di emissione fisica dell'informazione, la quale viaggia a velocità $c$ per raggiungere l'osservatore al tempo presente $t$ dopo aver percorso la distanza $r$). 
+where $r$ is the distance and $t_{ret}$ is the retarded time (which represents the time coordinate of the physical emission of the information, which travels at speed $c$ to reach the observer at the present time $t$ after traveling a distance of $r$). 
 
-Un esempio quotidiano rende l'idea di quanto questo concetto sia in realtà intuitivo: quando osserviamo il Sole dalla Terra, la luce impiega circa 8 minuti e 20 secondi per raggiungerci, il che significa che l'istante di emissione $t_{ret}$ della luce che stiamo vedendo ora risale a circa 8 minuti e 20 secondi fa; per la Luna, molto più vicina, questo ritardo temporale scende a circa $1{,}3$ secondi.
+An everyday example illustrates just how intuitive this concept actually is: when we observe the Sun from Earth, light takes about 8 minutes and 20 seconds to reach us, which means that the time of emission $t_{ret}$ of the light we are seeing now occurred about 8 minutes and 20 seconds ago; for the Moon, which is much closer, this time delay drops to about $1.3$ seconds.
  
-Nel motore il valore di $t_{ret}$ è recuperato dai buffer storici con costo computazionale pressoché nullo.
+In the engine, the value of $t_{ret}$ is retrieved from the history buffers at virtually no computational cost.
 
-I dettagli di memoria sono nel deep-dive, mentre il meccanismo concettuale del **doppio ritrovamento causale** con cui il motore individua $t_{ret}$ in pratica è descritto in apertura del [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica), "Il recupero in due passi".
+Memory details are provided in the deep dive, while the conceptual mechanism of **double retrieval** (which the engine uses to determine $t_{ret}$ in practice) is described at the beginning of [§3](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics), “Two-Step Retrieval.”
 
-### 2.1 Il cono di luce e il diagramma di Minkowski
+### 2.1 The Light Cone and the Minkowski Diagram
 
-Un **cono di luce** è l'insieme di tutti i punti dello spaziotempo raggiungibili da un dato evento (o in grado di raggiungerlo) viaggiando esattamente alla velocità $c$ . Nel classico diagramma di Minkowski a tre assi (due spaziali più il tempo verticale), l'insieme dei fronti d'onda emessi da un evento disegna letteralmente un cono che si apre verso il futuro. È la costruzione geometrica di base dietro ogni discorso di causalità relativistica ed è esattamente il calcolo formale richiamato in apertura del [§5.1](#51-il-tempo-di-volo-per-sorgenti-in-moto-rettilineo-formula-chiusa): risolvere il tempo di volo *è* trovare l'intersezione con questo cono.
+A **light cone** is the set of all points in spacetime that can be reached by a given event (or that can reach it) while traveling exactly at the speed $c$. In the classic three-axis Minkowski diagram (two spatial axes plus the vertical time axis), the set of wavefronts emitted by an event literally draws a cone that opens toward the future. This is the basic geometric construct underlying any discussion of relativistic causality, and it is precisely the formal calculation referred to at the beginning of [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula): determining the time of flight *is* finding the intersection with this cone.
 
-Nella simulazione, che vive su un piano spaziale 2D, il cono si proietta in modo particolarmente semplice: **un cerchio che si espande (o si contrae) a velocità $c$**, centrato sull'evento che lo ha generato. È lo stesso oggetto geometrico del diagramma di Minkowski completo, solo osservato con **una dimensione spaziale in meno** (il classico trucco "**+1D**" per rendere visualizzabile un cono che in 3D pieno avrebbe bisogno di quattro assi): un piano spaziale 2D più il tempo produce comunque un cono a sezione circolare e vale la stessa costruzione se si passasse a un piano 3D pieno, con il cerchio sostituito da una superficie sferica che si espande.
+In the simulation, which takes place on a 2D spatial plane, the cone is projected in a particularly simple way: **a circle that expands (or contracts) at speed $c$**, centered on the event that generated it. It is the same geometric object as in the full Minkowski diagram, only viewed with **one fewer spatial dimension** (the classic “**+1D**” trick to make a cone visualizable that would require four axes in full 3D): a 2D spatial plane plus time still produces a cone with a circular cross-section, and the same construction would hold if we moved to a full 3D plane, with the circle replaced by an expanding spherical surface.
 
 <div align="center">
-  <img src="docs/img/Minkowski.png" width="400" alt="Diagramma classico del cono di luce di Minkowski">
+  <img src="docs/img/Minkowski.png" width="400" alt="Classic diagram of the Minkowski light cone">
 </div>
 
-*Rappresentazione geometrica del cono di luce di Minkowski nel diagramma a tre assi (due spaziali più il tempo verticale $t$ ). Ciascun evento nello spaziotempo definisce un cono di luce del passato (la regione da cui può ricevere segnali a velocità $\leq c$ ) e un cono del futuro (la regione che può influenzare causalmente).*
+*Geometric representation of the Minkowski light cone in a three-axis diagram (two spatial axes plus the vertical time axis $t$). Each event in spacetime defines a past light cone (the region from which it can receive signals at speeds $\leq c$) and a future light cone (the region it can causally influence).*
 
-Il modo più diretto per vederlo emergere **nel simulatore stesso** è osservare cosa succede quando un corpo appare o scompare di colpo: l'informazione della sua nascita o morte non si propaga istantaneamente ovunque, ma parte dal punto dell'evento e si allarga come un fronte sferico (circolare, nel piano 2D) che avanza a $c$ . Fuori da quel fronte, lo spazio *non sa ancora* che l'evento è accaduto e continua a reagire al passato.
+The most direct way to see this emerge **in the simulator itself** is to observe what happens when a body suddenly appears or disappears: the information about its creation or destruction does not propagate instantaneously everywhere, but starts from the point of the event and spreads out as a spherical front (circular, in the 2D plane) that advances at $c$. Outside that front, space *does not yet know* that the event has occurred and continues to react to the past.
 
-| Morte causale improvvisa di una stella | Nascita causale improvvisa di una stella |
+| Sudden causal death of a star | Sudden causal birth of a star |
 |:---:|:---:|
-| <img src="docs/gif/Minkowski_causal_death.gif" width="100%" alt="Diagramma di Minkowski: morte causale"><br><br><img src="docs/gif/Sun_causal_death.gif" width="100%" alt="Espansione del cono di luce alla scomparsa improvvisa di una stella"> | <img src="docs/gif/Minkowski_causal_birth.gif" width="100%" alt="Diagramma di Minkowski: nascita causale"><br><br><img src="docs/gif/Sun_causal_birth.gif" width="100%" alt="Espansione del cono di luce alla comparsa improvvisa di una stella"> |
-| **Sopra (Diagramma di Minkowski)**: Il tempo scorre verso l'alto; alla scomparsa della stella, il cono di luce del futuro si interrompe dal vertice dell'evento.<br>**Sotto (Simulatore 2D)**: Il campo della stella scomparsa persiste all'esterno del fronte causale e collassa a zero solo quando il cerchio d'espansione della "notizia" (viaggiando a velocità $c$ ) raggiunge i punti dello spazio. | **Sopra (Diagramma di Minkowski)**: La nascita di una stella apre il cono di luce verso il futuro a partire dal vertice dell'evento.<br>**Sotto (Simulatore 2D)**: Il campo della nuova stella è del tutto assente all'esterno del fronte causale e si accende propagandosi verso l'esterno solo quando il cerchio d'espansione dell'evento di nascita lo raggiunge. |
+| <IMG src="docs/gif/Minkowski_causal_death.gif" width="100%" alt="Minkowski diagram: causal death"><BR><BR><img src="docs/gif/Sun_causal_death.gif" width="100%" alt="Expansion of the causal cone upon the sudden disappearance of a star"> | <IMG src="docs/gif/Minkowski_causal_birth.gif" width="100%" alt="Minkowski diagram: causal birth"><BR><BR><IMG src="docs/gif/Sun_causal_birth.gif" width="100%" alt="Expansion of the causal cone upon the sudden appearance of a star"> |
+| **Above (Minkowski diagram)**: Time flows upward; when the star disappears, the future light cone is cut off at the event’s vertex.<br>**Below (2D Simulator)**: The field of the vanished star persists outside the causal front and collapses to zero only when the expansion circle of the “news” (traveling at speed $c$) reaches points in space. | **Above (Minkowski Diagram)**: The birth of a star opens the light cone toward the future starting from the event horizon.<BR>**Below (2D Simulator)**: The field of the new star is completely absent outside the causal front and turns on, propagating outward, only when the expanding circle of the birth event reaches it. |
 
-*L'inquadratura delle due dimostrazioni è leggermente diversa ed è intorno a 1 × 1 AU.*
+*The scale of the two demonstrations is slightly different and is approximately 1 × 1 AU.*
 
-*In entrambi i casi, l'architettura del motore riproduce la geometria dei coni di luce di uno spaziotempo di Minkowski $2+1\text{D}$ piatto e regolare, osservato da un sistema di riferimento globale stazionario. Una precisazione onesta: il tempo del motore resta assoluto e globale, quindi la geometria causale coincide con quella di Minkowski, ma la dinamica non possiede l'invarianza di Lorentz. Ciascuna schermata 2D del simulatore rappresenta una **sezione spaziale istantanea $(x,y)$ rigorosamente ortogonale all'asse del tempo $t$** (una fetta a $t = \text{costante}$ ). Il fronte causale circolare visibile nella heatmap del potenziale $\Phi$ è proprio l'intersezione del cono di luce tridimensionale $(x,y,t)$ con questi piani spaziali ortogonali, mentre si propaga a velocità $c$ .*
+*In both cases, the engine’s architecture reproduces the geometry of the light cones of a flat and regular $2+1\text{D}$ Minkowski spacetime, observed from a stationary global reference frame. A fair clarification: the engine’s time remains absolute and global, so the causal geometry coincides with that of Minkowski, but the dynamics do not possess Lorentz invariance. Each 2D screenshot from the simulator represents an **instantaneous spatial cross-section $(x,y)$ strictly orthogonal to the time axis $t$** (a slice at $t = \text{constant}$). The circular causal front visible in the heatmap of the potential $\Phi$ is precisely the intersection of the three-dimensional light cone $(x,y,t)$ with these orthogonal spatial planes, as it propagates at speed $c$.*
 
 
 ---
 
-## 3. Aberrazione causale, Dead Reckoning e dinamica relativistica
+## 3. Causal Aberration, Dead Reckoning, and Relativistic Dynamics
 
-Prima di entrare nel merito dell'aberrazione e del dead reckoning, vale la pena chiarire **come il motore recupera in pratica la posizione ritardata** introdotta in [§2](#2-propagazione-causale-e-istante-di-emissione). È la base su cui poggia tutto il resto del capitolo.
+Before delving into the details of aberration and dead reckoning, it is worth clarifying **how the engine actually recovers the retarded position** introduced in [§2](#2-causal-propagation-and-the-moment-of-emission). This is the foundation upon which the rest of the chapter rests.
 
-**La natura implicita del ritardo causale.** Per calcolare la forza gravitazionale ritardata esercitata da una sorgente su un osservatore al tempo presente $t$, dobbiamo conoscere la posizione della sorgente all'istante di emissione $t_{\text{ret}} = t - r(t_{\text{ret}})/c$. Questa relazione definisce un'equazione implicitamente accoppiata: la distanza di propagazione $r(t_{\text{ret}}) = |\vec{x}_{\text{obs}}(t) - \vec{x}_{\text{src}}(t_{\text{ret}})|$ richiede la conoscenza della posizione di emissione $\vec{x}_{\text{src}}(t_{\text{ret}})$, la quale a sua volta dipende dal tempo di volo ritardato $r(t_{\text{ret}})/c$. Nel caso generale di traiettorie arbitrarie (accelerate, curvilinee o all'interno di sistemi a $N$ corpi), questa equazione di intersezione con il cono di luce passato non ammette una soluzione analitica in forma chiusa.
+**The Implicit Nature of Causal Delay.** To calculate the retarded gravitational force exerted by a source on an observer at the present time $t$, we must know the source’s position at the time of emission $t_{\text{ret}} = t - r(t_{\text{ret}})/c$. This relationship defines an implicitly coupled equation: the propagation distance $r(t_{\text{ret}}) = |\vec{x}_{\text{obs}}(t) - \vec{x}_{\text{src}}(t_{\text{ret}})|$ requires knowledge of the emission position $\vec{x}_{\text{src}}(t_{\text{ret}})$, which in turn depends on the retarded time of flight $r(t_{\text{ret}})/c$. In the general case of arbitrary trajectories (accelerated, curvilinear, or within $N$-body systems), this equation of intersection with the past light cone does not admit an analytical solution in closed form.
 
-**La risposta: conservare lo storico di ogni sorgente.** Anziché risolvere l'equazione ogni frame, il motore **memorizza la traiettoria passata** di ciascun corpo. A ogni passo di simulazione, ciascun corpo deposita il proprio stato (posizione, velocità, massa) in un **archivio temporale stratificato a tre livelli di dettaglio**: il livello *fine* registra ogni passo (passato recente, alta risoluzione), il *medio* uno ogni 32 passi, il *grossolano* uno ogni 256. Questa stratificazione riproduce sia il passato recente in alta risoluzione sia quello remoto a campioni radi. Quando un osservatore chiede *"che stato aveva la sorgente al tempo $t_{ret}$?"*, la risposta è una **singola lettura nello storico**, a costo computazionale **costante** (indipendente da quanto indietro nel tempo si va).
+**The solution: store the history of each source.** Instead of solving the equation every frame, the engine **stores the past trajectory** of each body. At each simulation step, each body records its state (position, velocity, mass) in a **temporal archive stratified into three levels of detail**: the *fine* level records every step (recent past, high resolution), the *medium* level records one every 32 steps, and the *coarse* level records one every 256 steps. This stratification reproduces both the recent past in high resolution and the distant past with sparse samples. When an observer asks *“What was the state of the source at time $t_{ret}$?”*, the answer is a **single read from the history**, at a **constant** computational cost (independent of how far back in time one goes).
 
-**Il recupero in due passi.** Per ogni interazione causale il motore consulta lo storico due volte in cascata:
+**Two-step retrieval.** For each causal interaction, the engine consults the history twice in sequence:
 
-1. **Stima.** Si misura la distanza istantanea $r_{now}$ fra osservatore e sorgente *dove si trovano ora* e si calcola un primo tempo di volo approssimato $t_{est} = r_{now}/c$ . Tradotto nel numero di passi di simulazione corrispondente ( $t_{est}/\Delta t$ ), questo individua un punto nello storico: una **prima lettura** restituisce la **posizione ritardata stimata** $\vec r_{ret,est}$ .
-2. **Ricalcolo causale.** Dalla posizione stimata si calcola la distanza vera al tempo di emissione $r_{true} = |\vec r_{obs} - \vec r_{ret,est}|$ e si ripete il conto: $t_{true} = r_{true}/c$ , nuovo punto nello storico, **seconda lettura**. Da qui si ottengono posizione, velocità e massa all'istante di emissione *effettivo*, con cui il calcolo della forza, del potenziale o del quadrupolo procede senza ambiguità.
+1. **Estimate.** The instantaneous distance $r_{now}$ between the observer and the source *as they currently stand* is measured, and an initial approximate time of flight $t_{est} = r_{now}/c$ is calculated. Converted into the corresponding number of simulation steps ($t_{est}/\Delta t$), this identifies a point in the history: a **first read** returns the **estimated retarded position** $\vec r_{ret,est}$.
+2. **Causal recalculation.** From the estimated position, the true distance at the time of emission is calculated as $r_{true} = |\vec r_{obs} - \vec r_{ret,est}|$, and the calculation is repeated: $t_{true} = r_{true}/c$, yielding a new point in the history, the **second reading**. From this, we obtain the position, velocity, and mass at the *actual* emission instant, allowing the calculation of the force, potential, or quadrupole to proceed unambiguously.
 
-Matematicamente, questo doppio passo è equivalente a una singola iterazione di Picard sull'equazione del cono di luce e per orbite ordinarie ( $v \ll c$ ) converge in un colpo. Per regimi estremi ( $v \to c$ ), [§5.1](#51-il-tempo-di-volo-per-sorgenti-in-moto-rettilineo-formula-chiusa) fornisce la soluzione **analitica in forma chiusa**, ricavata da una quadratica nel tempo di volo, che il motore usa al posto della doppia lettura in casi molto specifici.
+Mathematically, this two-step process is equivalent to a single Picard iteration on the light-cone equation and, for ordinary orbits ($v \ll c$), converges immediately. For extreme regimes ( $v \to c$ ), [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula) provides the **analytic closed-form solution**, derived from a quadratic in time of flight, which the engine uses in place of the double reading in very specific cases.
 
-**Cosa c'è qui e cosa nel deep dive.** Quanto sopra descrive solo il *cosa* e il *perché*. Tutti i dettagli ingegneristici (struttura interna dei tre livelli di dettaglio, ottimizzazioni di accesso, criterio di scelta del livello in base alla profondità temporale richiesta, dimensionamento della memoria per scenari estremi come $0{,}999c$ ) sono documentati in **[ARCHITECTURE_DEEP_DIVE.md §2](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**.
+**What’s covered here and what’s in the deep dive.** The above describes only the *what* and the *why*. All engineering details (internal structure of the three levels of detail, access optimizations, criteria for selecting the level based on the required temporal depth, memory sizing for extreme scenarios such as $0{,}999c$) are documented in **[ARCHITECTURE_DEEP_DIVE.md §2](ARCHITECTURE_DEEP_DIVE.md#2-the-ring-buffer-and-the-position-history)**.
 
-**Ricapitolando.** Il recupero restituisce la posizione *ritardata* della sorgente. Da qui parte il problema centrale: usare quella posizione "indietro nel tempo" come riferimento per la forza introduce un'**aberrazione spuria** che destabilizza le orbite e serve un'estrapolazione in avanti, il **dead reckoning**, per cancellarla.
+**To summarize.** The retrieval returns the *retarded* position of the source. This is where the central problem arises: using that “back-in-time” position as a reference for the force introduces a **spurious aberration** that destabilizes the orbits, requiring a forward extrapolation (**dead reckoning**) to cancel it out.
 
-### 3.1 Il problema dell'aberrazione
+### 3.1 The Problem of Aberration
 
-Se la gravità punta verso la posizione **ritardata** della sorgente, in un'orbita punta sistematicamente "indietro" rispetto alla posizione vera. Questo introduce una piccola componente di forza **tangenziale** che agisce come una **coppia fittizia**: inietta momento angolare spurio e tende ad allargare progressivamente le orbite, fino a destabilizzarle. È un artefatto noto della gravità causale discreta presa alla lettera.
+If gravity points toward the **retarded** position of the source, in an orbit it systematically points “backward” relative to the true position. This introduces a small **tangential** force component that acts as a **fictitious torque**: it injects spurious angular momentum and tends to progressively widen the orbits, until they become unstable. This is a well-known artifact of discrete causal gravity taken literally.
 
-### 3.2 La compensazione: Dead Reckoning ibrido
+### 3.2 Compensation: Hybrid Dead Reckoning
 
-<table width="100%">
-  <tr>
-    <td valign="top" width="60%">
-      <p>Il <em>dead reckoning</em> è il metodo con cui un navigatore stima la posizione attuale di un oggetto dalla sua ultima posizione nota, più velocità e tempo trascorso, senza vederlo direttamente. Qui fa l'equivalente per la gravità: stima dove la sorgente <em>è ora</em> a partire da dove <em>era</em> all'istante di emissione. Ha anche un corrispettivo fisico diretto: in elettrodinamica e in gravità linearizzata i termini di velocità del campo fanno sì che la forza di una sorgente in <strong>moto uniforme</strong> punti alla sua posizione <em>presente</em>, non a quella di emissione (l'aberrazione si cancella). Il dead reckoning del motore riproduce numericamente proprio questa cancellazione.</p>
-      <p>Il motore non usa la posizione di emissione grezza, ma la <strong>estrapola in avanti</strong> verso l'istante presente, riducendo l'aberrazione. Sviluppo di Taylor della posizione della sorgente sul tempo di volo $\Delta t_{flight}$ :</p>
+<TABLE width="100%">
+  <TR>
+    <TD valign="top" width="60%">
+      <P><EM>Dead reckoning</EM> is the method by which a navigator estimates the current position of an object based on its last known position, plus its speed and the elapsed time, without seeing it directly. Here, it performs the equivalent for gravity: it estimates where the source <em>is now</em> based on where <em>it was</em> at the moment of emission. It also has a direct physical counterpart: in electrodynamics and linearized gravity, the velocity terms of the field cause the force from a source in <STRONG>uniform motion</STRONG> to point toward its <EM>current</EM> position, not toward the emission position (the aberration cancels out). The engine’s dead reckoning numerically reproduces precisely this cancellation.</P>
+      <P>The engine does not use the raw emission position, but <STRONG>extrapolates it forward</STRONG> to the present instant, thereby reducing the aberration. Taylor expansion of the source position with respect to the time of flight $\Delta t_{flight}$:</P>
       <ul>
-        <li><strong>2° ordine (regime ordinario):</strong>
+        <li><strong>2nd order (ordinary regime):</strong>
           $$\vec{x}_{eff} = \vec{x}_{ret} + \vec{v}_{ret}\,\Delta t_{flight} + \tfrac{1}{2}\vec{a}_{ret}\,\Delta t_{flight}^2$$
         </li>
-        <li><strong>Bypass nel regime GW (vicino al merger):</strong> in regime relativistico estremo l'estrapolazione lineare non basta più e lascia un errore radiale periodico che si traduce in eccentricità spuria. Il motore allora <strong>abbandona del tutto il dead reckoning</strong> e usa la <strong>posizione presente esatta</strong> della sorgente, sia per la direzione sia per la distanza, azzerando all'origine quell'aberrazione residua (dettaglio ingegneristico in <a href="ARCHITECTURE_DEEP_DIVE.md">ARCHITECTURE_DEEP_DIVE.md</a>, [§2](#2-propagazione-causale-e-istante-di-emissione)).</li>
+        <li><strong>Bypass in the GW regime (near merger):</strong> in the extreme relativistic regime, linear extrapolation is no longer sufficient and leaves a periodic radial error that results in spurious eccentricity. The engine then <strong>completely abandons dead reckoning</strong> and uses the <strong>exact current position</strong> of the source, for both direction and distance, thereby resetting that residual aberration to zero at the origin (engineering detail in <a href="ARCHITECTURE_DEEP_DIVE.md">ARCHITECTURE_DEEP_DIVE.md</a>, [§2](#2-causal-propagation-and-the-moment-of-emission)).</li>
       </ul>
-      <p>L'accelerazione storica $\vec{a}_{ret}$ non è memorizzata: è ricostruita al volo per <strong>differenze finite</strong> tra velocità consecutive.</p>
+      <p>The historical acceleration $\vec{a}_{ret}$ is not stored: it is reconstructed on the fly using <strong>finite differences</strong> between consecutive velocities.</p>
     </td>
     <td valign="top" align="center" width="40%">
-      <img src="docs/gif/sagA_orbit.gif" width="320" alt="Media non trovato">
+      <img src="docs/gif/sagA_orbit.gif" width="320" alt="Media not found">
     </td>
   </tr>
 </table>
 
-**Showcase: Orbita Galattica (Sgr A\*) (nella GIF sopra a destra)**: Inquadratura camera circa 22x10 AU, velocità simulazione: 35 giorni/secondo. L'inquadratura a destra mostra i parametri del corpo evidenziato, il Sole, con il vettore velocità verde neon e il vettore forza viola che punta a Sgr A\* ad anni luce di distanza, in orbita a ≈ 230 km/s che resta stabile a lungo termine. Senza il Dead Reckoning, l'aberrazione la farebbe spiraleggiare verso l'esterno.
+**Showcase: Galactic Orbit (Sgr A\*) (in the GIF above on the right)**: Camera field of view approximately 22x10 AU, simulation speed: 35 days/second. The view on the right shows the parameters of the highlighted body, the Sun, with the neon-green velocity vector and the purple force vector pointing toward Sgr A\* light-years away, in an orbit at ≈ 230 km/s that remains stable over the long term. Without Dead Reckoning, the aberration would cause it to spiral outward.
 
 
-### 3.3 L'equilibrio tra freno e spinta
+### 3.3 The Balance Between Braking and Thrust
 
-Quando il radar relativistico rileva una coppia in regime estremo, il motore inietta la reazione 2.5PN reale ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)) come freno fisico che fa decadere l'orbita. Oggi questo avviene in modo pulito, ma arrivarci ha richiesto una lunga messa a punto, raccontata per intero (con i grafici) in [§6.5](#65-la-storia-da-m_chirp_mult-al-25pn-reale). In sintesi, i tre ingredienti che tengono l'orbita stabile e poco eccentrica sono:
+When the relativistic radar detects a pair in extreme conditions, the engine injects the actual 2.5PN reaction ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)) as a physical brake that causes the orbit to decay. Today this happens smoothly, but getting there required a long fine-tuning process, described in full (with graphs) in [§6.5](#65-the-history-from-m_chirp_mult-to-the-real-25pn). In summary, the three factors that keep the orbit stable and low in eccentricity are:
 
-- il **dead reckoning di 2° ordine** fuori dal regime relativistico estremo, che cancella l'aberrazione nelle orbite ordinarie;
-- il **bypass a posizioni presenti** dentro il regime relativistico estremo ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)), che toglie l'aberrazione residua proprio dove l'estrapolazione lineare la lasciava;
-- la **reazione 2.5PN reale** ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)), che dissipa l'energia orbitale senza alcun coefficiente di taratura.
+- **second-order dead reckoning** outside the extreme relativistic regime, which cancels out the aberration in ordinary orbits;
+- the **bypass at current positions** within the extreme relativistic regime ([§3.2](#32-compensation-hybrid-dead-reckoning)), which removes the residual aberration precisely where linear extrapolation left it;
+- the **real 2.5PN reaction** ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)), which dissipates orbital energy without any calibration coefficient.
 
-**Nota dell'autore. Un'ipotesi sul perché il dead reckoning può frenare alcune orbite estreme (e un nodo aperto sull'EMRI).** Il dead reckoning di 2° ordine tronca al termine in accelerazione: il primo pezzo che scarta è quello in **jerk** (la derivata terza della posizione). Due indizi fanno sospettare che questo residuo non sia solo rumore numerico. Primo: anche la reazione di radiazione 2.5PN entra all'ordine del jerk nelle equazioni del moto (è una forza che dipende dalle derivate temporali dell'accelerazione). Secondo indizio, questo di fisica accertata. L'aberrazione di una sorgente in moto *uniforme* si cancella quasi esattamente grazie ai termini di velocità del campo. Il termine che resiste a quella cancellazione, all'ordine $(v/c)^5$ , è proprio la reazione di radiazione (S. Carlip, *Aberration and the speed of gravity*, [arXiv:gr-qc/9909087](https://arxiv.org/abs/gr-qc/9909087)). Da qui l'ipotesi che il residuo del dead reckoning, quando l'accelerazione varia in modo non lineare, *possa* cadere nella stessa famiglia della perdita di energia per radiazione. È un sospetto motivato, non una dimostrazione.
+**Author’s note. A hypothesis on why dead reckoning can slow down certain extreme orbits (and an open question regarding EMRI).** Second-order dead reckoning truncates the accelerating term: the first component it discards is the **jerk** (the third derivative of position). Two clues suggest that this residual is not merely numerical noise. First: the 2.5PN radiation reaction also enters the equations of motion at the jerk order (it is a force that depends on the time derivatives of acceleration). Second clue, this one from established physics: the aberration of a source in *uniform* motion cancels out almost exactly due to the velocity terms of the field. The term that resists this cancellation, of the order of $(v/c)^5$, is precisely the radiation reaction (S. Carlip, *Aberration and the speed of gravity*, [arXiv:gr-qc/9909087](https://arxiv.org/abs/gr-qc/9909087)). Hence the hypothesis that the dead reckoning residual, when the acceleration varies nonlinearly, *may* fall into the same category as energy loss due to radiation. This is a well-founded suspicion, not a proof.
 
-Va segnalato dove l'analogia diventa fragile. Sul piano numerico, quel residuo è **anche** un errore di troncamento (la cui formulazione del costo è in [§4.2](#42-errore-di-troncamento)), la cui esatta entità è difficile da stimare se non che scali su $\Delta t$. A questo si somma l'accelerazione $\vec{a}_{ret}$ usata nell'estrapolazione, non esatta ma ricostruita al volo per differenze finite ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)), quindi essa stessa approssimata. In entrambi i casi l'ampiezza dell'errore relativo dipende dal passo $\Delta t$ scelto. L'analogia, anche se cogliesse qualcosa di reale, qui sarebbe solo un'approssimazione grezza, dell'ordine giusto (jerk) ma di misura non controllata. Il dato empirico: a $\Delta t$ insignificanti (1 microsecondo) nei contesti GW (gli scenari dove ci si aspetta emissione di onde gravitazionali), lasciando il 2.5PN **spento** e il solo dead reckoning di 2° ordine **acceso**, l'orbita dissipa energia troppo in fretta rispetto al 2.5PN reale, ma il fatto stesso che dissipi dimostra indubbiamente che gioca un ruolo paragonabile nella pratica. Si è scoperto così che, in quel regime, da solo "frena troppo". È proprio questa la ragione per cui, nel regime GW, il dead reckoning viene spento e sostituito dal bypass a posizioni presenti ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)). Resta quindi un'**ipotesi**: un'analogia strutturale plausibile, non una sostituzione quantitativa del 2.5PN.
+It should be noted where the analogy becomes fragile. Numerically speaking, that residual is **also** a truncation error (whose cost is formulated in [§4.2](#42-truncation-error)), the exact magnitude of which is difficult to estimate other than that it scales with $\Delta t$. Added to this is the acceleration $\vec{a}_{ret}$ used in the extrapolation, which is not exact but reconstructed on the fly using finite differences ([§3.2](#32-compensation-hybrid-dead-reckoning)), and is therefore itself an approximation. In both cases, the magnitude of the relative error depends on the chosen time step $\Delta t$. The analogy, even if it captured some reality, would be only a raw approximation here, of the correct order (jerk) but of uncontrolled magnitude. The empirical data: at negligible $\Delta t$ values (1 microsecond) in GW contexts (scenarios where gravitational wave emission is expected), leaving the 2.5PN **turned off** and only the 2nd-order dead reckoning **turned on**, the orbit dissipates energy too quickly compared to the actual 2.5PN, but the very fact that it dissipates energy undoubtedly demonstrates that it plays a comparable role in practice. It was thus discovered that, in that regime, on its own it “slows down too much.” This is precisely why, in the GW regime, dead reckoning is turned off and replaced by the bypass using current positions ([§3.2](#32-compensation-hybrid-dead-reckoning)). It therefore remains a **hypothesis**: a plausible structural analogy, not a quantitative replacement for the 2.5PN.
 
-**Il banco di prova naturale: l'EMRI.** Lo scenario che mette questa ipotesi davanti agli occhi è l'**EMRI** (*Extreme Mass Ratio Inspiral*): nel preset, un buco nero da 10 masse solari viene lanciato su un'orbita estremamente eccentrica ( $e \approx 0{,}98$ ) attorno a un compagno da 1.000 (rapporto 100:1), con apocentro a 0,1 AU e pericentro intorno ai 165.000 km. L'analisi della soglia spiega quanto poco lavori qui il freno esplicito. Il gate del 2.5PN richiede $v_{rel} > 0{,}1c$ a distanza ravvicinata ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)): su quest'orbita la condizione si accende solo in una finestra di una ventina di secondi attorno a ogni passaggio al pericentro (dove $v_{rel} \approx 0{,}13c$ ), su un periodo orbitale di circa tre ore. Per oltre il 99% del tempo il 2.5PN è quindi spento e la coppia è governata dal solo dead reckoning di 2° ordine. Il potenziale di Paczyński-Wiita, dal canto suo, non può spiegare la *contrazione* dell'orbita: è un potenziale conservativo, non dissipa energia. Al pericentro (a ~55 $R_s$ dall'orizzonte) la sua correzione di pochi punti percentuali sulla forza genera però la vistosa **precessione apsidale**, di qualche grado per orbita. Quella è fisica attesa, l'analogo dell'avanzamento del perielio relativistico. Il lento decadimento dell'orbita, invece, può venire solo dai brevi lampi 2.5PN al pericentro e/o dal residuo del dead reckoning che agisce su tutto il resto dell'orbita: quanto pesi ciascuno dei due canali è esattamente l'osservazione che meriterebbe una verifica esperta.
+**The natural test bed: the EMRI.** The scenario that brings this hypothesis into sharp focus is the **EMRI** (*Extreme Mass Ratio Inspiral*): In the preset, a 10-solar-mass black hole is launched into an extremely eccentric orbit ( $e \approx 0.98$ ) around a 1,000-solar-mass companion (ratio 100:1), with an apocenter at 0.1 AU and a pericenter around 165,000 km. The threshold analysis explains how little the explicit brake works here. The 2.5PN gate requires $v_{rel} > 0.1c$ at close range ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)): on this orbit, the condition is triggered only within a window of about twenty seconds around each passage through the pericenter (where $v_{rel} \approx 0.13c$), over an orbital period of approximately three hours. For over 99% of the time, the 2.5PN is therefore off, and the pair is governed solely by second-order dead reckoning. The Paczyński-Wiita potential, for its part, cannot explain the *contraction* of the orbit: it is a conservative potential and does not dissipate energy. At pericenter (at ~55 $R_s$ from the horizon), however, its correction of a few percentage points to the force generates the striking **apsidal precession** of a few degrees per orbit. That is expected physics, the analog of relativistic perihelion advance. The slow decay of the orbit, on the other hand, can only come from the brief 2.5PN flashes at pericenter and/or from the residual dead reckoning acting on the rest of the orbit: the relative contributions of each of these two mechanisms is precisely the observation that would warrant expert verification.
 
-| Rosetta : inspiral | Rosetta : late inspiral |
+| Rosetta: inspiral | Rosetta: late inspiral |
 |:---:|:---:|
-| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Media non trovato"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Media non trovato"> |
-| Scala ≈ 7M × 4M km · 5 min/s · il BH viola è 100× quello verde · ~6 giorni dalla prima orbita, ~7 al merge | Scala 1,2M × 825.000 km · late inspiral · 13 giorni e 7 ore, ~4 ore al merge |
+| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Media not found"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Media not found"> |
+| Scale ≈ 7M × 4M km · 5 min/s · the purple BH is 100× the size of the green one · ~6 days from the first orbit, ~7 days until merge | Scale 1.2M × 825,000 km · late inspiral · 13 days and 7 hours, ~4 hours until merge |
 
-**Showcase: EMRI / orbita a rosetta**: l'esempio appena descritto, ripreso in diretta. La scia del corpo leggero disegna una **rosetta**: l'orbita precessa (non si richiude) per la precessione apsidale di Paczyński-Wiita vista sopra e nel contempo si stringe, lentamente nei primi giorni (GIF a sinistra), sempre più in fretta verso il merger (a destra), man mano che i lampi 2.5PN al pericentro si fanno più fitti e il residuo del dead reckoning lavora su un'orbita sempre più corta.
+**Showcase: EMRI / rosette orbit**: the example just described, captured in real time. The trail of the lighter body draws a **rosette**: the orbit precesses (it does not close) due to the Paczyński-Wiita apsidal precession seen above, and at the same time it tightens (slowly in the first few days (GIF on the left), then increasingly rapidly toward the merger (on the right)) as the 2.5PN flashes at the pericenter become denser and the dead reckoning residual works on an increasingly shorter orbit.
 
-### 3.4 Compressione relativistica dell'accelerazione
+### 3.4 Relativistic Compression of Acceleration
 
-Per impedire fughe superluminali, l'accelerazione netta di un corpo viene smorzata al crescere della velocità. Sotto la soglia $v^2 = 0{,}5c^2$ (≈ 0,707 c) non cambia nulla. Sopra, l'accelerazione è moltiplicata per il fattore di Lorentz inverso $\sqrt{1 - v^2/c^2}$ , che la sopprime sempre di più man mano che $v \to c$ : raggiungere $c$ diventa **gradualmente impossibile**, esattamente come con l'aumento relativistico dell'inerzia (servirebbe un'energia via via divergente). Oltre la soglia $v^2 = 0{,}999\,c^2$ (circa $0{,}9995c$) l'accelerazione è azzerata del tutto. È un cap fenomenologico, non una derivazione dalla Relatività Generale, ma riproduce il comportamento giusto: $c$ resta un asintoto inavvicinabile.
+To prevent superluminal escape, the net acceleration of a body is damped as its velocity increases. Below the threshold $v^2 = 0.5c^2$ (≈ 0.707 c), nothing changes. Above this threshold, the acceleration is multiplied by the inverse Lorentz factor $\sqrt{1 - v^2/c^2}$, which suppresses it more and more as $v \to c$: reaching $c$ becomes **gradually impossible**, exactly as with the relativistic increase in inertia (it would require an increasingly divergent amount of energy). Beyond the threshold $v^2 = 0{,}999\,c^2$ (approximately $0{,}9995c$), the acceleration is completely zero. This is a phenomenological limit, not a derivation from General Relativity, but it reproduces the correct behavior: $c$ remains an unreachable asymptote.
 
-**Perché una soglia e non un fattore sempre attivo.** È un freno d'emergenza, non una correzione relativistica generale (che tra l'altro richiederebbe di distinguere massa longitudinale e trasversale, qui ignorate): resta spento finché il rischio di superare $c$ non è concreto, senza bisogno di eccezioni o limiti hardcoded altrove. Gli scenari ART, ad esempio, lo scavalcano solo perché la loro spinta artificiale è sommata *dopo* questo blocco.
+**Why a threshold and not a constantly active factor?** It is an emergency brake, not a general relativistic correction (which, incidentally, would require distinguishing between longitudinal and transverse mass, both of which are ignored here): it remains inactive until the risk of exceeding $c$ is real, without the need for exceptions or hardcoded limits elsewhere. ART scenarios, for example, bypass it only because their artificial thrust is added *after* this block.
 
-> Lo scenario "Approccio a c" di [§5.3](#53-showcase-approccio-a-c) sfrutta esattamente il bypass appena descritto: il motore artificiale "ART" ignora questo freno di proposito e spinge il Sole oltre $c$ , un caso limite tecnico dichiaratamente impossibile, non un risultato fisico.
+> The “Approach to c” scenario in [§5.3](#53-showcase-approach-to-c) exploits precisely the bypass just described: the artificial “ART” engine deliberately ignores this brake and propels the Sun beyond $c$, a technical limit case that is explicitly impossible, not a physical result.
 
 ---
 
-## 4. Metodi numerici: Velocity Verlet, errore di troncamento e DT
+## 4. Numerical Methods: Velocity Verlet, Truncation Error, and DT
 
-### 4.1 Lo schema di integrazione
+### 4.1 The integration scheme
 
-La dinamica è integrata con il **Velocity Verlet**, un integratore simplettico del secondo ordine scelto per la sua eccellente conservazione dell'energia a lungo termine. Ogni passo:
+The dynamics are integrated using the **Velocity Verlet** method, a second-order simplistic integrator chosen for its excellent long-term energy conservation. At each step:
 
-1. mezzo calcio di velocità: $\vec{v}(t+\tfrac{\Delta t}{2}) = \vec{v}(t) + \tfrac{1}{2}\vec{a}(t)\,\Delta t$
-2. drift di posizione: $\vec{x}(t+\Delta t) = \vec{x}(t) + \vec{v}(t+\tfrac{\Delta t}{2})\,\Delta t$
-3. calcolo causale delle nuove accelerazioni $\vec{a}(t+\Delta t)$
-4. secondo mezzo calcio: $\vec{v}(t+\Delta t) = \vec{v}(t+\tfrac{\Delta t}{2}) + \tfrac{1}{2}\vec{a}(t+\Delta t)\,\Delta t$
+1. half a velocity step: $\vec{v}(t+\tfrac{\Delta t}{2}) = \vec{v}(t) + \tfrac{1}{2}\vec{a}(t)\,\Delta t$
+2. position drift: $\vec{x}(t+\Delta t) = \vec{x}(t) + \vec{v}(t+\tfrac{\Delta t}{2})\,\Delta t$
+3. causal calculation of the new accelerations $\vec{a}(t+\Delta t)$
+4. Second-half calculation: $\vec{v}(t+\Delta t) = \vec{v}(t+\tfrac{\Delta t}{2}) + \tfrac{1}{2}\vec{a}(t+\Delta t)\,\Delta t$
 
-### 4.2 Errore di troncamento
+### 4.2 Truncation error
 
-Espandendo la posizione in serie di Taylor:
+Expanding the position in a Taylor series:
 
-$$\vec{x}(t+\Delta t) = \vec{x} + \vec{v}\,\Delta t + \tfrac{1}{2}\vec{a}\,\Delta t^2 + \tfrac{1}{6}\dot{\vec{a}}\,\Delta t^3 + \tfrac{1}{24}\ddot{\vec{a}}\,\Delta t^4 + \dots$$
+$$\vec{x}(t+\Delta t) = \vec{x} + \vec{v}\,\Delta t + \tfrac{1}{2}\vec{a}\,\Delta t^2 + \tfrac{1}{6}\dot{\vec{a}}\,\Delta t^3 + \tfrac{1}{24}\ddot{\vec{a}}\,\\Delta t^4 + \dots$$
 
-Lo schema di Verlet è **simmetrico nel tempo** (invariante per $\Delta t \to -\Delta t$ ). Questa simmetria fa **cancellare il termine dispari di ordine $\Delta t^3$**, lasciando come primo errore locale sulla posizione un termine $\propto \Delta t^4$ :
+The Verlet scheme is **time-symmetric** (invariant for $\Delta t \to -\Delta t$). This symmetry causes **the odd-order term of $\Delta t^3$ to cancel out**, leaving a term $\propto \Delta t^4$ as the first local error in position:
 
-$$\varepsilon_{\text{locale}} \approx \frac{\Delta t^4}{12}\,\frac{d^4 \vec{x}}{dt^4}$$
+$$\varepsilon_{\text{local}} \approx \frac{\Delta t^4}{12}\,\frac{d^4 \vec{x}}{dt^4}$$
 
-L'errore **globale** accumulato è invece $O(\Delta t^2)$ (metodo del secondo ordine). La conseguenza pratica è che l'energia orbitale non deriva secolarmente ma **oscilla in modo limitato**, motivo per cui orbite kepleriane restano stabili per milioni di passi.
+The accumulated **global** error, on the other hand, is $O(\Delta t^2)$ (second-order method). The practical consequence is that the orbital energy does not drift steadily but **oscillates within a limited range**, which is why Keplerian orbits remain stable for millions of steps.
 
-Una possibile implementazione futura potrebbe riguardare come analisi al dettaglio il calcolo della deriva orbitale dovuta all'errore di troncamento in base al numero di passi eseguiti nell'ultimo secondo e $\Delta t$ .
+A possible future implementation could involve a detailed analysis of the calculation of orbital drift due to truncation error based on the number of steps performed in the last second and $\Delta t$.
 
-### 4.3 DT, Nyquist-Shannon e l'emergenza del chirp
+### 4.3 DT, Nyquist-Shannon, and the Emergence of the Chirp
 
 > [!NOTE]
-> In fisica dei segnali, un **chirp** definisce un'onda la cui frequenza aumenta (o diminuisce) nel tempo. Nei sistemi binari compatti, l'attrazione gravitazionale fa spiraleggiare i due corpi l'uno verso l'altro (*inspiral*) velocizzandone l'orbita. Questo produce un segnale con frequenza e ampiezza rapidamente crescenti, simile a un "cinguettio" acustico.
+> In signal processing, a **chirp** is a wave whose frequency increases (or decreases) over time. In compact binary systems, gravitational attraction causes the two bodies to spiral toward each other (*inspiral*), accelerating their orbit. This produces a signal with rapidly increasing frequency and amplitude, similar to an acoustic “chirp.”
 
-Il passo $\Delta t$ non governa solo la precisione dell'integrazione. Negli scenari in cui due corpi compatti spiraleggiano l'uno verso l'altro fino a fondersi (le simulazioni di *inspiral* e *merger*, come GW170817, che il [§6](#6-gravità-estrema-paczyński-wiita-25pn-e-massa-chirp) tratterà in dettaglio) ha **anche** un secondo ruolo, altrettanto decisivo: determina la **frequenza di campionamento** con cui la sonda virtuale del simulatore (l'**analizzatore LIGO**, trattato in dettaglio nel [§8](#8-lanalizzatore-ligovirgo-dal-proxy-cinematico-allo-spettro)) registra il segnale gravitazionale,
+The time step $\Delta t$ does not only govern the precision of the integration. In scenarios where two compact bodies spiral toward each other until they merge (the *inspiral* and *merger* simulations, such as GW170817, which [§6](#6-extreme-gravity-paczyński-wiita-25pn-and-chirp-mass) will discuss in detail) **also** plays a second, equally decisive role: it determines the **sampling frequency** at which the simulator’s virtual probe (the **LIGO analyzer**, discussed in detail in [§8](#8-the-ligovirgo-analyzer-from-kinematic-proxy-to-spectrum)) records the gravitational signal,
 
 $$f_s = \frac{1}{\Delta t}$$
 
-ed è questa frequenza a stabilire se il chirp potrà *emergere* dallo spettrogramma o sparirà nel rumore. Per il **teorema di campionamento di Nyquist-Shannon**, per ricostruire un segnale di frequenza massima $f_{max}$ senza aliasing serve
+and it is this frequency that determines whether the chirp will *emerge* from the spectrogram or be lost in the noise. According to the **Nyquist-Shannon sampling theorem**, to reconstruct a signal with a maximum frequency $f_{max}$ without aliasing, the following condition must be met:
 
 $$f_s > 2\,f_{max}$$
 
-Nei merger di stelle di neutroni (es. GW170817) la frequenza dell'onda analoga, pari al **doppio** di quella orbitale, raggiunge $\sim 1\text{–}2\ \text{kHz}$ poco prima del contatto. Per catturarla pulita serve $f_s > 4\ \text{kHz}$ , cioè $\Delta t < 2{,}5 \times 10^{-4}\ \text{s}$ . Il simulatore usa $\Delta t = 1\ \mu\text{s}$ ( $f_s = 1\ \text{MHz}$ ), un margine enorme: **è questo che permette al chirp di emergere** nello spettrogramma invece di collassare in rumore di aliasing. In altre parole, con un $\Delta t$ troppo grande l'evento fisico avverrebbe lo stesso, ma non sarebbe **osservabile**: la sonda non avrebbe abbastanza campioni per ricostruire la rampa finale di frequenza.
+In neutron star mergers (e.g., GW170817), the frequency of the analogous wave (which is **twice** that of the orbital frequency) reaches $\sim 1\text{–}2\ \text{kHz}$ shortly before contact. To capture it clearly, $f_s > 4\ \text{kHz}$ is required, i.e., $\Delta t < 2.5 \times 10^{-4}\ \text{s}$. The simulator uses $\Delta t = 1\ \mu\text{s}$ ( $f_s = 1\ \text{MHz}$ ), which is a huge margin: **this is what allows the chirp to emerge** in the spectrogram instead of collapsing into aliasing noise. In other words, if $\Delta t$ were too large, the physical event would still occur, but it would not be **observable**: the probe would not have enough samples to reconstruct the final frequency ramp.
  
 
-> **Nota metodologica.** La connessione formale con il teorema di Nyquist-Shannon è stata analizzata a posteriori, durante la fase di formalizzazione teorica dello spettrogramma. All'atto pratico della simulazione, l'integrazione numerica delle orbite (regolata dall'errore di troncamento locale, che scala quadraticamente con il passo temporale) impone già vincoli di stabilità estremamente severi, costringendo a un campionamento molto più fitto di quello strettamente richiesto per evitare l'aliasing del segnale. Se l'utente aumenta manualmente il $dt$ in tempo reale, la distruzione fisica dell'orbita per instabilità numerica si manifesterà molto prima degli effetti di aliasing descritti sopra. Il teorema di Nyquist-Shannon rimane tuttavia lo strumento teorico d'elezione per validare formalmente la pulizia dello strain ricostruito e per definire i limiti fisici di osservabilità della rampa di chirp.
+> **Methodological note.** The formal connection to the Nyquist-Shannon theorem was analyzed retrospectively, during the theoretical formalization of the spectrogram. In practice, during the simulation, the numerical integration of the orbits (governed by the local truncation error, which scales quadratically with the time step) already imposes extremely severe stability constraints, forcing a much denser sampling rate than is strictly required to avoid signal aliasing. If the user manually increases $dt$ in real time, the physical breakdown of the orbit due to numerical instability will occur long before the aliasing effects described above. The Nyquist-Shannon theorem remains, however, the theoretical tool of choice for formally validating the cleanliness of the reconstructed strain and for defining the physical limits of observability of the chirp ramp.
 
-### 4.4 Una nota sul LOD dei buffer
+### 4.4 A Note on the LOD of Buffers
 
-I buffer storici a risoluzione decrescente (L0/L1/L2, dettaglio nel deep-dive) introdurrebbero un errore di campionamento crescente con la profondità temporale. Ma c'è una compensazione fisica: l'errore di posizione di un campione L2 (uno ogni $256\,\Delta t$ ) è al massimo dell'ordine di $v \cdot 256\,\Delta t$ , un valore che **non cresce con la distanza**; il contributo gravitazionale della sorgente, invece, **decade come $1/r^2$**. L'errore *relativo* sulla forza ( $\sim v \cdot 256\,\Delta t / r$ ) diminuisce quindi proprio dove il campionamento è più rado: la risoluzione grossolana è usata esattamente dove conta poco. Inoltre, all'aumentare di DT, aumenta proporzionalmente anche la distanza alla quale verrà applicato lo scaling di campionamento. Per ulteriori dettagli, rimando a [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
+History buffers with decreasing resolution (L0/L1/L2; see the deep dive for details) would introduce a sampling error that increases with temporal depth. But there is a physical trade-off: the position error of an L2 sample (one every $256\,\Delta t$) is at most of the order of $v \cdot 256\,\Delta t$, a value that **does not increase with distance**; the gravitational contribution of the source, on the other hand, **decays as $1/r^2$**. The *relative* error in the force ( $\sim v \cdot 256\,\Delta t / r$ ) therefore decreases precisely where sampling is sparsest: coarse resolution is used exactly where it matters least. Furthermore, as DT increases, the distance at which the sampling scaling is applied also increases proportionally. For further details, see [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
 
 ---
 
-## 5. Deformazione di Liénard-Wiechert
+## 5. Liénard-Wiechert Deformation
 
-Questo capitolo copre il regime delle sorgenti in moto a una frazione consistente di $c$ : prima lo strumento formale che rende calcolabile il ritardo in quel regime (il tempo di volo in forma chiusa), poi la deformazione del campo che ne consegue, infine lo showcase dedicato.
+This chapter covers the regime of sources moving at a substantial fraction of $c$: first, the formal tool that makes it possible to calculate the delay in that regime (the time of flight in closed form); second, the resulting field deformation; and finally, the dedicated showcase.
 
-### 5.1 Il tempo di volo per sorgenti in moto rettilineo, formula chiusa
+### 5.1 Time of Flight for Sources in Rectilinear Motion, Closed-Form Formula
 
-Una precisazione: l'equazione completa di questo paragrafo serve **solo** in un caso estremo, gli scenari «Approccio alla Velocità della Luce», dove un'accelerazione artificiale (ART) spinge di proposito un corpo oltre il limite causale per renderne visibile l'effetto, cioè *rompe volutamente la fisica*. Ed è un calcolo **formale e geometrico** (l'intersezione col cono di luce di [§2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski)): trova *da dove* è partito il segnale. È anche il punto in cui questa strada si distingue dal meccanismo generale del [§2](#2-propagazione-causale-e-istante-di-emissione): là il tempo di volo si *legge* dallo storico (il doppio ritrovamento causale), qui si *calcola* in forma chiusa, un lusso concesso solo dal moto rettilineo.
+A clarification: the complete equation in this section is useful **only** in an extreme case (the “Approach to the Speed of Light” scenarios) where artificial acceleration (ART) deliberately propels a body beyond the causal limit to make the effect visible; that is, it *deliberately breaks the laws of physics*. And it is a **formal and geometric** calculation (the intersection with the light cone from [§2.1](#21-the-light-cone-and-the-minkowski-diagram)): it determines *where* the signal originated. It is also the point where this approach differs from the general mechanism described in [§2](#2-causal-propagation-and-the-moment-of-emission): there, the time of flight is *read* from the history (the double causal retrieval); here, it is *calculated* in closed form, a luxury afforded only by rectilinear motion.
 
-Qui c'è una distinzione di regime. Per un corpo che si muove a una frazione **minuscola** di $c$ , il "segnale" gravitazionale parte da una posizione praticamente identica a quella attuale: la sorgente si può trattare come **ferma** e il ritardo è semplicemente $r/c$ , con errore del tutto trascurabile. È il caso di quasi tutta la dinamica ordinaria (pianeti, stelle).
+Here there is a distinction in the framework. For a body moving at a **tiny** fraction of $c$, the gravitational “signal” originates from a position practically identical to its current one: the source can be treated as **stationary**, and the delay is simply $r/c$, with a completely negligible error. This is the case for almost all ordinary dynamics (planets, stars).
 
-Quando invece la frazione di $c$ diventa **consistente**, quell'approssimazione non regge più: la posizione da cui è partito il segnale non è quella attuale e bisogna risolvere per il tempo di volo $T$ l'equazione che impone alla luce di percorrere esattamente la distanza dalla posizione di emissione. Con $\vec{d} = \vec{r}_{target} - \vec{r}_{sorgente}$ ed estrapolazione lineare della sorgente all'indietro:
+When, on the other hand, the fraction of $c$ becomes **substantial**, that approximation no longer holds: the position from which the signal originated is not its current position, and we must solve for the time of flight $T$ using the equation that requires light to travel exactly the distance from the emission position. With $\vec{d} = \vec{r}_{target} - \vec{r}_{source}$ and linear extrapolation of the source backward:
 
 $$|\vec{d} + \vec{v}\,T|^2 = c^2 T^2 \;\Longrightarrow\; (c^2 - v^2)\,T^2 - 2(\vec{d}\cdot\vec{v})\,T - d^2 = 0$$
 
-È una quadratica in $T$ . Il discriminante (ridotto) è $\Delta = (\vec{d}\cdot\vec{v})^2 + (c^2 - v^2)\,d^2$ e la radice fisica è
+This is a quadratic equation in $T$. The (reduced) discriminant is $\Delta = (\vec{d}\cdot\vec{v})^2 + (c^2 - v^2)\,d^2$, and the physical root is
 
 $$T = \frac{(\vec{d}\cdot\vec{v}) + \sqrt{\Delta}}{c^2 - v^2}$$
 
-Questa è la **formula chiusa**, valida solo per moto rettilineo con accelerazione nota (il caso ART): è il motivo per cui si può risolvere analiticamente, invece di ricorrere allo storico. Nel caso generale, dove non esiste soluzione analitica (moto curvilineo, N corpi, accelerazioni variabili), il motore ricorre invece alla **soluzione architetturale implicita**, il doppio ritrovamento causale sui buffer storici descritto in apertura del [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica).
+This is the **explicit formula**, valid only for rectilinear motion with known acceleration (the ART case): this is why it can be solved analytically, rather than resorting to the historical method. In the general case, where no analytical solution exists (curvilinear motion, N bodies, variable accelerations), the engine instead resorts to the **implicit architectural solution**, the double causal retrieval from history buffers described at the beginning of [§3](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics).
 
 > [!NOTE]
-> **Il cono di Mach causale.** Se $\Delta < 0$ non esiste alcuna soluzione reale: la sorgente sta "scappando" dal proprio campo più velocemente di quanto questo possa raggiungere il bersaglio. Il bersaglio è fuori dal cono di luce passato raggiungibile e il motore restituisce un contributo nullo. Geometricamente, è ciò che accade quando la sorgente **"perfora" il proprio cono di luce**: supera il fronte d'onda che sta essa stessa emettendo, esattamente come un aereo supersonico supera il fronte sonoro che genera. È l'analogo gravitazionale del cono di Mach supersonico. Si tratta di una situazione **matematicamente assurda** dal punto di vista fisico (richiede una sorgente più veloce della luce, impossibile) e infatti è **forzata di proposito** solo negli scenari "Approccio alla Velocità della Luce": la versione piena (~20 GB di RAM) a $0{,}999c$ e le due ridotte a $0{,}9c$ e $0{,}7c$ , dove un'accelerazione artificiale costante spinge il Sole oltre il limite causale per renderne visibile l'effetto (il "vuoto" che si apre dietro al corpo).
+> **The causal cone.** If $\Delta < 0$, no real solution exists: the source is “escaping” from its own field faster than the field can reach the target. The target is outside the reachable past light cone, and the engine yields a zero contribution. Geometrically, this is what happens when the source **“pierces” its own light cone**: it overtakes the wavefront it is itself emitting, just as a supersonic aircraft overtakes the sound wavefront it generates. It is the gravitational analogue of the supersonic Mach cone. This is a **mathematically absurd** situation from a physical standpoint (it requires a source faster than light, which is impossible) and, in fact, is **deliberately enforced** only in the “Approaching the Speed of Light” scenarios: the full version (~20 GB of RAM) at $0{,}999c$ and the two reduced versions at $0.9c$ and $0.7c$, where a constant artificial acceleration pushes the Sun beyond the causal limit to make the effect visible (the “void” that opens up behind the body).
 
-*(La deformazione del campo che questi regimi estremi producono è il tema del resto del capitolo.)*
+*(The field distortion produced by these extreme regimes is the subject of the rest of this chapter.)*
 
-### 5.2 Il denominatore di Liénard-Wiechert e la contrazione di Lorentz
+### 5.2 The Liénard-Wiechert denominator and the Lorentz contraction
 
-Per sorgenti in moto rapido (sopra circa metà della velocità della luce), il potenziale eredita dall'elettrodinamica classica il **denominatore di Liénard-Wiechert**, che concentra il campo ortogonalmente alla direzione di moto:
+For rapidly moving sources (above about half the speed of light), the potential inherits the **Liénard-Wiechert denominator** from classical electrodynamics, which concentrates the field orthogonally to the direction of motion:
 
 $$\Phi = -\frac{GM}{r\left(1 - \dfrac{\vec{v}\cdot\hat{n}}{c}\right)}$$
 
-dove $\hat{n}$ è il versore sorgente→osservatore. Quando $\vec{v}\cdot\hat{n} \to c$ (sorgente in avvicinamento quasi luminale) il denominatore tende a zero e il campo si **comprime e si intensifica** trasversalmente al moto, esattamente come il campo elettrico di una carica relativistica. È l'analogo gravitazionale della contrazione del campo coulombiano ed è il punto in cui il modello attinge dall'analogia GEM (*gravitoelettromagnetismo*).
+where $\hat{n}$ is the source→observer unit vector. When $\vec{v}\cdot\hat{n} \to c$ (the source is approaching at nearly the speed of light), the denominator tends to zero, and the field **compresses and intensifies** transversely to the motion, exactly like the electric field of a relativistic charge. This is the gravitational analogue of the contraction of the Coulomb field and is the point at which the model draws on the GEM (*gravitational electromagnetism*) analogy.
 
-Il meccanismo fisico è la **contrazione di Lorentz** del campo: il campo di una sorgente in moto si appiattisce in un disco trasverso alla velocità, schiacciato lungo la direzione del moto e intensificato ortogonalmente di un fattore $\gamma = 1/\sqrt{1 - v^2/c^2}$ (lo stesso risultato che si ottiene trasformando il campo coulombiano statico nel riferimento in moto). Il denominatore $(1 - \vec{v}\cdot\hat{n}/c)$ è la forma in cui questa contrazione entra nel potenziale.
+The physical mechanism is the **Lorentz contraction** of the field: the field of a moving source flattens into a disk transverse to the velocity, compressed along the direction of motion and intensified orthogonally by a factor of $\gamma = 1/\sqrt{1 - v^2/c^2}$ (the same result obtained by transforming the static Coulomb field into the moving reference frame). The denominator $(1 - \vec{v}\cdot\hat{n}/c)$ is the form in which this contraction enters the potential.
 
 > [!NOTE]
-> **Chi vede davvero questa deformazione? (Osservatore stazionario vs Viaggiatore)**
-> È fondamentale sottolineare una distinzione fisica essenziale: la così chiamata compressione a pancake del campo **non è vissuta dal viaggiatore**, ma è ciò che misura **l'osservatore stazionario** (il sistema di riferimento della griglia del simulatore). Nel sistema di riferimento della stella in moto (il "viaggiatore"), la stella è in quiete e il suo potenziale gravitazionale resta perfettamente sferico, isotropo ed indeformato. È soltanto se misurato dal riferimento stazionario dell'osservatore (rispetto al quale la stella corre a velocità $v \to c$ ) che le ampiezze e i tempi di volo ritardati si combinano mediante le trasformazioni di Lorentz, facendo emergere l'effetto "pancake" trasverso visibile sullo schermo.
+> **Who actually sees this deformation? (Stationary Observer vs. Traveler)**
+> It is crucial to emphasize an essential physical distinction: the so-called “pancake” compression of the field **is not experienced by the traveler**, but is what **the stationary observer** (the simulator grid’s reference frame) measures. In the reference frame of the moving star (the “traveler”), the star is at rest and its gravitational potential remains perfectly spherical, isotropic, and undeformed. It is only when measured from the stationary observer’s reference frame (relative to which the star is traveling at a speed $v \to c$) that the retarded amplitudes and times of flight combine via Lorentz transformations, bringing out the transverse “pancake” effect visible on the screen.
 
 
-### 5.3 Showcase: Approccio a *c*
+### 5.3 Showcase: Approach to *c*
 
-Le isolinee del pozzo di potenziale del Sole si comprimono lungo la direzione del moto e si allargano in quella trasversa: è la stessa compressione a pancake di Liénard-Wiechert e Lorentz descritta poco sopra ([§5.2](#52-il-denominatore-di-liénard-wiechert-e-la-contrazione-di-lorentz)), qui vista dall'alto sulle curve di livello invece che sul profilo del campo.
+The isolines of the Sun’s potential well compress along the direction of motion and expand in the transverse direction: this is the same Liénard-Wiechert and Lorentz “pancake” compression described above ([§5.2](#52-the-liénard-wiechert-denominator-and-the-lorentz-contraction)), seen here from above on the contour lines rather than on the field profile.
 
-**Come si legge la heatmap del potenziale gravitazionale Φ ("phi").** Il colore mappa la profondità del pozzo gravitazionale punto per punto: blu profondo/nero significa "potenziale minimo o assente", giallo intenso significa "pozzo profondo". La scala è sempre tarata sul raggio efficace minimo del corpo più massiccio dello scenario, regolato dal cinematic floor fittizio `eff_rad` per evitare che la dinamica esploda nei corpi compatti. Il *bianco assoluto* compare quindi a ridosso di questa distanza di saturazione geometrica, un valore di $\Phi$ vicino al massimo teorico:
+**How to read the heatmap of the gravitational potential Φ (“phi”).** The color maps the depth of the gravitational well point by point: deep blue/black means “minimum or absent potential,” while bright yellow means “deep well.” The scale is always calibrated to the minimum effective radius of the most massive body in the scenario, adjusted by the fictitious cinematic floor `eff_rad` to prevent the dynamics from becoming unmanageable in compact bodies. *Pure white* therefore appears just beyond this geometric saturation distance, a value of $\Phi$ close to the theoretical maximum:
 
-$$\Phi_{\text{limite}} = -\tfrac{1}{2}c^2 \approx -4{,}49377 \times 10^{10}\ \text{km}^2/\text{s}^2$$
+$$\Phi_{\text{limit}} = -\tfrac{1}{2}c^2 \approx -4{,}49377 \times 10^{10}\ \text{km}^2/\text{s}^2$$
 
-(la condizione $v_{\text{fuga}} = c$ , cioè $\sqrt{-2\Phi} = c$ ).
+(the condition $v_{\text{escape}} = c$, i.e., $\sqrt{-2\Phi} = c$).
 
 ---
 
-**Esempio 1 : Approccio a c (ART), $0{,}7c \to c$ .**
-Il Sole viene spinto da un'accelerazione artificiale (ART) costante da $0{,}7c$ fino a oltrepassare $c$ . È un *what-if* dichiaratamente impossibile (servirebbe energia infinita, sez. [§3.4](#34-compressione-relativistica-dellaccelerazione)), usato per *rendere visibile* la deformazione del campo a velocità estreme.
+**Example 1: Approach to c (ART), $0.7c \to c$.**
+The Sun is propelled by a constant artificial acceleration (ART) from $0.7c$ until it exceeds $c$. This is an admittedly impossible *what-if* scenario (it would require infinite energy, see section [§3.4](#34-relativistic-compression-of-acceleration)), used to *make visible* the deformation of the field at extreme speeds.
 
-Moto della seguente dimostrazione: +x, ovvero da sinistra verso destra.
+Direction of motion in the following demonstration: +x, i.e., from left to right.
 
-<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media not found"></div>
 
-L'inquadratura è di circa **180 × 120 AU** (decine di miliardi di km per lato). A $0{,}7c$ (≈ 209.855 km/s) è già visibile l'effetto **Liénard-Wiechert**: il pozzo gravitazionale comincia a deformarsi rispetto alla simmetria sferica. Salendo verso $c$ (299.792,458 km/s) lo schiacciamento cresce in modo non lineare, finché (fittiziamente, oltre $c$ ) comincia a formarsi il **cono di Mach causale** descritto in [§5.1](#51-il-tempo-di-volo-per-sorgenti-in-moto-rettilineo-formula-chiusa).
+The frame of reference is approximately **180 × 120 AU** (tens of billions of km per side). At $0.7c$ (≈ 209,855 km/s), the **Liénard-Wiechert** effect is already visible: the gravitational well begins to deform relative to spherical symmetry. As the speed approaches $c$ (299,792.458 km/s), the flattening increases nonlinearly, until (hypothetically, beyond $c$) the **causal Mach cone** described in [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula) begins to form.
 
 <div align="center">
-  <img src="docs/gif/Minkowski_0.7c.gif" width="450" alt="Diagramma di Minkowski del moto a 0.7c">
+  <img src="docs/gif/Minkowski_0.7c.gif" width="450" alt="Minkowski diagram of motion at 0.7c">
 </div>
 
-*Rappresentazione nel diagramma di Minkowski del moto a $0{,}7c$ . Nel sistema di riferimento stazionario del simulatore/osservatore, la linea di universo della stella in corsa a $0{,}7c$ si inclina ripida verso il bordo del cono di luce (la diagonale a $45^\circ$ tracciata dal fotone che viaggia a velocità $c$ ). È la stessa distinzione osservatore/viaggiatore della nota in [§5.2](#52-il-denominatore-di-liénard-wiechert-e-la-contrazione-di-lorentz): l'inclinazione appartiene alla prospettiva esterna, non a quella della stella.*
+*Representation in the Minkowski diagram of motion at $0.7c$. In the stationary reference frame of the simulator/observer, the worldline of the star traveling at $0.7c$ slopes steeply toward the edge of the light cone (the $45^\circ$ diagonal traced by the photon traveling at speed $c$). This is the same observer/traveler distinction as in the note in [§5.2](#52-the-liénard-wiechert-denominator-and-the-lorentz-contraction): the tilt belongs to the external perspective, not to that of the star.*
 
-Un dettaglio che torna a breve: a destra del Sole (in direzione del moto) il campo cambia sfumatura in modo asimmetrico rispetto a sinistra, a $0{,}98c$ diventa qualitativamente evidente. È il preludio del fenomeno che si vede in pienezza nell'Esempio 2.
+A detail that will come up again shortly: to the right of the Sun (in the direction of motion), the field changes character asymmetrically compared to the left; at $0.98c$, this becomes qualitatively evident. It is the prelude to the phenomenon seen in full in Example 2.
 
 ---
 
-**Esempio 2 : Approccio a c (ART), $0{,}999c \to c$ .**
-Lo stesso scenario, ma ravvicinato ed estremamente più lento, per cogliere gli istanti asintotici prima del limite causale.
+**Example 2: Approach to c (SRT), $0{,}999c \to c$.**
+The same scenario, but zoomed in and much slower, to capture the asymptotic moments before the causal limit.
 
 <div align="center">
     <video src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" controls="controls" width="100%"></video>
 </div>
 
-L'inquadratura qui è di **~0,8 × 0,3 AU**. A $0{,}999c$ (≈ 299.493 km/s) il Sole sta letteralmente **cavalcando il fronte dell'informazione che lui stesso ha emesso**: la sua posizione e i suoi fronti d'onda gravitazionali viaggiano a velocità praticamente coincidenti.
+The field of view here is **~0.8 × 0.3 AU**. At $0{,}999c$ (≈ 299,493 km/s), the Sun is literally **riding the front of the information it has itself emitted**: its position and its gravitational wavefronts travel at virtually identical speeds.
 
-#### Il fenomeno: il gap d'emissione fra "dov'è" e "dov'era"
+#### The phenomenon: the emission gap between “where it is” and “where it was”
 
-È il punto in cui il confine del **cono di luce di [§2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski)** si vede ad occhio nudo: la heatmap mostra, letteralmente, quanto vicini si è al suo bordo. Più un pixel è prossimo al fronte del cono (cioè più la sua distanza causale dal Sole è vicina al raggio che la luce ha potuto percorrere), più il campo che mostra è quello di un Sole ormai lontano nel tempo di emissione e quindi debole o assente.
+This is the point where the boundary of the **light cone from [§2.1](#21-the-light-cone-and-the-minkowski-diagram)** is visible to the naked eye: the heatmap literally shows how close one is to its edge. The closer a pixel is to the front of the cone (i.e., the closer its causal distance from the Sun is to the distance the light has traveled), the more the field it displays corresponds to a Sun that is now far removed in emission time and therefore faint or absent.
 
-Il puntino giallo è il Sole *adesso*, alla sua posizione reale. Il taglio verticale netto al centro, ovvero la linea bianca compressa che separa il pozzo arancione a sinistra dal vuoto viola a destra, è il **disco di Liénard-Wiechert + Lorentz al massimo**: il campo del Sole si schiaccia in un disco *perpendicolare* al moto, esattamente come una carica relativistica ([§5](#5-deformazione-di-liénard-wiechert)).
+The yellow dot is the Sun *now*, at its actual position. The sharp vertical cut in the center (that is, the compressed white line separating the orange well on the left from the purple void on the right) is the **Liénard-Wiechert + Lorentz disk at its maximum**: the Sun’s field is compressed into a disk *perpendicular* to its motion, exactly like a relativistic charge ([§5](#5-liénard-wiechert-deformation)).
 
-**Perché a destra è "buio".** Ogni pixel della heatmap non vede il Sole *dov'è adesso*, ma *dov'era quando ha emesso il segnale che sta arrivando proprio ora*, il principio causale del [§2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski). Per un pixel davanti al Sole (a destra), il Sole gli sta correndo incontro a $0{,}999c$ . Per "raggiungere" quel pixel adesso, il segnale è dovuto partire da molto, molto più indietro:
+**Because it’s “dark” on the right.** Each pixel in the heatmap does not see the Sun *where it is now*, but *where it was when it emitted the signal that is arriving right now*, the causal principle described in [§2.1](#21-the-light-cone-and-the-minkowski-diagram). For a pixel in front of the Sun (on the right), the Sun is rushing toward it at $0{,}999c$. To “reach” that pixel now, the signal must have departed from much, much farther back:
 
-$$r_{ret} \approx \frac{d}{1 - v/c}, \qquad \text{a } v = 0{,}999c \;\Rightarrow\; r_{ret} \approx 1000\,d$$
+$$r_{ret} \approx \frac{d}{1 - v/c}, \qquad \text{at } v = 0{,}999c \;\Rightarrow\; r_{ret} \approx 1000\,d$$
 
-Tradotto: per un pixel a pochi milioni di km a destra, l'emissione che arriva *adesso* è partita quando il Sole era a **miliardi di km più a sinistra**, fino a *320 anni-luce nel passato* in questo scenario. A quella distanza il pozzo gravitazionale del Sole è già trascurabile ( $\Phi \propto 1/r$ ). Il pixel risulta **scuro fino al nero**: non perché lì non ci sia gravità, ma perché sta mostrando un Sole che, da *dov'era allora*, non si faceva sentire qui.
+In other words: for a pixel a few million km to the right, the emission arriving *now* was emitted when the Sun was **billions of km further to the left**, as far back as *320 light-years in the past* in this scenario. At that distance, the Sun’s gravitational well is already negligible ( $\Phi \propto 1/r$ ). The pixel appears **dark, almost black**: not because there is no gravity there, but because it is showing a Sun that, from *where it was back then*, had no gravitational effect here.
 
-Il **gap fra posizione attuale e posizione di emissione** è la chiave. A $0{,}7c$ il gap è ~3,3 volte la distanza attuale e l'asimmetria si vede appena. A $0{,}999c$ è 1000 volte e il "buio" davanti è quasi perfetto. A $v = c$ il rapporto diverge e il simulatore restituisce contributo nullo a destra. Quando poi $v > c$ , il discriminante dell'equazione del tempo di volo cambia segno ed entriamo nel regime fittizio del **cono di Mach causale** di [§5.1](#51-il-tempo-di-volo-per-sorgenti-in-moto-rettilineo-formula-chiusa).
+The **gap between the current position and the emission position** is the key. At $0.7c$, the gap is ~3.3 times the current distance, and the asymmetry is barely visible. At $0{,}999c$, it is 1,000 times the current distance, and the “darkness” in front is almost perfect. At $v = c$, the ratio diverges, and the simulator returns a zero contribution on the right. Then, when $v > c$, the discriminant of the time of flight equation changes sign, and we enter the fictitious regime of the **causal Mach cone** described in [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula).
 
-In altre parole, ciò che si vede non è una "mancanza di gravità" davanti al Sole, è il *suo passato* in scala: più $v$ si avvicina a $c$ , più il passato visibile è lontano. Il taglio verticale è la firma di Liénard-Wiechert e Lorentz al massimo e il buio a destra è il principio causale del [§2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski) reso letteralmente visibile.
+In other words, what we see is not a “lack of gravity” in front of the Sun; it is *its past* on a scaled-up scale: the closer $v$ gets to $c$, the farther away the visible past is. The vertical cut is the Liénard-Wiechert and Lorentz signature at its peak, and the darkness on the right is the causal principle from [§2.1](#21-the-light-cone-and-the-minkowski-diagram) made literally visible.
 
-I dettagli ingegneristici, tra cui come è stato possibile renderizzare buffer di emissione lunghi oltre 300 anni-luce in tempo reale e perché lo scenario "pieno" a $0{,}999c$ richiede ~20 GB di RAM, sono in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
+The engineering details (including how it was possible to render emission buffers over 300 light-years long in real time and why the “full” scenario at $0{,}999c$ requires ~20 GB of RAM) are in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
 
 > [!NOTE]
-> **Sull'attendibilità fisica dello scenario e sul suo valore ingegneristico.**
-> L'applicazione del denominatore di Liénard-Wiechert al campo gravitazionale è un'estrapolazione dall'analogia GEM (gravitoelettromagnetismo), non una derivazione dalla relatività generale. L'analogia *potrebbe* essere qualitativamente calzante con la realtà, oppure sbagliata in modi non ancora evidenti: non esiste, a conoscenza dell'autore, una trattazione equivalente nella letteratura. Le visualizzazioni note del regime relativistico gravitazionale riguardano la traiettoria dei fotoni (lensing, ombre di buchi neri) o la geometria dello spazio-tempo, non la heatmap del potenziale scalare di una sorgente in moto quasi-luminale. Questo scenario nasce da una onesta curiosità scientifica: *cosa accadrebbe al campo gravitazionale se lo trattassimo come il campo coulombiano di una carica in moto?* La risposta visiva (il disco di Liénard-Wiechert, il gap d'emissione, il cono di Mach causale) è ciò che il motore restituisce, senza pretesa di correttezza relativistica.
+> **On the physical plausibility of the scenario and its engineering value.**
+> The application of the Liénard-Wiechert denominator to the gravitational field is an extrapolation from the GEM (gravitational electromagnetism) analogy, not a derivation from general relativity. The analogy *might* be qualitatively consistent with reality, or it might be incorrect in ways not yet apparent: to the author’s knowledge, there is no equivalent treatment in the literature. Known visualizations of the relativistic gravitational regime concern the trajectory of photons (lensing, black hole shadows) or the geometry of spacetime, not the heatmap of the scalar potential of a source moving at near-light speeds. This scenario stems from honest scientific curiosity: *what would happen to the gravitational field if we treated it like the Coulomb field of a moving charge?* The visual response (the Liénard-Wiechert disk, the emission gap, the causal Mach cone) is what the simulator produces, without any claim to relativistic correctness.
 >
-> L'autore resta aperto a ogni contrappunto, contraddittorio, correzione e suggerimento da parte di chi abbia competenze specifiche in relatività generale o gravitoelettromagnetismo.
+> The author remains open to any counterarguments, contradictions, corrections, and suggestions from those with specific expertise in general relativity or gravitoelectromagnetism.
 >
-> A prescindere dalla validità fisica, lo scenario ha un valore ingegneristico concreto: forzare la propagazione causale a $0{,}999c$ rappresenta il **caso limite estremo** per l’architettura dei buffer storici con ricerca $O(1)$ e sistema LOD a tre livelli, descritto in [§2 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
+> Regardless of its physical validity, the scenario has concrete engineering value: forcing causal propagation to $0{,}999c$ represents the **extreme limit case** for the architecture of history buffers with $O(1)$ lookup and a three-level LOD system, described in [§2 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
 >
-> Un’ultima osservazione: nel caso specifico dell’accelerazione ART costante e del moto rettilineo, il tempo ritardato ammette una soluzione analitica in forma chiusa (l’equazione del ritardo si riduce a una quadratica in $t_{ret}$ ), quindi i buffer storici non sarebbero strettamente necessari per *questo* scenario. Il motore li usa comunque perché lo scopo è forzare la pipeline causale generale al suo limite: profondità di centinaia di anni-luce, cascata LOD su tutti e tre i livelli, ~20 GB di RAM (scenario estremo), stabilità numerica con $(1 - \vec{v}\cdot\hat{n}/c) \to 0$ . Nessun altro scenario del simulatore esercita queste condizioni. In aggiunta, la pipeline generale basata sui buffer funziona **senza modifiche anche se in futuro si forzasse un moto complesso** (curvilineo, con accelerazione variabile, con interazione N-body): la scorciatoia analitica cesserebbe di esistere, ma l’architettura dei buffer continuerebbe a funzionare invariata.
+> One final observation: in the specific case of constant ART acceleration and rectilinear motion, the retarded time admits a closed-form analytical solution (the retarded time equation reduces to a quadratic in $t_{ret}$), so history buffers would not be strictly necessary for *this* scenario. The engine uses them anyway because the goal is to push the general causal pipeline to its limits: depths of hundreds of light-years, LOD cascading across all three levels, ~20 GB of RAM (extreme scenario), and numerical stability as $(1 - \vec{v}\cdot\hat{n}/c) \to 0$. No other scenario in the simulator pushes these conditions to such extremes. In addition, the general buffer-based pipeline works **without modification even if a complex motion were forced in the future** (curvilinear, with variable acceleration, with N-body interaction): the analytical shortcut would cease to exist, but the buffer architecture would continue to function unchanged.
 
 
 ---
 
-## 6. Gravità estrema: Paczyński-Wiita, 2.5PN e massa chirp
+## 6. Extreme Gravity: Paczyński-Wiita, 2.5PN, and chirp mass
 
-### 6.1 Lo pseudo-potenziale di Paczyński-Wiita
+### 6.1 The Paczyński-Wiita pseudo-potential
 
-Per i buchi neri, la gravità newtoniana è sostituita dallo **pseudo-potenziale di Paczyński-Wiita**, che riproduce due caratteristiche chiave della metrica di Schwarzschild su sfondo piatto:
+For black holes, Newtonian gravity is replaced by the **Paczyński-Wiita pseudo-potential**, which reproduces two key characteristics of the Schwarzschild metric on a flat background:
 
 $$V_{PW}(r) = -\frac{GM}{r - R_s}, \qquad R_s = \frac{2GM}{c^2}$$
 
-$R_s$ è il **raggio di Schwarzschild**, cioè il raggio dell'**orizzonte degli eventi** (la distanza dal centro entro cui nemmeno la luce sfugge) e vale $2GM/c^2$ . Il potenziale PW riproduce due cose distinte:
-- **a $r \to R_s$ diverge** ( $V_{PW} \to -\infty$ ): l'orizzonte diventa una barriera infinita ed è *lì* che la formula esplode numericamente. È questa divergenza che, con DT finito, inietta l'immensa energia spuria se un corpo le si avvicina troppo ([§3 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisioni-buchi-neri-e-singolarità));
-- **a $r = 3R_s$ colloca l'ISCO**, l'ultima orbita circolare stabile. Non è una divergenza, ma una proprietà dinamica del potenziale efficace, che PW mette esattamente al valore relativistico corretto $3R_s = 6GM/c^2$ .
+$R_s$ is the **Schwarzschild radius**, that is, the radius of the **event horizon** (the distance from the center beyond which not even light can escape), and it is equal to $2GM/c^2$. The PW potential reproduces two distinct behaviors:
+- **as $r \to R_s$, it diverges** ( $V_{PW} \to -\infty$ ): the horizon becomes an infinite barrier, and it is *there* that the formula diverges numerically. It is this divergence that, for a finite DT, injects immense spurious energy if a body approaches it too closely ([§3 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisions-black-holes-and-singularities));
+- **At $r = 3R_s$, the ISCO** (the last stable circular orbit) is located. This is not a divergence but a dynamic property of the effective potential, which PW sets exactly to the correct relativistic value $3R_s = 6GM/c^2$.
 
-È per questo che PW è lo standard "economico" per la dinamica attorno ai buchi neri: orizzonte e ISCO giusti senza risolvere la metrica.
+This is why PW is the “economical” standard for dynamics around black holes: it gives the correct event horizon and ISCO without solving for the metric.
 
-**Una nota sul "softening" (e come è diventato uno stabilizzatore senza volerlo).** Il softening è una piccola modifica al calcolo della distanza usata dalla forza: invece di $r$ il kernel usa $d = \sqrt{r^2 + S_{soft}^2}$ , con $S_{soft} = 10$ km. In pratica: per coppie lontane $r$ e $d$ sono identici (a 1000 km cambiano relativamente di appena $5\cdot10^{-5}$ , cioè 0,05 km su 1000), ma quando $r$ scende sotto la decina di km la distanza non va mai sotto $S_{soft}$ . Tutto qui.
+**A note on “softening” (and how it became a stabilizer without intending to).** Softening is a small modification to the calculation of the distance used by the force: instead of $r$, the kernel uses $d = \sqrt{r^2 + S_{soft}^2}$, with $S_{soft} = 10$ km. In practice: for distant pairs, $r$ and $d$ are identical (at 1000 km, they differ by only $5\cdot10^{-5}$, or 0.05 km out of 1000), but when $r$ drops below about 10 km, the distance never falls below $S_{soft}$. That’s all there is to it.
 
-*Perché esiste.* Il softening è nato **prima del sistema di collisioni**, quando l'unico modo per evitare dei NaN (Not a Number, che porta in errore il motore) era impedire al denominatore $(d - R_s)^2$ del potenziale PW di passare per zero (per impedire i negativi invece è bastata una riga di codice semplice). Bastava che due corpi finissero per un istante dentro il loro raggio di Schwarzschild perché la forza diventasse infinita, l'energia esplodesse e tutto il tensorone andasse a `inf` in un tick. Il softening era il primo argine e una toppa contro la divisione per zero, niente di più ambizioso. Oggi il sistema di collisioni ([§3 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisioni-buchi-neri-e-singolarità)) gestisce il contatto in modo pulito e in linea di principio il softening sarebbe rimovibile.
+*Why it exists.* Softening was introduced **before the collision system**, when the only way to avoid NaNs (Not a Number, which causes the engine to error out) was to prevent the denominator $(d - R_s)^2$ of the PW potential from going through zero (to prevent negative values, on the other hand, a single line of simple code was sufficient). All it took was for two bodies to end up inside their Schwarzschild radius for an instant for the force to become infinite, the energy to explode, and the entire tensor to go to `inf` in a single tick. Softening was the first safeguard and a workaround against division by zero, nothing more ambitious than that. Today, the collision system ([§3 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisions-black-holes-and-singularities)) handles contact cleanly, and in principle, the softening could be removed.
 
-*L'effetto collaterale.* Negli stress test su GW170817, toglierlo rende rumorosi gli ultimi millisecondi del chirp. Ipotesi: a 30-40 km la forza è così ripida che dentro un singolo tick Verlet calcia da una posizione già stantia, generando eccentricità spuria; il softening schiaccia quella pendenza e smorza l'errore. Tenerlo acceso non nasconde fisica vera: la reazione di radiazione *circolarizza* le orbite (Peters 1964, [§6.4](#64-massa-chirp-e-formula-di-peters)), quindi un'eccentricità che cresce verso il merger è per forza spuria. Nato come tappabuchi anti-NaN, finito per fare anche da stabilizzatore in un caso che non era previsto.
+*The side effect.* In stress tests on GW170817, turning it off makes the last milliseconds of the chirp noisy. Hypothesis: at 30–40 km, the force is so steep that within a single Verlet tick, it kicks from an already stale position, generating spurious eccentricity; softening flattens that slope and dampens the error. Keeping it on does not hide the true physics: the radiation reaction *circularizes* the orbits (Peters 1964, [§6.4](#64-chirp-mass-and-peters-formula)), so an eccentricity that increases toward the merger must be spurious. Originally designed as a stopgap for NaN, it ended up also serving as a stabilizer in a case that was not anticipated.
 
-### 6.2 Cosa sono gli ordini post-newtoniani e il 2.5PN
+### 6.2 What Are Post-Newtonian Orders and 2.5PN
 
-L'espansione **post-newtoniana (PN)** sviluppa la dinamica relativistica in potenze di $(v/c)$ attorno alla gravità di Newton. Un termine di ordine $n$ PN è soppresso di un fattore $(v/c)^{2n}$ rispetto al termine newtoniano. Gli ordini **interi** (1PN, 2PN, …) sono *conservativi*: correggono la forma delle orbite (per esempio la precessione del perielio) senza togliere energia. Gli ordini **semi-interi dispari** sono invece *dissipativi*, perché rompono la simmetria temporale.
+The **post-Newtonian (PN)** expansion develops relativistic dynamics as powers of $(v/c)$ around Newtonian gravity. A term of order $n$ PN is suppressed by a factor of $(v/c)^{2n}$ relative to the Newtonian term. The **integer** orders (1PN, 2PN, …) are *conservative*: they correct the shape of the orbits (for example, the precession of the perihelion) without removing energy. The **odd half-integer** orders, on the other hand, are *dissipative*, because they break time symmetry.
 
-Il **2.5PN** (soppresso di $(v/c)^5$ , da cui la firma $1/c^5$ ) è il **primo termine dissipativo**: descrive la **reazione di radiazione**, cioè l'energia che la coppia perde irraggiando onde gravitazionali e che ne fa decadere l'orbita. Nella sua forma rigorosa (reazione di Burke-Thorne) è un'accelerazione $\propto G^2/c^5$ legata alla **derivata terza** del momento di quadrupolo di massa.
+The **2.5PN** (suppressed by $(v/c)^5$, hence the signature $1/c^5$) is the **first dissipative term**: it describes the **radiation reaction**, that is, the energy that the pair loses by radiating gravitational waves, causing its orbit to decay. In its rigorous form (the Burke-Thorne reaction), it is an acceleration $\propto G^2/c^5$ related to the **third derivative** of the mass quadrupole moment.
 
-La fonte ufficiale da cui ho attinto è la review di **L. Blanchet**, *Gravitational Radiation from Post-Newtonian Sources and Inspiralling Compact Binaries*, [*Living Reviews in Relativity*, 2014](https://link.springer.com/article/10.12942/lrr-2014-2), in cui il 2.5PN è identificato come il primo effetto **non conservativo** dello sviluppo, cioè la prima comparsa della reazione di radiazione.
+The official source I drew upon is the review by **L. Blanchet**, *Gravitational Radiation from Post-Newtonian Sources and Inspiralling Compact Binaries*, [*Living Reviews in Relativity*, 2014](https://link.springer.com/article/10.12942/lrr-2014-2), in which the 2.5PN term is identified as the first **non-conservative** effect of the expansion, that is, the first appearance of the radiation reaction.
 
-Quello che il simulatore implementa è proprio questa reazione di radiazione, nella forma di **Damour-Deruelle** (la specializzazione del 2.5PN al problema dei due corpi puntiformi, equivalente a Burke-Thorne in quel contesto), descritta sotto.
+What the simulator implements is precisely this radiation reaction, in the **Damour-Deruelle** form (the specialization of the 2.5PN to the two-point-mass problem, equivalent to Burke-Thorne in that context), described below.
 
-### 6.3 Come viene usato il 2.5PN nel simulatore
+### 6.3 How the 2.5PN Is Used in the Simulator
 
-La versione attuale del motore implementa la reazione di radiazione 2.5PN nella sua **forma relativistica reale** (Damour-Deruelle), non più come attrito fenomenologico. L'accelerazione relativa della coppia è:
+The current version of the engine implements the 2.5PN radiation reaction in its **real relativistic form** (Damour-Deruelle), no longer as phenomenological friction. The relative acceleration of the pair is:
 
 $$\vec{a}_{rel} = \frac{8}{5}\frac{G^2 M \mu}{c^5 r^3}\Big[\dot{r}\big(18v^2 + \tfrac{2}{3}\tfrac{GM}{r} - 25\dot{r}^2\big)\hat{n} - \big(6v^2 - 2\tfrac{GM}{r} - 15\dot{r}^2\big)\vec{v}\Big]$$
 
-dove $M = m_1 + m_2$ è la massa totale, $\mu = m_1 m_2/M$ la massa ridotta, $\vec{v}$ la velocità relativa e $\dot{r}$ la sua componente radiale. Il motore li costruisce così:
-- **Versore di separazione $\hat{n}$**: dalle coordinate cartesiane della coppia, $\vec{r}=(x_1-x_2,\,y_1-y_2)$ , modulo $r=|\vec{r}|$ , normalizzato componente per componente ( $n_x = \Delta x / r$ , $n_y = \Delta y / r$ ).
-- **Componente radiale $\dot r$**: proiezione scalare $\dot{r}=\vec{v}\cdot\hat{n} = v_x n_x + v_y n_y$ , positiva in allontanamento, negativa in avvicinamento.
+where $M = m_1 + m_2$ is the total mass, $\mu = m_1 m_2/M$ is the reduced mass, $\vec{v}$ is the relative velocity, and $\dot{r}$ is its radial component. The engine constructs them as follows:
+- **Separation unit vector $\hat{n}$**: from the Cartesian coordinates of the pair, $\vec{r}=(x_1-x_2,\,y_1-y_2)$, modulus $r=|\vec{r}|$, normalized component by component ($n_x = \Delta x / r$, $n_y = \Delta y / r$).
+- **Radial component $\dot r$**: scalar projection $\dot{r}=\vec{v}\cdot\hat{n} = v_x n_x + v_y n_y$, positive when moving away, negative when moving toward.
 
-La formula mantiene la firma $1/c^5$ del termine dissipativo, ma rispetto alla vecchia bozza ([§6.5](#65-la-storia-da-m_chirp_mult-al-25pn-reale)) usa il **prodotto reale delle due masse** dentro $\mu$ , quindi resta corretta anche per rapporti di massa estremi e non solo per binarie quasi simmetriche.
+The formula retains the $1/c^5$ sign of the dissipative term, but compared to the old draft ([§6.5](#65-the-history-from-m_chirp_mult-to-the-real-25pn)), it uses the **real product of the two masses** inside $\mu$, so it remains correct even for extreme mass ratios and not just for nearly symmetric binaries.
 
-L'accelerazione viene poi **ripartita tra i due corpi in base al contributo di massa** ( $m_{src}/M$ ): il corpo più leggero riceve la spinta maggiore, esattamente come impone la conservazione del momento lineare. È questa ripartizione corretta che ha eliminato l'oscillazione del baricentro che affliggeva la prima versione, dove la massa al quadrato sbilanciava la forza.
+The acceleration is then **distributed between the two bodies based on their mass contributions** ($m_{src}/M$): the lighter body receives the greater thrust, exactly as required by the conservation of linear momentum. It is this correct distribution that eliminated the oscillation of the center of mass that plagued the first version, where the square of the mass unbalanced the force.
 
-Il termine entra in gioco solo quando la **velocità relativa della coppia** supera il 10% di $c$ e a distanza ravvicinata (è un freno *locale* al merger). Il criterio è sulla relativa, non sulla velocità del singolo corpo, per una ragione precisa: nel baricentro le velocità dei due membri sono sempre antiparallele ( $|\vec v_{rel}| = |\vec v_A| + |\vec v_B|$ ), quindi per masse uguali equivale al 5% di $c$ per corpo, ma resta corretto anche nelle coppie asimmetriche, dove il membro pesante si muove lentamente e un criterio per-corpo lascerebbe il membro leggero senza freno per quasi tutto l'inspiral. Il difetto è emerso proprio così, sul primo scenario a rapporto di massa estremo: il caso di studio completo è in [§10.1](#101-caso-di-studio-gw190814-la-sovradissipazione-in-campo-profondo).
+This term comes into play only when the **relative velocity of the pair** exceeds 10% of $c$ and at close range (it acts as a *local* brake on the merger). The criterion is based on relative velocity, not on the velocity of a single body, for a specific reason: at the center of mass, the velocities of the two components are always antiparallel ($|\vec v_{rel}| = |\vec v_A| + |\vec v_B|$), so for equal masses, this corresponds to 5% of $c$ per body, but it remains valid even for asymmetric pairs, where the heavier component moves slowly and a per-body criterion would leave the lighter component unchecked for almost the entire inspiral. The flaw emerged precisely in this way, in the first scenario with an extreme mass ratio: the complete case study is in [§10.1](#101-case-study-gw190814-overdissipation-in-deep-space).
 
-Il motore gira **parameter-free**: il fattore `m_chirp_mult`, un tempo indispensabile, oggi vale 1.
+The engine runs **parameter-free**: the `m_chirp_mult` factor, once indispensable, is now set to 1.
 
-Vicino alla coalescenza, il sistema mantiene i raggi di cattura dei buchi neri sui rispettivi orizzonti degli eventi. Il floor è $1{,}0\ R_s$ per coppie comparabili; una guardia contro il cannone numerico lo espande a $1{,}25\ R_s$ per rapporti di massa tra 3:1 e 50:1 e a $1{,}9\ R_s$ oltre 50:1 (il caso EMRI puro); il dettaglio è in [§3 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisioni-buchi-neri-e-singolarità). La parte finale, entrati in zona ISCO, è un plunge quasi diretto.
+Near coalescence, the system preserves the capture radii of the black holes at their respective event horizons. The floor is $1.0\ R_s$ for comparable pairs; a safeguard against numerical blow-up expands it to $1.25\ R_s$ for mass ratios between 3:1 and 50:1 and to $1.9\ R_s$ beyond 50:1 (the pure EMRI case); details are in [§3 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#5-collisions-black-holes-and-singularities). The final section, once inside the ISCO region, is a nearly direct plunge.
 
-### 6.4 Massa chirp e formula di Peters
+### 6.4 Chirp Mass and Peters’ Formula
 
-**Cosa è un *chirp* e come si arriva alla coalescenza.** Quando due oggetti compatti (buchi neri o stelle di neutroni) sono legati in un'orbita binaria stretta, perdono energia per emissione di onde gravitazionali (la reazione di radiazione di [§6.2](#62-cosa-sono-gli-ordini-post-newtoniani-e-il-25pn)). L'orbita si **stringe progressivamente** e la frequenza orbitale **cresce**. Questa fase di avvicinamento a spirale si chiama *inspiral*. L'onda gravitazionale emessa segue: la sua frequenza (pari al **doppio** di quella orbitale, perché la sorgente è il quadrupolo, [§7.7](#77-la-natura-delle-onde-del-simulatore-livelli-di-astrazione)) sale sempre più in fretta e con essa l'ampiezza, fino a raggiungere migliaia di Hz nei millisecondi finali prima della **coalescenza** dei due corpi (il *merger*). Il segnale che ne risulta, come una sirena che accelera fino al picco e poi si spegne, è il *chirp* (letteralmente "cinguettio"), la firma sonora di GW150914 e GW170817 e di decine di altri rivelamenti.
+**What is a *chirp* and how does coalescence occur?** When two compact objects (black holes or neutron stars) are bound in a tight binary orbit, they lose energy through the emission of gravitational waves (the radiation reaction described in [§6.2](#62-what-are-post-newtonian-orders-and-25pn)). The orbit **gradually tightens** and the orbital frequency **increases**. This phase of spiral approach is called *inspiral*. The emitted gravitational wave follows: its frequency (equal to **twice** the orbital frequency, because the source is the quadrupole, [§7.7](#77-the-nature-of-the-simulators-waves-levels-of-abstraction)) rises faster and faster, and with it the amplitude, until it reaches thousands of Hz in the final milliseconds before the **coalescence** of the two bodies (the *merger*). The resulting signal, like a siren that accelerates to its peak and then fades away, is the *chirp* (literally “chirp”), the acoustic signature of GW150914 and GW170817 and of dozens of other detections.
 
-La grandezza che governa il chirp è la **massa chirp** $\mathcal{M}$ . In pratica è la **combinazione di masse che il segnale d'onda misura davvero**, né somma né media delle due:
+The quantity that governs the chirp is the **chirp mass** $\mathcal{M}$. In practice, it is the **combination of masses that the wave signal actually measures**, neither the sum nor the average of the two:
 
 $$\mathcal{M} = \frac{(m_1 m_2)^{3/5}}{(m_1 + m_2)^{1/5}}$$
 
-È lei a determinare *quanto in fretta* la coppia spiraleggia e quindi come sale il chirp. Per questo, da uno spettrogramma reale, è la prima quantità che si riesce a stimare (spesso meglio delle masse singole).
+It is this quantity that determines *how fast* the pair spirals and, consequently, how the chirp rises. For this reason, in a real spectrogram, it is the first quantity that can be estimated (often more accurately than the individual masses).
 
-In forma esplicita, la frequenza dell'onda evolve in questo modo (ordine dominante):
+In explicit form, the wave frequency evolves as follows (dominant order):
 
 $$f(\tau) = \frac{1}{\pi}\left(\frac{5}{256}\right)^{3/8}\left(\frac{c^3}{G\mathcal{M}}\right)^{5/8}\tau^{-3/8}$$
 
-L'analizzatore inverte la relazione per stimare $\mathcal{M}$ dai dati:
+The analyzer inverts this relationship to estimate $\mathcal{M}$ from the data:
 
 $$\mathcal{M} = \frac{c^3}{G}\left[\frac{5}{96\,\pi^{8/3}}\frac{\dot{f}}{f^{11/3}}\right]^{3/5}$$
 
-dove $\tau$ è il tempo che manca al merger, $f$ la frequenza istantanea dell'onda, $\dot{f}=df/dt$ la sua derivata, $G$ e $c$ le costanti. **In pratica, nel progetto, le due grandezze misurate si ricavano così**: $f$ è la **frequenza istantanea** del segnale registrato dalla [sonda](#81-lanalogia-con-ligo-e-virgo-sulla-terra), ottenuta dalla derivata della fase del *segnale analitico* (trasformata di Hilbert, [§8.8](#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy)); $\dot{f}$ **non** da una derivata numerica grezza, che è rumorosa, ma adattando la legge di potenza $f(\tau)\propto\tau^{-3/8}$ alla traccia ripulita. La prima formula dà la curva attesa nota $\mathcal{M}$ . La seconda la inverte, ricavando $\mathcal{M}$ dai $f$ e $\dot{f}$ misurati (è ciò che fa l'analizzatore, [§8.8](#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy)).
+where $\tau$ is the time remaining until the merger, $f$ is the instantaneous frequency of the wave, $\dot{f}=df/dt$ is its derivative, and $G$ and $c$ are constants. **In practice, in the project, the two measured quantities are obtained as follows**: $f$ is the **instantaneous frequency** of the signal recorded by the [probe](#81-the-analogy-with-ligo-and-virgo-on-earth), obtained from the derivative of the phase of the *analytic signal* (Hilbert transform, [§8.8](#88-the-analyzers-analysis-pipeline-ligo_analyzerpy)); $\dot{f}$ is **not** obtained from a raw numerical derivative, which is noisy, but by fitting the power law $f(\tau)\propto\tau^{-3/8}$ to the cleaned-up trace. The first formula gives the known expected curve $\mathcal{M}$. The second reverses this process, deriving $\mathcal{M}$ from the measured $f$ and $\dot{f}$ (this is what the analyzer does, [§8.8](#88-the-analyzers-analysis-pipeline-ligo_analyzerpy)).
 
-### 6.5 La storia: da `m_chirp_mult` al 2.5PN reale
+### 6.5 The History: From `m_chirp_mult` to the Real 2.5PN
 
-Questa sezione ripercorre il percorso che, a tentativi e attraverso graduali approfondimenti, ha portato dall'integrazione simbolica ed euristica del 2.5PN al 2.5PN completo. Il riferimento che ha testimoniato il progresso è un unico grafico, in tre versioni successive: i punti rossi mostrano la frequenza del chirp simulato generata istante per istante dal *radar relativistico*. Questo sistema di monitoraggio integrato registra una lunga lista di frequenze istantanee prima della coalescenza calcolandole direttamente dalle variabili geometriche della coppia tramite la formula:
+This section traces the path that, through trial and error and gradual refinement, led from the symbolic and heuristic implementation of the 2.5PN to the complete 2.5PN. The reference that documented this progress is a single graph, presented in three successive versions: the red points show the frequency of the simulated chirp generated instant by instant by the *relativistic radar*. This integrated monitoring system records a long list of instantaneous frequencies prior to coalescence, calculating them directly from the geometric variables of the pair using the formula:
 
 $$f_{GW} = \frac{v_{rel}}{\pi d}$$
 
-ricavata raddoppiando la frequenza orbitale di una traiettoria circolare:
+derived by doubling the orbital frequency of a circular trajectory:
 
 $$f_{GW} = 2 \cdot f_{orb} = 2 \cdot \frac{v_{rel}}{2\pi d}$$
 
-dove $v_{rel}$ è la velocità relativa e $d$ la distanza tra i corpi celesti. I dettagli del campionamento e del funzionamento del sistema di telemetria e della sonda sono approfonditi nel [§5 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#L254).
+where $v_{rel}$ is the relative velocity and $d$ is the distance between the celestial bodies. Details regarding the sampling and operation of the telemetry system and the probe are discussed in depth in [§7 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#7-the-ligo-probe-sampling-and-dump-architecture).
 
-Questa lunga lista di frequenze discrete viene rappresentata graficamente come punti rossi sovrapposti alla trasformata Q (la mappa energetica tempo/frequenza del segnale) dell'**evento reale** GW170817 (rivelatore H1), insieme alla curva **teorica di Peters**. Più i punti oscillano attorno alla curva liscia, più l'orbita simulata è ancora **eccentrica** invece che circolare: quell'oscillazione è la misura visiva dell'eccentricità residua. Le tre fasi che seguono mostrano come è stata progressivamente ridotta.
+This long list of discrete frequencies is plotted as red points superimposed on the Q-transform (the time-frequency energy map of the signal) of the **real event** GW170817 (H1 detector), along with the **theoretical Peters curve**. The more the points oscillate around the smoothed curve, the more the simulated orbit is still **eccentric** rather than circular: that oscillation is the visual measure of the residual eccentricity. The following three steps show how it was progressively reduced.
 
-> **Due tecniche, in breve.** La **trasformata di Hilbert** costruisce il *segnale analitico* $s_a(t) = s(t) + i\,\mathcal{H}[s](t)$ , la cui fase $\phi(t)$ dà la **frequenza istantanea** $f(t) = \frac{1}{2\pi}\frac{d\phi}{dt}$ : questo metodo viene usato dall'analizzatore a posteriori per tracciare il segnale registrato dalla [sonda](#81-lanalogia-con-ligo-e-virgo-sulla-terra). La **trasformata Q** è una mappa tempo/frequenza a *fattore di qualità* $Q$ costante (come uno spettrogramma, ma con risoluzione adattiva: più fine in frequenza alle basse, più fine nel tempo alle alte). Viene usata per disegnare lo sfondo dell'evento reale. Dettagli e pipeline completa in [§8.8](#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy).
+> **Two techniques, in brief.** The **Hilbert transform** constructs the *analytic signal* $s_a(t) = s(t) + i\,\mathcal{H}[s](t)$, whose phase $\phi(t)$ yields the **instantaneous frequency** $f(t) = \frac{1}{2\pi}\frac{d\phi}{dt}$: this method is used by the post-processing analyzer to plot the signal recorded by the [probe](#81-the-analogy-with-ligo-and-virgo-on-earth). The **Q-transform** is a time-frequency map with a constant *quality factor* $Q$ (like a spectrogram, but with adaptive resolution: finer in frequency at low frequencies, finer in time at high frequencies). It is used to draw the background of the actual event. Details and the complete pipeline are in [§8.8](#88-the-analyzers-analysis-pipeline-ligo_analyzerpy).
 
-**Fase 1, la vecchia logica.** All'inizio non è stato implementato il 2.5PN completo, bensì un *frammento* della formula: un attrito viscoso $\vec{F} \propto -m_{src}^2\,\vec{v}_{rel}/(r^3 c^5)$ , moltiplicato per un fattore euristico, `m_chirp_mult`, tarato a mano perché la coppia coalescesse nei tempi attesi. I tempi risultavano credibili, ma la dinamica aveva tre difetti. La massa al quadrato, al posto del prodotto reale delle due masse, sbilanciava la ripartizione della forza e faceva **oscillare il baricentro**. Il dead reckoning lineare, nel regime estremo, lasciava un'aberrazione residua. Il fattore correttivo, agendo come spinta aggiuntiva, aumentava l'eccentricità. Il risultato è la prima figura, con i punti che oscillano in modo marcato attorno alla curva di Peters.
+**Step 1, the old logic.** Initially, the full 2.5PN was not implemented; instead, a *fragment* of the formula was used: a viscous drag $\vec{F} \propto -m_{src}^2\,\vec{v}_{rel}/(r^3 c^5)$, multiplied by a heuristic factor, `m_chirp_mult`, which was tuned by hand so that the pair would coalesce within the expected time frame. The times were plausible, but the dynamics had three flaws. The square of the mass, instead of the actual product of the two masses, unbalanced the force distribution and caused **the center of mass to oscillate**. Linear dead reckoning, under extreme conditions, left a residual aberration. The corrective factor, acting as an additional thrust, increased the eccentricity. The result is shown in the first figure, with the points oscillating markedly around the Peters curve.
 
-<img src="docs/img/chirp_fase1_old_logic.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase1_old_logic.png" alt="Media not found">
 
-**Figura: Fase 1 (vecchia logica)**: frammento di 2.5PN + fattore `m_chirp_mult` + dead reckoning lineare. I punti tracciati oscillano in modo incostante e la forma della curva non combacia del tutto.
+**Figure: Phase 1 (old logic)**: 2.5PN fragment + `m_chirp_mult` factor + linear dead reckoning. The plotted points oscillate erratically, and the shape of the curve does not match perfectly.
 
-**Fase 2, il 2.5PN reale.** È stato sostituito il frammento con la **formula completa di Damour-Deruelle** ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)), tenendo ancora il dead reckoning e un `m_chirp_mult` ridotto a correzione lieve. Effetto a doppia faccia: la **media** del chirp ricalca molto meglio Peters (la curva combacia), ma l'**oscillazione del baricentro peggiora**, addirittura più che in Fase 1. Meglio in media, peggio in stabilità.
+**Phase 2, the actual 2.5PN.** The fragment was replaced with the **complete Damour-Deruelle formula** ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)), while still retaining dead reckoning and a reduced `m_chirp_mult` for slight correction. A double-edged sword: the **average** of the chirp matches Peters much better (the curve matches), but the **centroid oscillation worsens**, even more so than in Phase 1. Better on average, worse in terms of stability.
 
-<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Average not found">
 
-**Figura: Fase 2 (2.5PN reale, correzione lieve)**: 2.5PN reale + dead reckoning + `m_chirp_mult` lieve.
+**Figure: Phase 2 (actual 2.5PN, mild correction)**: actual 2.5PN + dead reckoning + mild `m_chirp_mult`.
 
-**Il problema del fattore correttivo.** Tre osservazioni, emerse una alla volta, mostravano i limiti di `m_chirp_mult` come rimedio artificiale:
+**The problem with the correction factor.** Three observations, emerging one at a time, revealed the limitations of `m_chirp_mult` as an artificial remedy:
 
-- la sua **amplificazione lineare** (moltiplicare il 2.5PN per uno scalare) poteva traslare il chirp, ma non correggerne la *curvatura*: lo scarto dal dato reale era di forma, non di sfasamento, e anche quando *non* spostava la massa chirp attesa (come in Fase 1) ne alterava comunque leggermente la forma della curva;
-- in Fase 2, con la formula reale, **alzava la massa chirp apparente**, perché iniettava nell'orbita energia oltre quella fisica e falsava la stima a valle;
-- più venivano migliorati gli altri elementi, più il valore ottimale del fattore tendeva a 1.
+- its **linear amplification** (multiplying the 2.5PN by a scalar) could shift the chirp, but not correct its *curvature*: the deviation from the actual data was in shape, not in phase, and even when it *did not* shift the expected chirp mass (as in Phase 1), it still slightly altered the shape of the curve;
+- In Phase 2, with the actual formula, it **increased the apparent chirp mass**, because it injected energy into the orbit beyond the physical amount and distorted the downstream estimate;
+- The more the other elements were improved, the more the optimal value of the factor tended toward 1.
 
-**Fase 3, la rimozione dei rimedi.** Arrivati a questo punto sono stati eliminati i correttivi artificiali ed è qui che l'eccentricità residua si è ridotta in modo decisivo:
+**Phase 3: Removal of the Workarounds.** At this point, the artificial corrections were eliminated, and this is where the residual eccentricity was significantly reduced:
 
-- **rimosso `m_chirp_mult`** (portato a 1): il motore diventa *parameter-free*;
-- **rimosso il dead reckoning lineare** nel regime GW, sostituito dal **bypass a posizioni presenti** ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)): si elimina l'aberrazione residua che alimentava l'eccentricità;
-- **corretto l'errore della *prima accelerazione***: il primo half-kick del Velocity Verlet partiva da un'accelerazione non inizializzata (dunque a zero), introducendo un transiente all'avvio di ogni *rebuild*; la correzione è il *warm-start* delle accelerazioni iniziali, calcolato in un colpo solo a ogni rebuild da `_prime_initial_accelerations()` (dettaglio in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#come-larchitettura-abbatte-i-cache-miss));
-- **corretta la stima della massa chirp** lato analizzatore (dalla regressione lineare di $\dot{f}$ al fit della legge di potenza $f(\tau)\propto\tau^{-3/8}$ , [§8.8](#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy)), eliminando un errore di metodo non fisico;
-- **migliorati i parametri di partenza (*boot*)**: capire come distinguere, nei database ufficiali, le masse in *Source Frame* (quelle intrinseche della sorgente) da quelle in *Detector Frame* (quelle che gli interferometri sulla Terra misurano davvero, leggermente più pesanti per effetto del *redshift*). Usare il Source Frame direttamente, senza convertirlo in Detector Frame tramite il fattore $(1+z)$, introduce un errore sistematico nel confronto con i dati osservati dal rivelatore.
+- **removed `m_chirp_mult`** (set to 1): the engine becomes *parameter-free*;
+- **removed the linear dead reckoning** in GW mode, replaced by **bypassing to current positions** ([§3.2](#32-compensation-hybrid-dead-reckoning)): this eliminates the residual aberration that was feeding the eccentricity;
+- **Corrected the *first acceleration* error***: the first half-kick of the Velocity Verlet started from an uninitialized acceleration (i.e., zero), introducing a transient at the start of every *rebuild*; the correction is the *warm-start* of the initial accelerations, calculated in a single step at each rebuild by `_prime_initial_accelerations()` (details in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#how-architecture-reduces-cache-misses));
+- **Corrected the chirp mass estimate** on the analyzer side (from the linear regression of $\dot{f}$ to a fit of the power law $f(\tau)\propto\tau^{-3/8}$, [§8.8](#88-the-analyzers-analysis-pipeline-ligo_analyzerpy)), eliminating a non-physical method error;
+- **Improved initial parameters (*boot*)**: understanding how to distinguish, in the official databases, the masses in *Source Frame* (those intrinsic to the source) from those in *Detector Frame* (those actually measured by the ground-based interferometers, which are slightly heavier due to *redshift*). Using the Source Frame directly, without converting it to the Detector Frame via the factor $(1+z)$, introduces a systematic error in the comparison with the data observed by the detector.
 
-### 6.6 Le prove: confronto col dato reale
+### 6.6 The Evidence: Comparison with Actual Data
 
- Il riferimento è lo strain pubblico di GW170817 dal Gravitational Wave Open Science Center (rivelatore **H1**, 4096 s campionati a 16 kHz, da [gwosc.org](https://gwosc.org/eventapi/html/GWTC-1-confident/GW170817/v3/)). Lo script di confronto carica lo strain reale, ne estrae la traccia di frequenza del chirp (Q-transform) attorno al merger, vi sovrappone i punti della **simulazione** (frequenza istantanea via Hilbert) e la curva **teorica di Peters**, infine calcola l'errore punto per punto.
+ The reference is the public strain data for GW170817 from the Gravitational Wave Open Science Center (**H1** detector, 4096 s sampled at 16 kHz, from [gwosc.org](https://gwosc.org/eventapi/html/GWTC-1-confident/GW170817/v3/)). The comparison script loads the actual strain, extracts the chirp frequency trace (Q-transform) around the merger, superimposes the points from the **simulation** (instantaneous frequency via Hilbert transform) and the **Peters theoretical curve**, and finally calculates the error point by point.
 
-**Una nota sulla massa chirp del grafico.** GW170817 ha un piccolo redshift ( $z \approx 0{,}01$ ), quindi la massa chirp *osservata nel rivelatore* (detector frame, $\approx 1{,}1975\ M_\odot$ ) è leggermente più alta di quella *propria della sorgente* (source frame, $\approx 1{,}186\ M_\odot$ ).
+**A note on the chirp mass in the graph.** GW170817 has a small redshift ( $z \approx 0.01$ ), so the chirp mass *observed in the detector* (detector frame, $\approx 1{,}1975\ M_\odot$ ) is slightly higher than that *inherent to the source* (source frame, $\approx 1{,}186\ M_\odot$ ).
 
-**Il risultato finale.** Con il modello parameter-free corretto, la massa chirp stimata dalla simulazione cade allo **0,97%** dall'analitica di Peters, un'aderenza quasi perfetta e guadagnata attraverso le correzioni descritte sopra. Contro lo strain reale osservato (H1) lo scarto è invece dell'**8,45%**.
+**The final result.** With the correct parameter-free model, the chirp mass estimated from the simulation is within **0.97%** of Peters’ analytical result, an almost perfect fit achieved through the corrections described above. In contrast, the deviation from the actual observed strain (H1) is **8.45%**.
 
-<img src="docs/img/chirp_fase3_finale.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase3_finale.png" alt="Media not found">
 
-**Figura: Fase 3 (risultato finale)**: il modello finale (parameter-free, fattore correttivo rimosso, bug della prima accelerazione corretto, dead reckoning lineare sostituito dal bypass a posizioni presenti, stima della massa chirp corretta). I punti tracciati aderiscono alla curva di Peters: l'oscillazione e con essa l'eccentricità residua, è pressoché scomparsa.
+**Figure: Phase 3 (final result)**: the final model (parameter-free, correction factor removed, first acceleration bug fixed, linear dead reckoning replaced by bypass to current positions, chirp mass estimate corrected). The plotted points follow Peters’ curve: the oscillation (and with it the residual eccentricity) has virtually disappeared.
 
-Il confronto contro lo strain reale H1 ha comunque un limite metodologico dichiarato: il dato negli ultimi 50 ms è rumoroso e la finestra robusta si ferma a $\tau \in [-1{,}0, -0{,}2]$ s. Di seguito dunque un confronto tra Peters e NR.
+However, the comparison with the actual strain H1 has a stated methodological limitation: the data in the last 50 ms is noisy, and the robust window ends at $\tau \in [-1.0, -0.2]$ s. Therefore, a comparison between Peters and NR is presented below.
 
-Per lo scenario BBH il confronto con la relatività numerica SXS è documentato in [§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs).
+For the BBH scenario, the comparison with SXS numerical relativity is documented in [§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity).
 
-#### 6.6.1 Lo scenario BNS (GW170817): Peters vs relatività numerica SXS
+#### 6.6.1 The BNS scenario (GW170817): Peters vs. SXS numerical relativity
 
 > [!NOTE]
-> **Cos'è SXS.** Il progetto *Simulating eXtreme Spacetimes* ([black-holes.org](https://www.black-holes.org/)) è una collaborazione multi-universitaria (Caltech, Cornell, CITA e altri) che produce soluzioni di **relatività numerica** (NR) delle equazioni di Einstein per merger di buchi neri e stelle di neutroni. Il catalogo pubblico ([data.black-holes.org/waveforms/catalog](https://data.black-holes.org/waveforms/catalog.html)) contiene centinaia di simulazioni di riferimento, ciascuna identificata da un codice (`SXS:BBH:NNNN` per i buchi neri, `SXS:NSNS:NNNN` per le stelle di neutroni). Le due sottosezioni seguenti confrontano il modello con una waveform NR per ciascun regime.
+> **What is SXS?** The *Simulating eXtreme Spacetimes* project ([black-holes.org](https://www.black-holes.org/)) is a multi-university collaboration (Caltech, Cornell, CITA, and others) that produces **numerical relativity** (NR) solutions to Einstein’s equations for black hole and neutron star mergers. The public catalog ([data.black-holes.org/waveforms/catalog](https://data.black-holes.org/waveforms/catalog.html)) contains hundreds of reference simulations, each identified by a code (`SXS:BBH:NNNN` for black holes, `SXS:NSNS:NNNN` for neutron stars). The following two subsections compare the model with an NR waveform for each regime.
 
-Qui va messo in chiaro un fatto: **nel catalogo SXS una simulazione mirata su GW170817 non esiste**. Il catalogo pubblico contiene due sole waveform BNS, entrambe configurazioni generiche. Si è quindi presa la più vicina disponibile, **SXS:NSNS:0001**: una BNS a masse uguali e non rotanti ( $m_1 = m_2 = 1{,}4\ M_\odot$ source frame), con massa chirp di $1{,}2188\ M_\odot$ , a circa l'1,8% da quella del detector frame di GW170817 ( $1{,}1975\ M_\odot$ ). Il confronto è costruito di conseguenza: la curva di Peters è calcolata sulla massa chirp di **questa** configurazione, non su quella ufficiale dell'evento e viene messa contro la **sua** relatività numerica. Si misura cioè quanto l'ordine dominante si scosta dalla NR in un sistema BNS quasi identico al nostro. L'ipotesi di lavoro, dichiarata, è che il risultato si trasferisca: dato che il disallineamento di massa chirp vale un sistematico di appena l'1,1% sulla frequenza ( $f \propto \mathcal{M}^{-5/8}$ ), se la waveform SXS di GW170817 esistesse, il confronto reale mostrerebbe con ogni probabilità uno scostamento molto simile a quello riportato qui sotto.
+One fact must be made clear here: **there is no simulation in the SXS catalog specifically targeting GW170817**. The public catalog contains only two NS waveforms, both of which are generic configurations. We therefore selected the closest available one, **SXS:NSNS:0001**: a BNS system with equal, non-rotating masses ($m_1 = m_2 = 1.4\ M_\odot$ in the source frame), with a chirp mass of $1{,}2188\ M_\odot$, approximately 1.8% of that in the detector frame of GW170817 ($1{,}1975\ M_\odot$). The comparison is constructed as follows: the Peters curve is calculated based on the chirp mass of **this** configuration (not the official event value) and is plotted against **its** numerical relativity. In other words, we measure how much the dominant order deviates from NR in a BNS system nearly identical to ours. The stated working hypothesis is that the result is transferable: since the chirp mass misalignment amounts to a systematic error of just 1.1% on the frequency ($f \propto \mathcal{M}^{-5/8}$), if the SXS waveform for GW170817 existed, the actual comparison would in all likelihood show a deviation very similar to the one shown below.
 
-<img src="docs/img/confronto_sxs_gw170817_bns.png" width="700" alt="Confronto GW170817: Peters vs NR SXS:NSNS:0001">
+<IMG src="docs/img/confronto_sxs_gw170817_bns.png">
 
-Il risultato è fisicamente significativo: la formula di Peters **sovrastima sistematicamente** la frequenza del chirp rispetto alla soluzione della relatività numerica, con uno scarto che cresce dal 9,5% a $\tau = -40$ ms fino a superare il 100% nell'ultimo millisecondo (NR a ~994 Hz contro i ~1.769 Hz di Peters), per una media del **18,69%** lungo gli ultimi 40 ms prima del merger. La NR cresce più lentamente perché include contributi fisici che Peters, fermo all'ordine dominante, ignora: in primo luogo gli **effetti mareali** (la deformabilità della materia delle stelle di neutroni rallenta l'inspiral rispetto alla dinamica punto-massa), i termini PN conservativi di ordine superiore e il regime non perturbativo vicino al contatto.
+The result is physically significant: Peters’ formula **systematically overestimates** the chirp frequency compared to the numerical relativity solution, with a discrepancy that increases from 9.5% at $\tau = -40$ ms to over 100% in the last millisecond (NR at ~994 Hz versus Peters’ ~1,769 Hz), for an average of **18.69%** over the last 40 ms before the merger. The NR grows more slowly because it includes physical contributions that Peters, who focuses only on the dominant term, ignores: primarily **tidal effects** (the deformability of neutron star matter slows the inspiral compared to point-mass dynamics), higher-order conservative PN terms, and the non-perturbative regime near contact.
 
-Poiché il modello aderisce a Peters entro lo $0{,}97\%$ ([§6.6](#66-le-prove-confronto-col-dato-reale)), ne segue che anch'esso dista dalla NR BNS di circa la stessa entità. Questo è coerente con la fisica del sistema: i raggi di Schwarzschild delle due stelle di neutroni ( $r_s \approx 4{,}3$ e $3{,}8$ km per le masse del preset) restano una frazione modesta della separazione per tutto il tratto confrontato, dalle centinaia di km dell'inspiral alle poche decine a ridosso del contatto (i raggi visivi sono 12 km ciascuno), quindi il potenziale di Paczyński-Wiita resta molto vicino a quello newtoniano puro e non fornisce informazione aggiuntiva sostanziale rispetto a Peters. Il gap del **~18,7%** tra Peters/simulatore e NR nel regime BNS ha dunque un'origine diversa da quello nel regime BBH ([§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)): non è un effetto di campo forte gravitazionale (catturabile da PW), ma un effetto di **struttura interna della materia** e di ordini PN superiori, inaccessibili al modello attuale. Il quadro dei due regimi è riassunto nel [§6.7](#67-le-due-validazioni-a-confronto).
+Since the model agrees with Peters within $0.97\%$ ([§6.6](#66-the-evidence-comparison-with-actual-data)), it follows that it, too, differs from the BNS NR by approximately the same amount. This is consistent with the physics of the system: the Schwarzschild radii of the two neutron stars ($r_s \approx 4.3$ and $3.8$ km for the preset masses) remain a modest fraction of the separation throughout the compared range, from the hundreds of km during inspiral to the few tens of km near contact (the visual radii are 12 km each), so the Paczyński-Wiita potential remains very close to the pure Newtonian potential and does not provide any substantial additional information compared to Peters. The **~18.7%** gap between Peters/simulator and NR in the BNS regime therefore has a different origin than that in the BBH regime ([§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity)): it is not a strong gravitational field effect (capturable by PW), but rather an effect of the **internal structure of matter** and of higher PN orders, which are inaccessible to the current model. The overview of the two regimes is summarized in [§6.7](#67-comparing-the-two-validations).
 
-#### 6.6.2 Lo scenario BBH (GW150914): confronto con la relatività numerica SXS
+#### 6.6.2 The BBH scenario (GW150914): comparison with SXS numerical relativity
 
-La waveform usata qui è **SXS:BBH:0305**, il template NR che meglio riproduce i parametri di GW150914 ( $M_{tot} \approx 70{,}85\ M_\odot$ nel detector frame, rapporto di massa $q \approx 0{,}82$ ). A differenza del caso BNS sopra, qui il confronto è direttamente contro la **curva di frequenza pulita della relatività numerica**: è il riferimento ideale perché è privo di rumore strumentale e rappresenta la soluzione esatta delle equazioni di Einstein per quella configurazione. La curva teorica di **Peters** ( $\mathcal{M} \approx 30{,}62\ M_\odot$ , detector frame) funge da secondo riferimento analitico, ma all'ordine dominante: non include i contributi di ordine superiore formali della post-newtoniana né il regime non perturbativo vicino al merger.
+The waveform used here is **SXS:BBH:0305**, the NR template that best reproduces the parameters of GW150914 ($M_{tot} \approx 70.85\ M_\odot$ in the detector frame, mass ratio $q \approx 0.82$). Unlike the BNS case above, here the comparison is made directly against the **clean frequency curve from numerical relativity**: this is the ideal reference because it is free of instrumental noise and represents the exact solution to Einstein’s equations for that configuration. The theoretical curve by **Peters** ( $\mathcal{M} \approx 30.62\ M_\odot$ , detector frame) serves as a second analytical reference, but only to the dominant order: it does not include the formal higher-order contributions of the post-Newtonian term nor the non-perturbative regime near the merger.
 
-**Il risultato.** La traccia del chirp del simulatore (radar cinematico, $f_{GW} = v_{rel}/(\pi D)$ letta direttamente dalla dinamica orbitale, senza alcuna elaborazione DSP) aderisce alla curva NR con **errore medio dell'1,27%** lungo tutto l'inspiral (da $\tau \approx -1{,}14$ s fino a $\tau \approx -10$ ms), contro un errore medio di Peters vs NR del **7,47%**: il simulatore è quindi *circa sei volte più aderente a NR* di quanto lo sia la formula analitica di Peters all'ordine dominante. La coalescenza simulata avviene in **52,034 s**, contro i $\approx 55$ s attesi sia da Peters sia da NR SXS:BBH:0305 dati i parametri di partenza dello scenario (separazione iniziale $D_0 = 4\,000$ km, frequenza orbitale iniziale $\sim 1{,}93$ Hz corrispondente a una $f_{GW}$ iniziale $\sim 3{,}9$ Hz per il sistema con $M_{tot} = 70{,}85\ M_\odot$ detector-frame). I $\sim 3$ s di anticipo del simulatore rispetto al riferimento sono interamente concentrati negli ultimi cicli, dove i contributi non perturbativi accelerano la coalescenza e dove anche la NR stessa lascia il regime PN puro.
+**The result.** The chirp trace from the simulator (kinematic radar, $f_{GW} = v_{rel}/(\pi D)$ read directly from the orbital dynamics, without any DSP processing) agrees with the NR curve with an **average error of 1.27%** throughout the entire inspiral (from $\tau \approx -1.14$ s to $\tau \approx -10$ ms), compared to an average error of **7.47%** for Peters vs. NR: the simulator is therefore *approximately six times closer to NR* than Peters’ analytical formula is at the dominant order. The simulated coalescence occurs in **52.034 s**, compared to the $\approx 55$ s expected by both Peters and NR SXS:BBH:0305 given the scenario’s initial parameters (initial separation $D_0 = 4\,000$ km, initial orbital frequency $\sim 1.93$ Hz corresponding to an initial $f_{GW}$ of $\sim 3.9$ Hz for the system with $M_{tot} = 70.85\ M_\odot$ in the detector frame). The $\sim 3$ s lead of the simulator over the reference is entirely concentrated in the final cycles, where non-perturbative contributions accelerate coalescence and where the NR itself also departs from the pure PN regime.
 
-<img src="docs/img/confronto_sxs_gw150914.png" width="700" alt="Confronto GW150914: simulatore vs NR SXS:BBH:0305 vs Peters">
+<IMG src="docs/img/confronto_sxs_gw150914.png">
 
-**Figura, vista globale dell'ultimo secondo di inspiral.** I punti rossi del simulatore sono visivamente sovrapposti alla curva verde della NR (SXS:BBH:0305) per quasi tutta la traccia. La curva grigia tratteggiata di Peters è sistematicamente sopra entrambe, perché trascura i contributi di ordine superiore che NR include e il simulatore cattura implicitamente attraverso la combinazione di 2.5PN + Paczyński-Wiita + bypass causale.
+**Figure: Overview of the last second of inspiral.** The red points from the simulator visually overlap with the green curve from the NR (SXS:BBH:0305) for almost the entire trace. Peters’ gray dashed curve lies consistently above both, because it neglects the higher-order contributions that NR includes and that the simulator implicitly captures through the combination of 2.5PN + Paczyński-Wiita + causal bypass.
 
-<img src="docs/img/confronto_sxs_gw150914_zoom.png" width="700" alt="Zoom sull'ultimo segmento di inspiral di GW150914">
+<IMG src="docs/img/confronto_sxs_gw150914_zoom.png" width="700" alt="Zoom on the final inspiral segment of GW150914">
 
-**Il limite residuo: l'ultimo millisecondo.** L'aderenza del modello alla NR è strutturalmente buona ( $1{,}27\%$ in media) per tutto l'inspiral e il modello cattura non solo l'ordine dominante di Peters, ma anche, implicitamente, una porzione significativa dei contributi di ordine superiore. Resta un confine non valicato, ben dentro l'ultimo millisecondo prima del merger, dove la dinamica entra nel regime non perturbativo: qui nessuna combinazione PN classica converge e per descriverla servono tecniche di relatività numerica vera o modelli surrogati calibrati sulla NR. È il confine dichiarato del progetto ed è il punto in cui servirebbe la collaborazione di un esperto di relatività per capire se l'ambiente ha il potenziale per divenire un modello surrogato alternativo in scenari specifici, a masse comparabili e spin nullo (vedi Roadmap nel README).
+**The residual limit: the last millisecond.** The model’s agreement with NR is structurally good ( $1.27\%$ on average) throughout the entire inspiral, and the model captures not only the dominant Peters term but also, implicitly, a significant portion of the higher-order contributions. There remains an uncrossed boundary, well within the last millisecond before the merger, where the dynamics enter the non-perturbative regime: here, no classical PN combination converges, and to describe it, one needs techniques of proper numerical relativity or surrogate models calibrated to NR. This is the stated boundary of the project and the point at which the collaboration of a relativity expert would be needed to understand whether the environment has the potential to become an alternative surrogate model in specific scenarios, with comparable masses and zero spin (see Roadmap in the README).
 
-### 6.7 Le due validazioni a confronto
+### 6.7 Comparing the Two Validations
 
-I confronti dei [§6.6.1](#661-lo-scenario-bns-gw170817-peters-vs-relatività-numerica-sxs) e [§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs) producono risultati qualitativamente diversi dallo stesso motore parameter-free:
+The comparisons in [§6.6.1](#661-the-bns-scenario-gw170817-peters-vs-sxs-numerical-relativity) and [§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity) yield qualitatively different results from the same parameter-free engine:
 
-| Scenario | Benchmark NR | Sim vs Peters | Peters vs NR | Sim vs NR |
+| Scenario | NR Benchmark | Sim vs. Peters | Peters vs. NR | Sim vs. NR |
 |---|---|---|---|---|
-| **BNS** (GW170817) | SXS:NSNS:0001 | 0,97% | **18,69%** | **~18%** |
-| **BBH** (GW150914) | SXS:BBH:0305 | 6,2% | 7,47% | **1,27%** |
+| **BNS** (GW170817) | SXS:NSNS:0001 | 0.97% | **18.69%** | **~18%** |
+| **BBH** (GW150914) | SXS:BBH:0305 | 6.2% | 7.47% | **1.27%** |
 
-Nel primo caso il simulatore converge a Peters, ma entrambi distano dalla NR di circa il 18,7%. Nel secondo il simulatore *si avvicina* alla NR molto più di quanto lo faccia Peters. La lettura più semplice riguarda il peso del **potenziale di Paczyński-Wiita** nei due regimi.
+In the first case, the simulator converges to Peters, but both are about 18.7% away from the NR. In the second case, the simulator *comes much closer* to the NR than Peters does. The simplest interpretation concerns the weight of the **Paczyński-Wiita potential** in the two regimes.
 
-**Cosa è realmente attivo in queste due simulazioni, oltre al 2.5PN.** Il motore ha più meccanismi legati al regime relativistico che possono innestarsi indipendentemente. È utile citare nuovamente ed elencare quali lo fanno davvero in queste due validazioni:
+**What is actually active in these two simulations, besides the 2.5PN?** The engine has multiple mechanisms related to the relativistic regime that can engage independently. It is useful to mention them again and list which ones are actually active in these two validations:
 
-| Meccanismo | BNS ([§6.6.1](#661-lo-scenario-bns-gw170817-peters-vs-relatività-numerica-sxs)) | BBH ([§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)) | Soglia / condizione |
+| Mechanism | BNS ([§6.6.1](#661-the-bns-scenario-gw170817-peters-vs-sxs-numerical-relativity)) | BBH ([§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity)) | Threshold / Condition |
 |---|:---:|:---:|---|
-| Potenziale di Paczyński-Wiita | Sì, ma $\approx$ Newton ( $r_s \ll r$ ) | **Sì, attivo** ( $r_s/r$ non trascurabile) | sempre presente, effetto scala con $r_s/r$ |
-| Reazione di radiazione 2.5PN | **Sì** | **Sì** | $v_{rel} > 0{,}1c$ e vicinanza ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)) |
-| Dead reckoning di 2° ordine | **Sostituito dal presente** | **Sostituito dal presente** | L'aberrazione residua numerica del Taylor disperderebbe energia mimando il 2.5PN. Il bypass forza la posizione esatta per evitare questo "doppio attrito" spurio ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)) |
-| Ritardo causale nel calcolo della forza | **Sì (Causality ON)** | **Sì (Causality ON)** | La *direzione* usa la scorciatoia del presente perfetto per eludere l'aberrazione numerica, ma l'**intensità** dell'attrito gravitazionale (2.5PN) continua a leggere le velocità al loro tempo di emissione |
-| Freno relativistico d'inerzia ( $\gamma^{-1}$ sull'accelerazione netta) | **No** (velocità assoluta stimata $\sim 0{,}14$-$0{,}18c$ anche al picco) | **No** (velocità assoluta stimata $\sim 0{,}23$-$0{,}29c$ anche al picco) | soglia a $0{,}707c$ di velocità **assoluta** del corpo che integra ([§3.4](#34-compressione-relativistica-dellaccelerazione)) |
+| Paczyński-Wiita potential | Yes, but $\approx$ Newtonian ($r_s \ll r$) | **Yes, active** ($r_s/r$ not negligible) | always present, scaling effect with $r_s/r$ |
+| 2.5PN radiation reaction | **Yes** | **Yes** | $v_{rel} > 0.1c$ and proximity ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)) |
+| 2nd-order dead reckoning | **Replaced by the present method** | **Replaced by the present method** | The residual numerical Taylor aberration would dissipate energy by mimicking the 2.5PN. The bypass enforces the exact position to avoid this spurious “double friction” ([§3.2](#32-compensation-hybrid-dead-reckoning)) |
+| Causal delay in force calculation | **Yes (Causality ON)** | **Yes (Causality ON)** | The *direction* uses the present perfect shortcut to circumvent the numerical aberration, but the **intensity** of gravitational friction (2.5PN) continues to read velocities at their time of emission |
+| Relativistic inertial braking ($\gamma^{-1}$ on net acceleration) | **No** (estimated absolute velocity $\sim 0.14$-$0.18c$ even at peak) | **No** (estimated absolute velocity $\sim 0.23$-$0.29c$ even at the peak) | threshold at $0{,}707c$ for the **absolute** velocity of the integrating body ([§3.4](#34-relativistic-compression-of-acceleration)) |
 
-**Nel regime BNS**, i raggi di Schwarzschild delle due stelle di neutroni sono piccoli ( $r_s \approx 4{,}3$ e $3{,}8$ km per le masse del preset) rispetto a una separazione che scende dalle centinaia di km dell'inspiral alle poche decine al contatto: in quel dominio il potenziale PW resta molto vicino a quello newtoniano puro e il simulatore riproduce Peters, né più né meno. Il gap del **~18,7%** tra Peters/simulatore e la NR va quindi cercato altrove: negli **effetti mareali** della materia delle stelle di neutroni e nei termini PN di ordine superiore, nessuno dei quali è rappresentato nel modello attuale (né in Peters né nel potenziale PW, che descrive geometria del vuoto, non struttura della materia).
+**In the BNS regime**, the Schwarzschild radii of the two neutron stars are small ( $r_s \approx 4.3$ and $3.8$ km for the preset masses) relative to a separation that decreases from hundreds of km during inspiral to a few tens of km at contact: in that regime, the PW potential remains very close to the pure Newtonian potential, and the simulator reproduces Peters’ results exactly. The **~18.7%** discrepancy between Peters/the simulator and the NR must therefore be sought elsewhere: in the **tidal effects** of the neutron stars’ matter and in higher-order PN terms, none of which are represented in the current model (neither in Peters nor in the PW potential, which describes the geometry of a vacuum, not the structure of matter).
 
-**Nel regime BBH**, i raggi di Schwarzschild sono due ordini di grandezza più grandi ( $r_s \approx 106$ e $86$ km) e nell'ultimo secondo di inspiral, quando la separazione scende sotto i $\sim 500$ km, il potenziale PW si discosta sensibilmente da quello newtoniano. Due proprietà del potenziale sono plausibilmente all'origine del miglior accordo con la NR: il gradiente più ripido di $1/r^2$ vicino al centro e l'esistenza di un'ultima orbita circolare stabile a $r = 3\,r_s$ (l'ISCO), che porta il sistema a un plunge diretto non previsto da Peters.
+**In the BBH regime**, the Schwarzschild radii are two orders of magnitude larger ($r_s \approx 106$ and $86$ km), and in the last second of inspiral, when the separation drops below $\sim 500$ km, the PW potential deviates appreciably from the Newtonian potential. Two properties of the potential are plausibly responsible for the better agreement with NR: the steeper gradient of $1/r^2$ near the center and the existence of a final stable circular orbit at $r = 3\,r_s$ (the ISCO), which leads the system to a direct plunge not predicted by Peters.
 
-Il quadro complessivo: nel regime BNS il modello resta all'ordine dominante e lo scarto dalla NR ha probabile origine nella fisica della materia; nel regime BBH il potenziale PW introduce qualcosa di più della gravità newtoniana pura e questo qualcosa avvicina il risultato alla NR. Se e quanto ciò equivalga a "catturare" specifici contributi post-newtoniani di ordine superiore è una domanda che eccede le competenze dell'autore e resta aperta alla verifica di chi abbia formazione in relatività numerica.
+The overall picture: in the BNS regime, the model remains the dominant term, and the discrepancy with NR likely originates in the physics of matter; in the BBH regime, the PW potential introduces something more than pure Newtonian gravity, and this “something” brings the result closer to NR. Whether and to what extent this amounts to “capturing” specific higher-order post-Newtonian contributions is a question that exceeds the author’s expertise and remains open to verification by those trained in numerical relativity.
 
 ---
 
-## 7. La matematica delle heatmap
+## 7. The Mathematics of Heatmaps
 
-Tutte le heatmap calcolano, per ogni pixel, un campo derivato dalle sorgenti. Qui le sei famiglie.
+All heatmaps calculate, for each pixel, a field derived from the sources. Here are the six families.
 
-### 7.1 Potenziale scalare Φ
+### 7.1 Scalar potential Φ
 
-La somma dei contributi causali di tutti i corpi, con la correzione di Liénard-Wiechert del [§5](#5-deformazione-di-liénard-wiechert) per le sorgenti rapide. Visualizza il pozzo di potenziale e le sue deformazioni. Come da convenzione dichiarata in apertura, il valore fisico è $\Phi = -G\sum_k M_k/r_k$ (negativo, quello che restituisce il doppio-click). Il renderer mappa la magnitudine $\sum_k M_k/r_k$ , senza $G$ né segno, perché per la scala cromatica sono fattori ininfluenti.
+The sum of the causal contributions of all bodies, with the Liénard-Wiechert correction from [§5](#5-liénard-wiechert-deformation) for fast sources. It visualizes the potential well and its deformations. As per the convention stated at the beginning, the physical value is $\Phi = -G\sum_k M_k/r_k$ (negative; this is what a double-click returns). The renderer maps the magnitude $\sum_k M_k/r_k$, without $G$ or the sign, because these factors are irrelevant for the color scale.
 
 <div align="center">
-  <img src="docs/img/solar_system_1.png" width="600" alt="Media non trovato">
+  <img src="docs/img/solar_system_1.png" width="600" alt="Media not found">
 </div>
 
-Nella figura si osserva la classica topografia dei primi pianeti del sistema solare in modalità $\Phi$ ("phi mode"). A rendere speciale questa visualizzazione è la sua interazione con l'informazione gravitazionale a velocità finita $c$ : in vari scenari o tramite interazioni in-game è possibile visualizzare i fronti d'onda comprimersi o espandersi, la sezione 2D del **[cono di luce di §2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski)** resa visibile quando un corpo appare o scompare di colpo. Per un'analisi dettagliata di questa distorsione si rimanda al capitolo [§5](#5-deformazione-di-liénard-wiechert), dedicato alla deformazione di Liénard-Wiechert e alla contrazione di Lorentz.
+The figure shows the classic topography of the inner planets of the solar system in $\Phi$ mode (“phi mode”). What makes this visualization special is its interaction with gravitational information traveling at finite speed $c$: in various scenarios or through in-game interactions, it is possible to observe wavefronts compressing or expanding, the 2D cross-section of the **[light cone from §2.1](#21-the-light-cone-and-the-minkowski-diagram)**, which becomes visible when a body suddenly appears or disappears. For a detailed analysis of this distortion, see Chapter [§5](#5-liénard-wiechert-deformation), dedicated to the Liénard-Wiechert deformation and Lorentz contraction.
 
-### 7.2 Variazione temporale dΦ/dt
+### 7.2 Time derivative dΦ/dt
 
-La grandezza target è la derivata parziale del potenziale nel tempo. Per una sorgente puntiforme in moto, con la convenzione fisica $\Phi = -GM/r$ , derivando rispetto al tempo (la distanza cambia al rate $\dot{r} = -v_{rad}$ , dove $v_{rad}$ è la componente radiale della velocità, positiva in avvicinamento):
+The target quantity is the partial derivative of the potential with respect to time. For a moving point source, with the physical convention $\Phi = -GM/r$, differentiating with respect to time (the distance changes at a rate of $\dot{r} = -v_{rad}$, where $v_{rad}$ is the radial component of the velocity, positive as the object approaches):
 
 $$\frac{\partial \Phi}{\partial t} = \frac{GM}{r^2}\dot{r} = -\frac{GM\,v_{rad}}{r^2}$$
 
-In avvicinamento il pozzo si approfondisce ( $\partial\Phi/\partial t < 0$ ), in allontanamento si rilassa. Il kernel di rendering calcola la stessa grandezza come magnitudine con segno cinematico, $M\,v_{rad}/r^2$ : stesso contenuto informativo, segno ribaltato per pura convenzione di visualizzazione. Sommata su tutti i corpi e colorata con scala divergente (blu per il lato in avvicinamento, cioè dove il pozzo si approfondisce; rosso per il lato in allontanamento), la heatmap mette in evidenza *il movimento del campo* attorno a ogni sorgente. La scala di sensibilità di base è tarata sulla massa più grande presente nello scenario (così tutti i corpi appaiono in proporzione, dal Sole al granello) e l'utente può comprimerla o esploderla a piacere via fader.
+As the body approaches, the potential well deepens ($\partial\Phi/\partial t < 0$); as it moves away, the potential well flattens. The rendering kernel calculates the same quantity as a magnitude with a kinematic sign, $M\,v_{rad}/r^2$: the same information content, but with the sign reversed purely for visualization purposes. Summed over all bodies and colored with a divergent scale (blue for the approaching side, i.e., where the well deepens; red for the receding side), the heatmap highlights *the motion of the field* around each source. The base sensitivity scale is calibrated to the largest mass present in the scene (so that all bodies appear in proportion, from the Sun to a speck), and the user can compress or expand it at will using a fader.
 
-#### Showcase: dipolo del corpo singolo e spirali della coppia in inspiral
+#### Showcase: single-body dipole and spirals of the pair in inspiral
 
-Sono i due pattern visivi che la $d\Phi/dt$ mostra più chiaramente e affiancarli aiuta a capire perché le "onde" **visibili in $d\Phi/dt$** non sono onde gravitazionali tensoriali vere ([§7.7](#77-la-natura-delle-onde-del-simulatore-livelli-di-astrazione)): qui siamo in un campo scalare propagato causalmente e per una proiezione tensoriale del quadrupolo (più fedele alla simmetria delle onde reali) c'è invece la heatmap **GW Strain** di [§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare). La topografia a **dipolo** per il corpo singolo è reale: la derivata temporale del potenziale monopolare in movimento genera matematicamente un campo dipolare ( $\propto \cos\theta/r^2$ ). Le **spirali** della coppia binaria sono invece un'analogia morfologica: esse riproducono visivamente la propagazione ondulatoria e il chirp delle onde gravitazionali reali, ma la loro natura fisica resta quella di un campo di dipolo scalare rotante, mentre per la reale simmetria di quadrupolo di spin-2 serve lo strain tensoriale ([§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare)).
+These are the two visual patterns that $d\Phi/dt$ displays most clearly, and comparing them side by side helps explain why the “waves” **visible in $d\Phi/dt$** are not true tensor gravitational waves ([§7.7](#77-the-nature-of-the-simulators-waves-levels-of-abstraction)): Here we are dealing with a causally propagated scalar field, whereas for a tensor projection of the quadrupole (which more faithfully reflects the symmetry of real waves), we have the **GW Strain** heatmap from [§7.6](#76-projected-strain-gw-quadrupole-strain). The **dipole** topography for a single body is real: the time derivative of the moving monopolar potential mathematically generates a dipole field ( $\propto \cos\theta/r^2$ ). The **spirals** of the binary pair, on the other hand, are a morphological analogy: they visually reproduce the wave propagation and chirp of real gravitational waves, but their physical nature remains that of a rotating scalar dipole field, whereas the actual spin-2 quadrupole symmetry requires the strain tensor ([§7.6](#76-projected-strain-gw-quadrupole-strain)).
 
 
-| Dipolo del corpo singolo in moto | Spirali della coppia binaria |
+| Single-body dipole in motion | Spirals of the binary pair |
 |:---:|:---:|
-| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media non trovato"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media non trovato"> |
-| Il pozzo trasla con la sorgente: il lato in avvicinamento al pixel diventa blu, quello in allontanamento rosso. È il **dipolo che si sposta**, non radiazione. Nell'esempio Giove orbita a velocità stabile (≈ 13 km/s) e il suo dipolo accompagna il moto, ruotando con esso; attorno, in ordine le lune: Amaltea, Io, Europa, Ganimede, Callisto. Anche le lune maggiori possiedono il proprio dipolo che si fonde con quello di Giove, ma a causa dell'inquadratura di visualizzazione molto dezoomata non sono risolvibili nella GIF dimostrativa. La sensibilità è tarata sulla massa massima dello scenario (il Sole in questo caso) e un selettore (fader) permette all'utente di scalare questo rapporto a piacimento, estendendo e riducendo luminosità ed estensione dei dipoli in modo proporzionato. | Scenario: *Stelle di Neutroni Binarie, Orbita Stabile*, velocità orbitale: 1580 km/s, inquadratura camera $\approx$ 2 AU $\times$ 2 AU, velocità simulazione: 40 s/s. Due stelle di neutroni mediamente massicce (1,5 masse solari) orbitano a una distanza di sicurezza di 40.000 km (nessun merger imminente). È proprio grazie alla causalità (la velocità finita $c$ di propagazione dell'informazione) che i dipoli dei due corpi in moto non si cancellano a distanza, ma vengono ritardati rispetto a ciascun pixel dello schermo, avvitandosi in un pattern a spirale pienamente emergente. |
+| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media not found"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media not found"> |
+| The well moves with the source: the side approaching the pixel turns blue, the side moving away turns red. It is the **dipole that moves**, not radiation. In this example, Jupiter orbits at a constant speed (≈ 13 km/s) and its dipole accompanies the motion, rotating with it; surrounding it, in order, are the moons: Amalthea, Io, Europa, Ganymede, and Callisto. The larger moons also have their own dipoles that merge with Jupiter’s, but due to the highly zoomed-out view, they are not resolvable in the demonstration GIF. The sensitivity is calibrated to the maximum mass in the scenario (the Sun in this case), and a slider allows the user to adjust this ratio as desired, proportionally increasing or decreasing the brightness and size of the dipoles. | Scenario: *Binary Neutron Stars, Stable Orbit*, orbital velocity: 1580 km/s, camera field of view $\approx$ 2 AU $\times$ 2 AU, simulation speed: 40 s/s. Two moderately massive neutron stars (1.5 solar masses) orbit at a safe distance of 40,000 km (no imminent merger). It is precisely thanks to causality (the finite speed $c$ at which information propagates) that the dipoles of the two moving bodies do not cancel each other out at a distance, but are retarded relative to each pixel on the screen, spiraling into a fully emergent spiral pattern. |
 
 
 > [!NOTE]
-> **Una nota sulla causalità del rendering.** Questa heatmap, insieme alla mappa scalare $\Phi$ ([§7.1](#71-potenziale-scalare-φ)) e alla GW Strain ([§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare)), è una delle tre del simulatore a essere **interamente causali**: ogni pixel risolve il tempo di volo $r/c$ per ciascuna sorgente e legge il suo stato all'istante di emissione, non quello presente. Le tre restanti (Tidal, Roche e Lagrange Hunter, trattate qui a seguire) sono invece istantanee: interpretano la geometria locale del campo, non la sua propagazione. È proprio questa causalità a far emergere il fenomeno visivamente più complesso dell'intero progetto, le spirali e i fronti d'onda. Il *come* l'intero sistema sia stato reso causale a costo $O(1)$ per lookup, mantenendo 60 fps anche con storiche profonde anni-luce, è frutto della struttura **DOD/JIT** e dell'architettura a **ring buffer LOD a 3 livelli**: la trattazione completa è in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md), in particolare nel **[§2 : Il Ring Buffer e lo storico delle posizioni](ARCHITECTURE_DEEP_DIVE.md#2-il-ring-buffer-e-lo-storico-delle-posizioni)**.
+> **A note on the causality of the rendering.** This heatmap, along with the scalar map $\Phi$ ([§7.1](#71-scalar-potential-φ)) and the GW Strain ([§7.6](#76-projected-strain-gw-quadrupole-strain)), is one of the three in the simulator that is **entirely causal**: each pixel calculates the time of flight $r/c$ for each source and reads its state at the moment of emission, not its current state. The remaining three (Tidal, Roche, and Lagrange Hunter, discussed below) are, in contrast, instantaneous: they interpret the local geometry of the field, not its propagation. It is precisely this causality that gives rise to the visually most complex phenomenon of the entire project: the spirals and wavefronts. The *how* the entire system was made causal at a cost of $O(1)$ per lookup, while maintaining 60 fps even with light-year-deep histories, is the result of the **DOD/JIT** structure and the **3-level LOD ring buffer** architecture: The complete discussion can be found in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md), specifically in **[§2: The Ring Buffer and the position history](ARCHITECTURE_DEEP_DIVE.md#2-the-ring-buffer-and-the-position-history)**.
 
-### 7.3 Stress di marea (e una nota sull'Hessiana)
+### 7.3 Tidal Stress (and a Note on the Hessian)
 
-**Cos'è una "marea" in astrofisica.** Questa heatmap è chiamata **Tidal Stress** nell'UI (mappa tidale o stress di marea). In astrofisica si chiama **forza di marea** la differenza di gravità sentita da due punti di un corpo esteso vicino a un attrattore. È ciò che alza gli oceani della Terra dal lato rivolto alla Luna ed è anche ciò che "spaghettifica" un oggetto in caduta verso un buco nero (lo stira nella direzione radiale e lo comprime in quella trasversa). La heatmap quantifica questo effetto misurando, punto per punto, il **massimo sforzo di taglio** del campo gravitazionale.
+**What is a “tide” in astrophysics?** This heatmap is called **Tidal Stress** in the UI (tidal map or tidal stress). In astrophysics, the **tidal force** is the difference in gravity experienced by two points on an extended body near an attractor. This is what causes the Earth’s oceans to rise on the side facing the Moon, and it is also what “spaghettifies” an object falling toward a black hole (stretching it in the radial direction and compressing it in the transverse direction). The heatmap quantifies this effect by measuring, point by point, the **maximum shear stress** of the gravitational field.
 
-Le due heatmap basate sulla curvatura del campo (questa e la topologia di Roche) usano l'**Hessiana** del potenziale. Intuitivamente potremmo dire che se il gradiente $\nabla\Phi$ dice *in che direzione e quanto forte* tira la gravità in un punto, l'Hessiana dice *come cambia quel tiro* spostandosi di poco: è la matrice delle derivate seconde
+The two heatmaps based on the field’s curvature (this one and the Roche topology) use the **Hessian** of the potential. Intuitively, we could say that while the gradient $\nabla\Phi$ tells us *in which direction and how strongly* gravity pulls at a point, the Hessian tells us *how that pull changes* as we move slightly: it is the matrix of second derivatives
 
 ```math
 H = \begin{pmatrix} \Phi_{xx} & \Phi_{xy} \\ \Phi_{xy} & \Phi_{yy} \end{pmatrix}
 ```
 
-cioè la **curvatura locale** del campo. I termini diagonali $\Phi_{xx}, \Phi_{yy}$ dicono quanto **rapidamente** cambia il tiro spostandosi lungo $x$ o lungo $y$ ; l'incrociato $\Phi_{xy}$ quanto le due direzioni sono accoppiate (spostarsi in $y$ modifica anche il tiro in $x$ ). Da questi stessi tre numeri le tre heatmap basate sulla curvatura estraggono grandezze diverse:
+that is, the **local curvature** of the field. The diagonal terms $\Phi_{xx}, \Phi_{yy}$ indicate how **rapidly** the pull changes as we move along $x$ or along $y$; the off-diagonal term $\Phi_{xy}$ indicates how the two directions are coupled (moving in $y$ also changes the pull in $x$). From these same three numbers, the three curvature-based heatmaps extract different quantities:
 
-| Mappa | Potenziale usato | Cosa fa dell'Hessiana | Risultato |
+| Map | Potential used | What it does to the Hessian | Result |
 |---|---|---|---|
-| **Stress di marea** | gravità pura, istantanea (niente rotazione) | differenza dei suoi **autovalori** | mappa continua di *shear/taglio* |
-| **Topologia di Roche** ([§7.4](#74-topologia-di-roche-il-segno-del-determinante)) | efficace co-rotante | il **segno del determinante** $D$ (ribaltato dal centrifugo) | **lobi continui** |
-| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)) | efficace co-rotante | la sua **inversa** $H^{-1}\nabla\Phi$ | **5 punti isolati** L1–L5 |
+| **Tidal stress** | pure, instantaneous gravity (no rotation) | difference of its **eigenvalues** | continuous *shear* map |
+| **Roche topology** ([§7.4](#74-roche-topology-the-sign-of-the-determinant)) | effective co-rotating | the **sign of the determinant** $D$ (inverted by the centrifugal force) | **continuous Roche lobes** |
+| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)) | co-rotating effective | its **inverse** $H^{-1}\nabla\Phi$ | **5 isolated points** L1–L5 |
 
-Procediamo per grado di complessità crescente. Cominciamo dalla più semplice, la marea.
+Let’s proceed in order of increasing complexity. We’ll start with the simplest case, the tidal potential.
 
-Per un singolo corpo l'Hessiana del potenziale $\Phi = -GM/r$ vale:
+For a single body, the Hessian of the potential $\Phi = -GM/r$ is given by:
 
 $$H_{ij} = G m \left(\frac{\delta_{ij}}{r^3} - \frac{3\,x_i x_j}{r^5}\right)$$
 
-dove gli indici $i, j$ scorrono sulle due coordinate del piano ( $x$ e $y$ ), $x_i$ è la $i$-esima componente del vettore che va dal corpo al punto, $r$ è la distanza e $\delta_{ij}$ è il **delta di Kronecker** (un simbolo che vale 1 se $i = j$ o 0 altrimenti). In chiaro, le tre componenti sono:
+where the indices $i, j$ run over the two coordinates of the plane ($x$ and $y$), $x_i$ is the $i$-th component of the vector from the body to the point, $r$ is the distance, and $\delta_{ij}$ is the **Kronecker delta** (a symbol that equals 1 if $i = j$ or 0 otherwise). In plain terms, the three components are:
 
 $$\Phi_{xx} = Gm\left(\frac{1}{r^3} - \frac{3x^2}{r^5}\right),\qquad \Phi_{yy} = Gm\left(\frac{1}{r^3} - \frac{3y^2}{r^5}\right),\qquad \Phi_{xy} = -\frac{3Gm\,xy}{r^5}$$
 
-Lo stress di marea visualizzato è la **differenza dei due autovalori** dell'Hessiana 2×2:
+The tidal stress shown is the **difference between the two eigenvalues** of the 2×2 Hessian:
 
 $$\sigma = \sqrt{(\Phi_{xx} - \Phi_{yy})^2 + 4\Phi_{xy}^2}$$
 
-proporzionale alla parte deviatorica del tensore e misura il massimo **sforzo di taglio** (shear): quanto un corpo verrebbe stirato in una direzione e compresso in quella ortogonale. Una singola derivata seconda *scalare* (per esempio la radiale $\partial^2\Phi/\partial r^2$ ) non basterebbe: la marea è **direzionale** e l'asimmetria tra stiramento e compressione vive nella *differenza* tra gli autovalori, non in un singolo numero. Serve quindi il tensore completo, non una sua componente né la sua traccia.
+proportional to the deviatoric part of the tensor and measures the maximum **shear stress**: how much a body would be stretched in one direction and compressed in the orthogonal direction. A single *scalar* second derivative (for example, the radial $\partial^2\Phi/\partial r^2$) would not suffice: the tide is **directional**, and the asymmetry between stretching and compression lies in the *difference* between the eigenvalues, not in a single number. Therefore, the complete tensor is needed, not just one of its components or its trace.
 
-**Come la heatmap interpreta lo shear.** La $\sigma$ della formula sopra ha unità di $\text{s}^{-2}$ , e il kernel non la riscala affatto: quel numero grezzo *è già*, senza alcuna conversione, un gradiente di accelerazione in $\text{m/s}^2$ per **metro** (il fattore 1000 tra km e m si semplifica da solo, essendo presente sia al numeratore sia al denominatore). Il kernel ne mostra il **$\log_{10}$**, perché lo shear copre più di **11 ordini di grandezza** dal vuoto profondo dello spazio fino all'orlo di un buco nero. Il colore mappa fasce di intensità calibrate su soglie fisiche reali (limiti di Roche per diversi materiali, fratturazione di croste rocciose o di ghiaccio, spaghettificazione), come riportato dalla legenda integrata nell'UI del simulatore (tasto `M` per aprirla):
+**How the heatmap interprets shear.** The $\sigma$ in the formula above has units of $\text{s}^{-2}$, and the kernel does not rescale it at all: that raw number *is already*, without any conversion, an acceleration gradient in $\text{m/s}^2$ per **meter** (the factor of 1000 between km and m simplifies out on its own, since it is present in both the numerator and the denominator). The kernel displays the **$\log_{10}$** of this value, because shear spans more than **11 orders of magnitude**, from the deep vacuum of space to the edge of a black hole. The color maps intensity ranges calibrated to real physical thresholds (Roche limits for various materials, fracturing of rock or ice crusts, spaghettification), as shown in the legend integrated into the simulator’s UI (press the `M` key to open it):
 
-| Colore | Range $\log_{10}$ | Fascia fisica | Cosa significa |
+| Color | $\log_{10}$ Range | Physical Range | What It Means |
 |---|:---:|---|---|
-| Bianco | $> 1{,}0$ | **Disruption micro-scala** (vicinanza alla singolarità) | Gradiente estremo. Spaghettificazione letale per la biologia umana, cedimento strutturale di scafi rinforzati. Oltre $10^4$ , dissociazione molecolare. |
-| Rosso | $-6{,}0$ a $1{,}0$ | **Disruption macro-scala** (zona di shear severo) | Stress critico per pianeti nani ad alta densità e asteroidi metallici. I metalli cedono; macrostrutture artificiali di grande taglia collassano sotto il proprio peso. |
-| Giallo | $-7{,}5$ a $-6{,}0$ | **Limite di Roche planetario** (pianeti terrestri e roccia) | Supera la resistenza a trazione di roccia e silicati. Corpi terrestri e lune si fratturano, generando sistemi di anelli planetari permanenti. |
-| Verde | $-8{,}5$ a $-7{,}5$ | **Zona di frattura crostale** (lune di ghiaccio e tettonica) | Soglia di rottura per croste di ghiaccio (es. Europa) e lune porose. Innesca spaccature tettoniche globali ed espone oceani sotto-superficiali. |
-| Ciano | $-10{,}0$ a $-8{,}5$ | **Limite di Roche fragile** (comete e *rubble piles*) | Disruption di materia non legata e comete. In lune solide induce attrito interno estremo e vulcanismo mareale (es. Io). |
-| Blu scuro | $< -10{,}0$ | **Equilibrio orbitale** (spazio sicuro / vuoto) | Ambiente spazialmente piatto. La curvatura gravitazionale differenziale è trascurabile, nessun effetto tidale percepibile su macrostrutture o corpi celesti. 
+| White | $> 1.0$ | **Microscale disruption** (proximity to the singularity) | Extreme gradient. Spaghettification lethal to human life; structural failure of reinforced hulls. Above $10^4$, molecular dissociation. |
+| Red | $-6.0$ to $1.0$ | **Macroscale disruption** (severe shear zone) | Critical stress for high-density dwarf planets and metallic asteroids. Metals fail; large-scale artificial macrostructures collapse under their own weight. |
+| Yellow | $-7.5$ to $-6.0$ | **Planetary Roche limit** (terrestrial and rocky planets) | Exceeds the tensile strength of rock and silicates. Terrestrial bodies and moons fracture, generating permanent planetary ring systems. |
+| Green | $-8.5$ to $-7.5$ | **Crustal fracture zone** (ice moons and tectonic moons) | Fracture threshold for ice crusts (e.g., Europa) and porous moons. Triggers global tectonic rifts and exposes subsurface oceans. |
+| Cyan | $-10.0$ to $-8.5$ | **Fragile Roche limit** (comets and *rubble piles*) | Disruption of unbound material and comets. On solid moons, it induces extreme internal friction and tidal volcanism (e.g., Io). |
+| Dark blue | $< -10.0$ | **Orbital equilibrium** (safe space / vacuum) | Spatially flat environment. Differential gravitational curvature is negligible; no perceptible tidal effects on macrostructures or celestial bodies. 
 
-**Showcase: l'estremo bianco, una Pulsar**
+**Showcase: The Extreme White, a Pulsar**
 
-<img src="docs/img/extreme_tidal.png" width="700" alt="Media non trovato">
+<img src="docs/img/extreme_tidal.png" width="700" alt="Media not found">
 
-Inquadratura di circa 10.000 × 10.000 km attorno a una pulsar: le sfumature vanno dal rosso denso della disruption macro-scala fino al bianco accecante della fascia di disruption micro-scala a ridosso del corpo compatto, il puntino ciano al centro.
+A view spanning approximately 10,000 × 10,000 km around a pulsar: the shades range from the dense red of macroscale disruption to the blinding white of the microscale disruption band close to the compact body, the cyan dot at the center.
 
-**Showcase: Sistema di Giove (Europa e Io)**
+**Showcase: Jupiter System (Europa and Io)**
 
-<img src="docs/img/tidal_stress_Io.png" width="800" alt="Media non trovato">
+<img src="docs/img/tidal_stress_Io.png" width="800" alt="Media not found">
 
-In alto a sinistra la luna gioviana **Europa**, immersa nel blu verso il ciano della mappa tidale di Giove. Al centro **Io**, in pieno ciano: è la stessa marea che spiega perché sia il corpo roccioso con maggior attività vulcanica dell'intero sistema solare. Da notare come la heatmap consideri anche lo stress mareale che ciascuna luna genera a sua volta e come essa stessa risulti deformata dall'immersione nella marea di Giove.
+In the upper left is the Jovian moon **Europa**, immersed in the blue-to-cyan hues of Jupiter’s tidal map. In the center is **Io**, in full cyan: it is this same tidal force that explains why it is the most volcanically active rocky body in the entire solar system. Note how the heatmap also accounts for the tidal stress that each moon, in turn, generates, and how the moon itself is deformed by its immersion in Jupiter’s tide.
 
-<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Media non trovato">
+<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Media not found">
 
-> **NdA.** I due lobi neri trasversali che si vedono attorno a ciascuna luna sono punti in cui lo shear $\sigma$ visualizzato si annulla, ma per un motivo **molto diverso** da quello del blu scuro lontano dai corpi. Nel blu lontano, $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ sono tutti piccoli perché il campo è piatto. Nei lobi neri vicini alla luna, al contrario, le singole componenti dell'Hessiana sono **grandi e consistenti** e si combinano in modo che $\Phi_{xx} = \Phi_{yy}$ e $\Phi_{xy} = 0$ : la somma di quadrati $(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2$ va a zero non per assenza di campo, ma perché gli autovalori dell'Hessiana coincidono. La marea lì è localmente **isotropa**: stira allo stesso modo in tutte le direzioni del piano. Questi due punti nascono dall'interferenza geometrica fra il contributo della luna stessa (radiale, simmetrico) e quello di sfondo di Giove (anisotropo, orientato lungo l'asse luna-Giove). Proprio nelle due posizioni trasverse i due tensori si combinano in modo da pareggiare le direzioni principali.
+> **Author’s Note.** The two transverse black lobes visible around each moon are points where the visualized shear $\sigma$ vanishes, but for a **very different** reason than that of the dark blue areas far from the bodies. In the distant blue regions, $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ are all small because the field is flat. In the black lobes near the moon, on the other hand, the individual components of the Hessian are **large and substantial** and combine such that $\Phi_{xx} = \Phi_{yy}$ and $\Phi_{xy} = 0$: the sum of squares $(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2$ vanishes not because of the absence of a field, but because the eigenvalues of the Hessian coincide. The tide there is locally **isotropic**: it stretches equally in all directions within the plane. These two points arise from the geometric interference between the contribution from the moon itself (radial, symmetric) and the background contribution from Jupiter (anisotropic, oriented along the moon-Jupiter axis). Precisely at these two transverse positions, the two tensors combine in such a way as to balance out the principal directions.
 >
-> **Una conferma osservata in simulazione.** Variando la distanza luna-Giove, i lobi si spostano in modo prevedibile: quanto più la luna è immersa nel campo del gigante (cioè vicina a Giove), tanto più i lobi si stringono attorno a essa; quanto più si allontana, tanto più i lobi si dilatano. La regolarità della proporzione suggerisce che ci sia una legge di scala precisa dietro, riconducibile alla struttura della differenza fra le componenti dell'Hessiana. La derivazione quantitativa esula dall'ambito di questa guida e la lascio a un'analisi successiva.
+> **Confirmation observed in simulations.** By varying the Moon-Jupiter distance, the lobes shift in a predictable manner: the more the Moon is immersed in the giant planet’s field (i.e., the closer it is to Jupiter), the more the lobes contract around it; the farther it moves away, the more the lobes expand. The regularity of the proportions suggests that there is a precise scaling law behind this, attributable to the structure of the difference between the components of the Hessian. The quantitative derivation is beyond the scope of this guide, and I will leave it for a subsequent analysis.
 >
-> Su cosa accada nell'equivalente 3D non mi sbilancio: l'ipotesi naturale è che corrisponda a essere *"tagliati" in tutte le direzioni del piano trasverso* invece che lungo un asse preferenziale e quindi a uno stress isotropo intenso anziché nullo, ma è un punto che meriterebbe la conferma di un esperto.
+> I won’t speculate on what happens in the 3D equivalent: the natural hypothesis is that it corresponds to being *“cut” in all directions of the transverse plane* rather than along a preferred axis, and thus to intense isotropic stress rather than none, but this is a point that would warrant confirmation by an expert.
 
 > [!NOTE]
-> **Lettura quantitativa in-simulazione.** Le heatmap non sono solo una visualizzazione: sono ispezionabili con un *doppio-click* su un qualsiasi pixel dello schermo, che restituisce il valore numerico del campo in quel punto dello spazio simulato (potenziale, sua derivata temporale, autovalori del tensore di marea, strain proiettato, a seconda della modalità attiva). Il simulatore è anche uno strumento di misura, non serve estrarre i dati e rielaborarli fuori.
+> **Quantitative in-simulation readings.** Heatmaps are not just a visualization: they can be inspected by *double-clicking* on any pixel on the screen, which returns the numerical value of the field at that point in the simulated space (potential, its time derivative, eigenvalues of the tide tensor, projected strain, depending on the active mode). The simulator is also a measurement tool; there is no need to extract the data and process it externally.
 
-### 7.4 Topologia di Roche (il segno del determinante)
+### 7.4 Roche Topology (the sign of the determinant)
 
-#### 7.4.1 Il potenziale efficace nel sistema co-rotante
+#### 7.4.1 The Effective Potential in the Co-Rotating Frame
 
-È il passo successivo alla marea e introduce un ingrediente nuovo: il **potenziale efficace nel sistema co-rotante**. Per capire perché serve, basta un esperimento concettuale. Se un soggetto si posiziona su una giostra che ruota a velocità angolare $\omega$ e ne descrive la fisica *dall'interno* (cioè nel sistema che ruota con lui), avverte due forze: la gravità solita e una **forza centrifuga** che spinge verso l'esterno. Quella forza non esiste in un sistema inerziale (per chi guarda la giostra da fuori): è un effetto del riferimento rotante, ma per il soggetto è del tutto reale.
+This is the next step beyond the tide and introduces a new element: the **effective potential in the co-rotating frames**. To understand why it is needed, a thought experiment suffices. If a subject stands on a merry-go-round rotating at angular velocity $\omega$ and describes its physics *from the inside* (i.e., in the system rotating with them), they feel two forces: the usual gravity and a **centrifugal force** pushing outward. That force does not exist in an inertial frame (for someone observing the carousel from the outside): it is an effect of the rotating reference frame, but for the person on the carousel, it is entirely real.
 
-Il **potenziale efficace co-rotante** somma esattamente queste due cose: il potenziale gravitazionale dei corpi più il potenziale centrifugo $-\tfrac{1}{2}\omega^2 d^2$ (dove $d$ è la distanza dal baricentro). La velocità angolare $\omega$ del sistema è ricavata cinematicamente dalla **coppia bloccata** (il corpo che l'utente blocca e il suo attrattore dominante), tramite il momento angolare specifico:
+The **co-rotating effective potential** is exactly the sum of these two components: the gravitational potential of the bodies plus the centrifugal potential $-\tfrac{1}{2}\omega^2 d^2$ (where $d$ is the distance from the center of mass). The angular velocity $\omega$ of the system is derived kinematically from the **locked pair** (the body the user locks onto and its dominant attractor), using the specific angular momentum:
 
 $$h = \vec{r}\times\vec{v}_{rel}, \qquad \omega = \frac{h}{r^2}$$
 
-**Momento angolare $h$ e velocità angolare $\omega$ : due cose diverse.** Vale la pena fissarle prima di proseguire, perché tutta la lettura della heatmap si appoggia qui.
+**Angular momentum $h$ and angular velocity $\omega$: two different things.** It’s worth clarifying these before continuing, because the entire interpretation of the heatmap relies on this distinction.
 
-- $h = r^2\omega$ è il **momento angolare specifico** (intuitivamente: lo *slancio rotatorio* del corpo). In un'orbita non perturbata è una quantità **conservata**: non cambia mai, pericentro o apocentro, plunge o circolare. È un'**invariante del corpo**.
-- $\omega = h/r^2$ è la **velocità angolare istantanea** (quanto in fretta sto girando *adesso*). Per un dato $h$ , $\omega$ esplode quando $r$ è piccolo e collassa quando $r$ è grande. È un'**istantanea**.
+- $h = r^2\omega$ is the **specific angular momentum** (intuitively: the body’s *rotational momentum*). In an unperturbed orbit, it is a **conserved** quantity: it never changes, whether at the pericenter or apocenter, in a plunge or circular orbit. It is an **invariance of the body**.
+- $\omega = h/r^2$ is the **instantaneous angular velocity** (how fast I’m spinning *right now*). For a given $h$, $\omega$ skyrockets when $r$ is small and plummets when $r$ is large. It is a **snapshot**.
 
-È letteralmente la **seconda legge di Keplero**: $r^2 \dot\theta = h$ costante, quindi $\dot\theta$ cresce dove $r$ scende. Mercurio al perielio gira veloce, all'afelio rallenta molto, ma il prodotto $r^2\omega$ è sempre lo stesso. La heatmap respira col $\omega$ corrente: nelle orbite eccentriche, la soglia visibile nella heatmap **si sposta in fase con l'eccentricità**. In un'orbita perfettamente circolare, $\omega$ è costante e la soglia è ferma: tutto il moto che vedi nella heatmap *è* la non-circolarità dell'orbita.
+This is literally **Kepler’s second law**: $r^2 \dot\theta = h$ is constant, so $\dot\theta$ increases as $r$ decreases. Mercury spins fast at perihelion and slows down significantly at aphelion, but the product $r^2\omega$ always remains the same. The heatmap “breathes” with the current $\omega$: in eccentric orbits, the threshold visible in the heatmap **shifts in phase with the eccentricity**. In a perfectly circular orbit, $\omega$ is constant and the threshold is fixed: all the motion you see in the heatmap *is* the non-circularity of the orbit.
 
-Il frame ruota quindi come un *disco rigido* alla $\omega$ istantanea e questo cattura proprio la dinamica delle orbite chiuse: nel riferimento co-rotante una luna in orbita circolare è come se fosse ferma e ciò che si vede sono solo le perturbazioni di tutto il resto.
+The frame therefore rotates like a *hard drive* at the instantaneous $\omega$, and this precisely captures the dynamics of closed orbits: in the co-rotating reference frame, a moon in a circular orbit appears to be stationary, and all you see are the perturbations from everything else.
 
-Su questo potenziale, Roche guarda il **segno del determinante** dell'Hessiana, $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ (lo stesso oggetto matematico di [§7.3](#73-stress-di-marea-e-una-nota-sullhessiana), ma calcolato sul potenziale efficace invece che sulla gravità pura).
+For this potential, Roche examines the **sign of the determinant** of the Hessian, $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ (the same mathematical object as in [§7.3](#73-tidal-stress-and-a-note-on-the-hessian), but calculated on the effective potential rather than on pure gravity).
 
-Ed è qui che il centrifugo è protagonista. La sola gravità, vicino a un corpo, dà sempre una **forma iperbolica** ( $D < 0$ , sella locale della superficie potenziale): stira radialmente e comprime trasversalmente. Il termine centrifugo, sommato all'Hessiana, abbassa entrambi gli autovalori; lontano dai corpi, dove la gravità è debole, **domina e ribalta $D$ a positivo**. È esattamente questa transizione di segno a disegnare i lobi.
+And this is where centrifugal force takes center stage. Gravity alone, near a body, always yields a **hyperbolic shape** ( $D < 0$ , a local saddle of the potential surface): it stretches radially and compresses transversely. The centrifugal term, when added to the Hessian, lowers both eigenvalues; far from the bodies, where gravity is weak, **it dominates and flips $D$ to positive**. It is precisely this sign transition that draws the lobes.
 
-> **Una precisazione sulla terminologia.** Quando in questa sezione parliamo di *sella* o *cupola* non intendiamo punti critici isolati (con gradiente zero), ma la **forma locale** della superficie potenziale in *ogni pixel* della regione: tutto il rosso ha curvatura **iperbolica** (forma di sella), tutto il blu ha curvatura **ellittica** (forma di cupola). Il gradiente però è non-nullo quasi ovunque e una particella lasciata ferma in quei pixel **cade o viene scagliata** lungo il gradiente. Solo nei 5 punti di Lagrange si combinano entrambe le proprietà (gradiente zero **e** forma iperbolica o ellittica) ed è questa caratteristica a farne veri *punti critici* (trattati in [§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)).
+> **A clarification on terminology.** When we refer to a *saddle* or *dome* in this section, we do not mean isolated critical points (with zero gradient), but rather the **local shape** of the potential surface at *each pixel* in the region: all the red areas have **hyperbolic** curvature (saddle shape), and all the blue areas have **elliptical** curvature (dome-shaped). However, the gradient is nonzero almost everywhere, and a particle left at rest in those pixels **falls or is propelled** along the gradient. Only at the 5 Lagrange points do both properties (zero gradient **and** hyperbolic or elliptic shape) combine, and it is this characteristic that makes them true *critical points* (discussed in [§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)).
 
-#### 7.4.2 Mappatura cromatica (segno e intensità di $D$ )
+#### 7.4.2 Color Mapping (Sign and Intensity of $D$)
 
-Ogni pixel porta due informazioni. La **tinta** dà il segno di $D$ , cioè la topologia locale. La **saturazione** ne dà l'intensità. Per rendere l'intensità confrontabile in ogni scenario, $D$ viene diviso per $\omega^4$ , la scala naturale del frame co-rotante che ne condivide le unità di misura. La quantità mappata è quindi $\log_{10}(|D|/\omega^4)$ , limitata a $[-3, +3]$ . La rampa parte spenta dove $D \approx 0$ e satura a ridosso dei corpi, dove i termini $1/r^3$ dell'Hessiana esplodono:
+Each pixel carries two pieces of information. The **hue** indicates the sign of $D$, that is, the local topology. The **saturation** indicates its intensity. To make the intensity comparable across all scenarios, $D$ is divided by $\omega^4$, the natural scale of the co-rotating frame that shares its units of measurement. The mapped quantity is therefore $\log_{10}(|D|/\omega^4)$, restricted to $[-3, +3]$. The ramp starts off flat where $D \approx 0$ and saturates near the bodies, where the $1/r^3$ terms of the Hessian explode:
 
-| $D$ | Topologia (forma locale) | Rampa di curvatura ( $t = 0 \to 1$ ) |
+| $D$ | Topology (local shape) | Curvature ramp ( $t = 0 \to 1$ ) |
 |---|---|---|
-| $D < 0$ | iperbolica:  sella locale (dominio gravitazionale) | cremisi $\to$ rosso fuoco $\to$ giallo neon |
-| $D > 0$ | ellittica: cupola locale (dominio centrifugo) | indaco $\to$ blu elettrico $\to$ ciano |
+| $D < 0$ | hyperbolic:  local saddle (gravitational domain) | crimson $\to$ fiery red $\to$ neon yellow |
+| $D > 0$ | elliptic: local dome (centrifugal domain) | indigo $\to$ electric blue $\to$ cyan |
 
-Una particella co-rotante cadrebbe verso l'attrattore in zona *rossa* e verrebbe scagliata verso l'esterno in zona *blu*. Le sfumature dicono quanto in fretta accadrebbe.
+A co-rotating particle would fall toward the attractor in the *red* region and be flung outward in the *blue* region. The shades indicate how quickly this would happen.
 
-**La luminosità.** La luminosità di ogni pixel dipende dal modulo della forza netta $|\nabla\Phi_{\text{eff}}|$ nel punto corrispondente, mappato in scala logaritmica: più la forza è intensa, più il pixel è luminoso, fino al nero dove si annulla. È questa terza informazione, sovrapposta alla tinta, a generare il rilievo plastico percepito a simulazione in corso.
+**Brightness.** The brightness of each pixel depends on the magnitude of the net force $|\nabla\Phi_{\text{eff}}|$ at the corresponding point, mapped on a logarithmic scale: the stronger the force, the brighter the pixel, down to black where it vanishes. It is this third piece of information, superimposed on the hue, that generates the three-dimensional relief perceived during the simulation.
 
-**L'autogravità e gli equilibri rivelati dal nero.** Con autogravità si intende il campo gravitazionale che un corpo genera da sé, distinto da quello dell'attrattore e dal termine centrifugo. Nella mappa, il corpo minore della coppia, possiede una propria sacca rossa di autogravità, ovvero la regione in cui la sua attrazione domina il potenziale efficace locale. Le aree scure appaiono prima di tutto dove la gravità dei due corpi e la centrifuga si compensano; la forza netta si azzera e si generano zone a luminosità zero. In molte configurazioni, due fosse specifiche posizionate sulla retta che collega corpo attratto e attrattore, corrispondono ai punti di Lagrange L1 e L2 (presentati nella nota qui sotto), esattamente dove la sacca di autogravità si **strozza** verso l'attrattore e sul lato opposto, come mostra l'esempio con la Luna nello zoom di [§7.4.4](#744-lettura-combinata-delle-tre-informazioni). L3, L4 e L5 esistono anche qui, ma restano annegati nel bordo a bassa forza tra rosso e blu: per vederli serve il [Lagrange Hunter](#75-lagrange-hunter-determinante-e-hessiana-inversa).
+**Self-gravity and the equilibria revealed by black.** Self-gravity refers to the gravitational field that a body generates on its own, distinct from that of the attractor and from the centrifugal term. In the map, the smaller body of the pair has its own red pocket of self-gravity, that is, the region where its attraction dominates the local effective potential. The dark areas appear primarily where the gravity of the two bodies and the centrifugal force cancel each other out; the net force becomes zero, resulting in zones of zero brightness. In many configurations, two specific wells located on the line connecting the attracted body and the attractor correspond to the Lagrange points L1 and L2 (presented in the note below), exactly where the self-gravity well **narrows** toward the attractor and on the opposite side, as shown in the example with the Moon in the zoom of [§7.4.4](#744-combined-interpretation-of-the-three-data-sets). L3, L4, and L5 also exist here, but they are buried in the low-force boundary between red and blue: to see them, you need the [Lagrange Hunter](#75-lagrange-hunter-determinant-and-inverse-hessian).
 
-**Come è scelta la coppia.** L'utente blocca un corpo e il motore gli affianca il suo attrattore dominante, precalcolato via forza di marea $M/r^3$ , la stessa logica della sfera di Hill. Bloccando Io si ottiene perciò la mappa Io-Giove e non Io-Sole: localmente è Giove a dominare il gradiente.
+**How the pair is chosen.** The user selects a body, and the engine pairs it with its dominant attractor, precalculated using the tidal force $M/r^3$, following the same logic as the Hill sphere. Selecting Io therefore yields the Io-Jupiter map rather than the Io-Sun map: locally, Jupiter dominates the gradient.
 
 > [!NOTE]
-> **Punti di Lagrange in breve.** Sono i cinque punti del piano dove, nel sistema co-rotante della coppia, una particella di test resterebbe ferma: la gravità dei due corpi e la centrifuga si compensano esattamente. **L1, L2, L3** stanno sull'asse che congiunge i due corpi e sono *selle* (instabili: una piccola perturbazione li allontana). **L4 e L5** giacciono a 60° avanti e dietro il corpo minore, formano triangoli equilateri con i due corpi e sono dinamicamente stabili grazie alla forza di Coriolis: lì vivono i Trojani di Giove. La loro individuazione numerica e visiva è il compito specifico del **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)).
+> **Lagrange points in brief.** These are the five points in the plane where, in the co-rotating frame of the pair, a test particle would remain stationary: the gravity of the two bodies and the centrifugal force exactly cancel each other out. **L1, L2, L3** lie on the axis connecting the two bodies and are *saddles* (unstable: a small perturbation causes them to drift apart). **L4 and L5** lie 60° ahead and behind the smaller body, form equilateral triangles with the two bodies, and are dynamically stable due to the Coriolis force: this is where Jupiter’s Trojans reside. Their numerical and visual identification is the specific task of the **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)).
 
-#### 7.4.3 Overlay [M]: Orbita circolare ideale
+#### 7.4.3 Overlay [M]: Ideal Circular Orbit
 
-Premendo `M` in modalità Topologia di Roche, sul campo viene sovrapposto un **anello continuo color lavanda** centrato sul baricentro: è il raggio a cui il target orbiterebbe **circolarmente** se chiudesse l'orbita con l'$h$ che possiede in quel momento. La formula è quella standard del problema dei due corpi:
+Pressing `M` in Roche Topology mode overlays a **continuous lavender-colored ring** centered on the center of mass: this is the radius at which the target would orbit **circularly** if it were to complete an orbit with the $h$ it possesses at that moment. The formula is the standard one for the two-body problem:
 
 $$D_g = \frac{h^2}{G\,M_{tot}}, \qquad r_g = D_g \cdot \frac{m_{attr}}{M_{tot}}$$
 
-dove $D_g$ è la separazione totale della coppia che chiuderebbe un'orbita circolare con quel valore di $h$ e $r_g$ è la distanza del target dal baricentro su quella stessa orbita. L'anello è l'analogo concettuale dei marker analitici dei punti di Lagrange nel Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)): un riferimento **teorico calcolato** sovrapposto al campo **emergente**, per leggere a colpo d'occhio quanto il sistema è vicino o lontano dall'equilibrio.
+where $D_g$ is the total separation of the pair that would complete a circular orbit with that value of $h$, and $r_g$ is the distance of the target from the center of mass on that same orbit. The ring is the conceptual analogue of the analytical markers of the Lagrange points in Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)): a **theoretically calculated** reference superimposed on the **emerging** field, allowing one to see at a glance how close or far the system is from equilibrium.
 
-**Cosa l'anello dice e come si comporta nei vari scenari:**
+**What the ring indicates and how it behaves in various scenarios:**
 
-| Configurazione | Lettura |
+| Configuration | Interpretation |
 |---|---|
-| Target **sull'** anello | orbita circolare, sistema stabile |
-| Target **dentro** l'anello ( $r < r_g$ ) | eccesso di $h$ rispetto al raggio attuale → il corpo è vicino al proprio pericentro e sta risalendo verso l'apocentro |
-| Target **fuori** dall'anello ( $r > r_g$ ) | deficit di $h$ → il corpo è vicino al proprio apocentro, oppure in caduta |
-| Anello **dentro** l'attrattore | $h$ troppo piccolo per qualsiasi orbita: **plunge garantito**, visibile prima ancora del lancio |
+| Target **on** the ring | circular orbit, stable system |
+| Target **inside** the ring ( $r < r_g$ ) | excess of $h$ relative to the current radius → the body is near its pericenter and is rising toward the apocenter |
+| Target **outside** the ring ( $r > r_g$ ) | $h$ deficit → the body is near its apocenter, or in free fall |
+| Ring **inside** the attractor | $h$ too small for any orbit: **guaranteed plunge**, visible even before launch |
 
-**Come si comporta in tempo reale.** Siccome $h$ è conservato durante un'orbita non perturbata, l'anello è una **guida fissa**: non respira come la soglia rosso/blu. Lo smuovono solo eventi che cambiano $h$ , $M_{tot}$ o la coppia:
-- **Radiazione GW fino alla coalescenza (reazione 2.5PN)**: la radiazione gravitazionale irradia $h$ → l'anello **si stringe a spirale** in tempo reale mentre l'orbita decade.
-- **Cambio attrattore** (es. Terra sostituita da Giove): $M_{tot}$ esplode → l'anello **collassa** dentro il pianeta, plunge annunciato.
-- **Perturbazioni multi-corpo o flyby**: derive lente o salti.
+**How it behaves in real time.** Since $h$ is conserved during an unperturbed orbit, the ring is a **fixed guide**: it does not fluctuate like the red/blue threshold. It is only affected by events that change $h$, $M_{tot}$, or the pairs:
+- **GW radiation until coalescence (2.5PN reaction)**: gravitational radiation affects $h$ → the ring **spirals inward** in real time as the orbit decays.
+- **Attractor change** (e.g., Earth replaced by Jupiter): $M_{tot}$ explodes → the ring **collapses** into the planet, a predicted plunge.
+- **Multi-body perturbations or flybys**: slow drifts or jumps.
 
-In un'orbita pulita e isolata, invece, l'anello resta immobile mentre la soglia rosso/blu del lobo di Roche respira dentro e fuori di esso: la **divergenza istantanea fra i due** è la misura visiva diretta dell'eccentricità.
+In a clean, isolated orbit, however, the ring remains stationary while the red/blue boundary of the Roche lobe expands and contracts around it: the **instantaneous divergence between the two** is the direct visual measure of the eccentricity.
 
-<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Media not found"></div>
 
-Sistema Luna-Terra: la Luna è al suo apogeo a più di 400.000 km dalla Terra e infatti ha superato l'anello dell'orbita circolare ideale. Gli altri dettagli che emergono verranno discussi nel capitolo successivo.
+Earth-Moon system: The Moon is at its apogee, more than 400,000 km from Earth, and has in fact crossed the ring of the ideal circular orbit. The other details that emerge will be discussed in the next chapter.
 
-<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Media not found"></div>
 
-L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quell'$h$ , risulta essere vicina al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale forte che potrebbe frammentarla, il tutto in caduta libera (*plunge*) verso il centro di Giove.
+The animation shows a *what-if* experiment: replacing Earth with Jupiter and observing the Moon’s behavior as a result. The Moon, retaining its original angular momentum (calibrated for Earth), finds itself in the worst-case scenario: its new ideal orbit, with that $h$, turns out to be close to the center of Jupiter. Furthermore, it finds itself immersed in and overwhelmed almost immediately by a strong tidal field that could break it apart, all while in free fall (*plunge*) toward the center of Jupiter.
 
-#### 7.4.4 Lettura combinata delle tre informazioni
+#### 7.4.4 Combined Interpretation of the Three Data Sets
 
-Questa è l'unica heatmap del simulatore che codifica **tre quantità fisiche distinte simultaneamente**. Ecco come leggerle insieme.
+This is the only heatmap in the simulator that encodes **three distinct physical quantities simultaneously**. Here’s how to interpret them together.
 
-1. **Topologia degli spazi efficaci** *(dalla tinta rosso/blu, il segno di $D$ )*. Al pericentro di un'orbita eccentrica la centrifuga domina e il "mare blu" si espande, sommergendo il sistema, segno che il corpo sta accelerando in uscita verso il proprio apocentro. Lo spazio efficace del corpo minore sopravvive come una "nocciolina" rossa, la tasca in cui la sua autogravità batte la centrifuga circostante. Quella tasca non è mai un cerchio. La sua **dimensione** è erosa dalla centrifuga in modo isotropo, uguale su tutti gli assi, mentre la sua **forma allungata**, verso il compagno e sul lato opposto, è impressa dalla marea del compagno stesso. Attenzione a non confondere spazio topologico e materia: un corpo resta integro solo se la sua estensione fisica è tutta contenuta nella propria tasca rossa. Dalla zona gialla in poi l'autogravità diventa determinante e un oggetto in quell'area, a velocità angolari simili, avrà il vettore forza puntato verso il padrone dello spazio efficace.
+1. **Topology of the effective spaces** *(indicated by the red/blue shading, the sign of $D$ )*. At the pericenter of an eccentric orbit, centrifugal force dominates and the “blue sea” expands, submerging the system, a sign that the body is accelerating outward toward its apocenter. The effective space of the smaller body survives as a red “peanut”, the pocket where its self-gravity overcomes the surrounding centrifugal force. That pocket is never a circle. Its **size** is eroded by centrifugal force isotropically (equally along all axes) while its **elongated shape**, toward the companion and on the opposite side, is shaped by the companion’s own tidal forces. Be careful not to confuse topological space with matter: a body remains intact only if its physical extent is entirely contained within its own red pocket. From the yellow zone onward, self-gravity becomes the determining factor, and an object in that area, at similar angular velocities, will have its force vector pointing toward the owner of the effective space.
 
-2. **Stress mareale e disgregazione** *(dalla saturazione cromatica e dalla deformazione geometrica)*. Due regimi distinti, con **Mercurio al perielio** come confronto visivo a fine sezione:
+2. **Tidal stress and disintegration** *(from color saturation and geometric deformation)*. Two distinct regimes, with **Mercury at perihelion** as a visual comparison at the end of the section:
 
-   * *Regime di plunge, gravità dominante.* Il campo è rosso e la saturazione verso il giallo neon segnala l'esplodere dei termini $1/r^3$ dell'Hessiana. Un corpo esteso che precipita qui subisce un forte stress tidale e, se abbastanza grande, può frammentarsi.
-   * *Regime centrifugo, orbite eccentriche.* Lo stress si legge dalla compressione della nocciolina del punto 1. Quando la tasca rossa si contrae fin dentro il raggio solido del corpo, le estremità materiali sporgono nel dominio esterno e la centrifuga (o la gravità del compagno) le strappa via. È la disgregazione per *Roche Lobe Overflow*, lo stesso meccanismo che alimenta i dischi di accrescimento nelle binarie interagenti, attorno a buchi neri, nane bianche e stelle di neutroni.
+   * *Plunge regime, dominant gravity.* The field is red, and the saturation toward neon yellow indicates the explosion of the $1/r^3$ terms of the Hessian. An extended body plummeting here undergoes strong tidal stress and, if large enough, may fragment.
+   * *Centrifugal regime, eccentric orbits.* The stress is evident from the compression of the “peanut” in point 1. When the red pocket contracts all the way into the body’s solid radius, the material ends protrude into the outer region and the centrifugal force (or the companion’s gravity) tears them away. This is disintegration via *Roche lobe Overflow*, the same mechanism that fuels accretion disks in interacting binaries, around black holes, white dwarfs, and neutron stars.
 
-3. **Punti di Lagrange L1 e L2** *(dalla luminosità, già vista in [§7.4.2](#742-mappatura-cromatica-segno-e-intensità-di-d-))*. Sono i soli due punti di equilibrio che questa heatmap rende visibili da soli, ben nitidi nello zoom sulla Luna a fine sezione. Attenzione però a un caso limite. Un terzo corpo molto forte nell'area di influenza può impedirne l'emersione, come accade nel sistema Terra-Luna quando il Sole è attivo.
+3. **Lagrange points L1 and L2** *(based on luminosity, as previously discussed in [§7.4.2](#742-color-mapping-sign-and-intensity-of-d))*. These are the only two equilibrium points that this heatmap makes visible on their own, clearly visible in the close-up of the Moon at the end of the section. Be aware, however, of a special case. A third, very massive body within the sphere of influence can prevent these points from appearing, as happens in the Earth-Moon system when the Sun is active.
 
-In una sola inquadratura, dunque, si intuisce dove vanno le particelle, dove la marea distrugge e dove sono gli equilibri della coppia. È la mappa più densa di informazioni del simulatore.
+In a single frame, therefore, you can intuit where the particles are going, where the tide is destroying, and where the pair’s equilibrium points lie. It is the simulator’s most information-dense map.
 
-<div align="center"><img src="docs/img/mercury_Ueff.png" width="600" alt="Mercurio al perielio nella mappa di Roche"></div>
+<div align="center"><img src="docs/img/mercury_Ueff.png" width="600" alt="Mercury at perihelion in the Roche map"></div>
 
-**Mercurio al perielio (Regime ad alta energia centrifuga e forte marea).** Mercurio al suo perielio si trova a 46.001.200 km dal Sole con una velocità relativa elevatissima di 58,98 km/s. La sua velocità angolare istantanea $\omega$ è massima, al punto che la sua sacca di autogravità appare immersa ed erosa dal "mare blu" centrifugo ( $D > 0$ ). La forma dell'area di gravità efficace di Mercurio nel sistema corotante sarebbe circolare se non fosse pesantemente compressa e allungata dallo stress mareale anisotropo generato dalla vicinanza con la stella (il regime descritto al punto 2 sopra).
+**Mercury at perihelion (High centrifugal energy regime and strong tides).** At its perihelion, Mercury is 46,001,200 km from the Sun, with an extremely high relative velocity of 58.98 km/s. Its instantaneous angular velocity $\omega$ is at its maximum, to the point that its self-gravity well appears submerged and eroded by the centrifugal “blue sea” ( $D > 0$ ). The shape of Mercury’s effective gravitational field in the co-rotating frame would be circular were it not heavily compressed and elongated by the anisotropic tidal stress generated by its proximity to the star (the regime described in point 2 above).
 
-<div align="center"><img src="docs/img/moon_roche_zoom.png" width="600" alt="Zoom sul contesto Luna-Terra"></div>
+<div align="center"><img src="docs/img/moon_roche_zoom.png" width="600" alt="Zoom on the Moon-Earth context"></div>
 
-**La Luna nel sistema Terra-Luna (Regime quasi circolare / tranquillo).** Zoom sul contesto Luna-Terra prima mostrato: focus sull'autogravità della Luna nel sistema corotante. A differenza di Mercurio al perielio, la tasca di autogravità rossa della Luna è ben definita ed estesa, mentre le fosse scure corrispondenti ai punti di Lagrange collineari L1 e L2 emergono in modo nitido.
+**The Moon in the Earth-Moon system (quasi-circular / quiet regime).** Zoom on the Moon-Earth context shown earlier: focus on the Moon’s self-gravity in the co-rotating frame. Unlike Mercury at perihelion, the Moon’s red self-gravity pocket is well-defined and extensive, while the dark regions corresponding to the collinear Lagrange points L1 and L2 stand out clearly.
 
-<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Media not found"></div>
 
-Immagine presa da Wikipedia che mostra in modo chiaro una visione alternativa e 3D dei potenziali efficaci e della distribuzione dei punti di Lagrange, utile anche per il Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)).
+Image taken from Wikipedia that clearly shows an alternative 3D view of the effective potentials and the distribution of the Lagrange points, which is also useful for the Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)).
 
-#### 7.4.5 Caso di studio: La missione Artemis II
+#### 7.4.5 Case Study: The Artemis II Mission
 
 <div align="center">
     <video src="https://github.com/user-attachments/assets/b34ef8c8-b535-48ce-9ff8-8cd3820a8612" controls="controls" width="100%"></video>
 </div>
 
-**Missione Artemis II (NASA, aprile 2026)**: lo scenario impiega i vettori orbitali reali della missione in **fase di crociera translunare**, catturati alle **2026-04-03T12:03:39 UTC** (circa 12 ore dopo il completamento della manovra di *Translunar Injection*). In questo istante la navicella **Orion** viaggia in volo inerziale non alimentato (motori spenti) a 134.376 km dalla Terra (~34% della distanza Terra-Luna) e a 283.833 km dalla Luna, a una velocità di 2,037 km/s rispetto alla Terra. La simulazione ne riproduce la traiettoria balistica passiva fino al *flyby* del 6 aprile. Nella visualizzazione della topologia di Roche (associata al sistema corotante Terra-Luna), si può osservare graficamente la transizione gravitazionale: quando Orion attraversa il lobo di transizione ed entra nello spazio efficace dominato dalla Luna (colorazione giallo/cremisi), il **vettore viola dell'accelerazione netta** devia progressivamente il suo orientamento dal baricentro terrestre a quello lunare.
+**Artemis II Mission (NASA, April 2026)**: This scenario uses the mission’s actual orbital vectors during the **translunar cruise phase**, captured at **2026-04-03T12:03:39 UTC** (approximately 12 hours after completion of the *Translunar Injection* maneuver). At this moment, the **Orion** spacecraft is traveling in unpowered inertial flight (engines off) at a distance of 134,376 km from Earth (~34% of the Earth-Moon distance) and 283,833 km from the Moon, at a speed of 2.037 km/s relative to Earth. The simulation reproduces its passive ballistic trajectory up to the *flyby* on April 6. In the Roche topology visualization (associated with the co-rotating Earth-Moon system), the gravitational transition can be observed graphically: as Orion crosses the Roche lobe and enters the effective space dominated by the Moon (yellow/crimson shading), the **purple net acceleration vector** progressively shifts its orientation from the Earth’s center of mass to that of the Moon.
 
-La simulazione opera in un sistema di riferimento eliocentrico inerziale (non vincolato geocentricamente); di conseguenza, l'intero sistema Terra-Luna e la navicella stessa orbitano solidalmente attorno al Sole a circa 30 km/s. Questo comportamento è monitorabile in tempo reale tramite il **Pannello di Telemetria Orbitale** (HUD), i cui parametri e funzionamento sono discussi in dettaglio nel paragrafo dedicato **[§7.9](#79-il-doppio-clic-in-scena-pannello-di-telemetria-e-sonda-di-campo-le-unità-di-misura)**.
+The simulation operates in a heliocentric inertial reference frame (not geocentrically constrained); consequently, the entire Earth-Moon system and the spacecraft itself orbit the Sun together at approximately 30 km/s. This behavior can be monitored in real time via the **Orbital Telemetry Panel** (HUD), whose parameters and operation are discussed in detail in the dedicated section **[§7.9](#79-double-clicking-on-the-scene-telemetry-panel-and-field-probe-units-of-measurement)**.
 
-Per esplorare l'intero scenario dinamico si invita a utilizzare la simulazione interattiva. Il video soprastante illustra i passaggi salienti prima e dopo il *flyby* lunare, rendendo visibili le transizioni dello spazio efficace.
+To explore the entire dynamic scenario, we invite you to use the interactive simulation. The video above illustrates the key stages before and after the lunar *flyby*, showing the transitions in effective space.
 
-Le condizioni iniziali ( $t_0$ ) per l'intero sistema (Terra, Luna, Orion) sono state estratte in modo programmatico e simultaneo tramite le API **JPL Horizons**. Per garantire un'integrazione rigorosa nel kernel $O(N^2)$ , esente da forze fittizie o deriva del centro di massa, i vettori di stato cartesiani sono stati interrogati in un sistema di riferimento **eliocentrico inerziale** (origine al centro del Sole, `@10`), orientati sul piano dell'eclittica e successivamente proiettati sul piano $xy$ . Senza alcuna spinta artificiale aggiunta, la traiettoria attraversa la mappa di Roche Terra-Luna, entra nel lobo gravitazionale lunare e ne sfrutta l'influenza come fionda gravitazionale per il **flyby di *free-return***, il viaggio passivo di ritorno verso la Terra.
+The initial conditions ($t_0$) for the entire system (Earth, Moon, Orion) were extracted programmatically and simultaneously using the **JPL Horizons** APIs. To ensure a rigorous $O(N^2)$ kernel integration, free of fictitious forces or center-of-mass drift, the Cartesian state vectors were queried in a **heliocentric inertial** reference frame (origin at the center of the Sun, `@10`), oriented in the ecliptic plane, and subsequently projected onto the $xy$ plane. Without any added artificial thrust, the trajectory crosses the Earth-Moon Roche lobe, enters the lunar gravitational lobe, and exploits its influence as a gravitational slingshot for the **free-return flyby**, the passive return journey to Earth.
 
-### 7.5 Lagrange Hunter (determinante e Hessiana inversa)
+### 7.5 Lagrange Hunter (determinant and inverse Hessian)
 
-È il passo finale, il più elaborato. Si appoggia esattamente sullo stesso **potenziale efficace co-rotante** $\Phi_{eff}$ introdotto in [§7.4](#74-topologia-di-roche-il-segno-del-determinante) (gravità più centrifugo, con $\omega = h/r^2$ ricavato dalla coppia bloccata). I **punti di Lagrange** sono i cinque punti di equilibrio di quel potenziale, cioè gli **zeri del gradiente** $\nabla\Phi_{eff}$ : lì la forza netta sentita da una particella co-rotante è nulla. La stessa heatmap della Topologia di Roche è nata per errore come tentativo fallito di far emergere i punti di Lagrange, poi mantenuta per la ricchezza di informazioni che inizialmente non erano state considerate. La soluzione del così rinominato Lagrange Hunter (perché cerca pixel per pixel) usa invece uno **stimatore di distanza di tipo Newton-Raphson**.
+This is the final step, and the most elaborate one. It relies precisely on the same **co-rotating effective potential** $\Phi_{eff}$ introduced in [§7.4](#74-roche-topology-the-sign-of-the-determinant) (gravity plus centrifugal force, with $\omega = h/r^2$ derived from the locked pair). The **Lagrange points** are the five equilibrium points of that potential, that is, the **zeroes of the gradient** $\nabla\Phi_{eff}$: at these points, the net force experienced by a co-rotating particle is zero. The heatmap for Roche topology itself originated by mistake as a failed attempt to highlight the Lagrange points, but was retained because of the wealth of information it revealed that had not initially been considered. The solution of the so-called Lagrange Hunter (because it searches pixel by pixel) uses instead a **Newton-Raphson-type distance estimator**.
 
-Il metodo di Newton-Raphson è la tecnica numerica standard per trovare gli zeri di una funzione: dato un punto, usa la pendenza locale per fare un salto verso lo zero più vicino. Qui la funzione di cui cerco gli zeri è il gradiente $\nabla\Phi_{eff}$ e la "pendenza del gradiente" è proprio l'Hessiana. Vicino a un punto critico il gradiente si linearizza:
+The Newton-Raphson method is the standard numerical technique for finding the zeros of a function: given a point, it uses the local slope to take a step toward the nearest zero. Here, the function for which I am seeking zeros is the gradient $\nabla\Phi_{eff}$, and the “slope of the gradient” is precisely the Hessian. Near a critical point, the gradient linearizes:
 
 $$\nabla\Phi_{eff} \approx H \cdot \delta\vec{r} \;\Longrightarrow\; \delta\vec{r} \approx H^{-1}\,\nabla\Phi_{eff}$$
 
-dove $\delta\vec{r}$ è il passo (vettoriale) verso il punto critico più vicino. La sua lunghezza è la **distanza stimata** dal punto di Lagrange:
+where $\delta\vec{r}$ is the (vector) step toward the nearest critical point. Its magnitude is the **estimated distance** from the Lagrange point:
 
 $$r_{est} = \left|H^{-1}\,\nabla\Phi_{eff}\right|$$
 
-Per l'Hessiana 2×2 l'inversa è esplicita e dipende dal **determinante** $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ :
+For the 2×2 Hessian, the inverse is explicit and depends on the **determinant** $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$:
 
 ```math
 H^{-1} = \frac{1}{D}\begin{pmatrix} \Phi_{yy} & -\Phi_{xy} \\ -\Phi_{xy} & \Phi_{xx} \end{pmatrix}
 ```
 
-Quindi $r_{est}$ contiene un fattore $1/D$ (l'**inverso del determinante**): più ci si avvicina a un punto di Lagrange, più $r_{est} \to 0$ e più il pixel viene illuminato. È un "compasso" che misura quanto si è vicini all'equilibrio.
+Therefore, $r_{est}$ contains a factor of $1/D$ (the **inverse of the determinant**): the closer one gets to a Lagrange point, the more $r_{est} \to 0$ and the more the pixel is illuminated. It acts as a “compass” that measures how close one is to equilibrium.
 
-**La catena di calcolo, pixel per pixel.** Quello che il kernel esegue su ogni pixel della heatmap, in cinque passi:
+**The calculation chain, pixel by pixel.** What the kernel does to each pixel of the heatmap, in five steps:
 
-1. **Gradiente e Hessiana analitici.** Si calcolano in forma chiusa le componenti $\Phi_x, \Phi_y$ del gradiente e $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ dell'Hessiana sommando i contributi gravitazionali dei due corpi della coppia (le stesse formule di [§7.3](#73-stress-di-marea-e-una-nota-sullhessiana), ma valutate nel pixel corrente). A questi si aggiungono i **termini centrifughi**: $-\omega^2\,\vec{d}$ sul gradiente e $-\omega^2$ sulla diagonale dell'Hessiana, con $\omega$ ricavato dalla cinematica istantanea della coppia ([§7.4](#74-topologia-di-roche-il-segno-del-determinante)). Niente derivate numeriche: tutto in forma analitica.
+1. **Analytic gradient and Hessian.** The components $\Phi_x, \Phi_y$ of the gradient and $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ of the Hessian are calculated in closed form by summing the gravitational contributions of the two bodies in the pair (the same formulas as in [§7.3](#73-tidal-stress-and-a-note-on-the-hessian), but evaluated at the current pixel). To these are added the **centrifugal terms**: $-\omega^2\,\vec{d}$ on the gradient and $-\omega^2$ on the diagonal of the Hessian, with $\omega$ derived from the instantaneous kinematics of the pair ([§7.4](#74-roche-topology-the-sign-of-the-determinant)). No numerical derivatives: everything is in analytical form.
 
-2. **Newton-Raphson per la stima della distanza.** Con $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ e la formula esplicita di $H^{-1}$ già vista sopra, si calcola componente per componente $\delta\vec{r} = H^{-1}\nabla\Phi_{eff}$ e la sua lunghezza $r_{est} = |\delta\vec{r}|$ è la **distanza stimata dal punto critico più vicino**.
+2. **Newton-Raphson for estimating the distance.** With $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ and the explicit formula for $H^{-1}$ seen above, we calculate $\delta\vec{r} = H^{-1}\nabla\Phi_{eff}$ component by component, and its magnitude $r_{est} = |\delta\vec{r}|$ is the **estimated distance from the nearest critical point**.
 
-3. **Conversione in distanza schermo.** $r_{est}$ è in chilometri (mondo); per disegnarla serve la distanza in pixel: $d_{px} = r_{est} / s$ , con $s$ la scala camera ( $\text{km/pixel}$ ).
+3. **Conversion to screen distance.** $r_{est}$ is in kilometers (world); to plot it, we need the distance in pixels: $d_{px} = r_{est} / s$, where $s$ is the camera scale ($\text{km/pixel}$).
 
-4. **Filtro spaziale e gaussiana.** Se $d_{px}$ è sotto una soglia $r_{soglia}$ (calibrata dal **fader di sensibilità**, ~5 px al valore di default), il pixel cade dentro un punto di Lagrange candidato e gli si assegna un'intensità $I = e^{-2\,(d_{px}/r_{soglia})^2}$ : è la **gaussiana** che rende visibile il punto come una campana luminosa centrata sul vero zero del gradiente. Fuori dalla soglia il pixel resta nero.
+4. **Spatial filter and Gaussian.** If $d_{px}$ is below a threshold $r_{threshold}$ (calibrated by the **sensitivity fader**, ~5 px at the default value), the pixel falls within a candidate Lagrange point and is assigned an intensity $I = e^{-2\,(d_{px}/r_{threshold})^2}$: this is the **Gaussian** that makes the point visible as a luminous bell centered on the true zero of the gradient. Outside the threshold, the pixel remains black.
 
-5. **Filtro topologico e colorazione.** Prima di colorare il pixel candidato, due controlli finali:
-   - se $D > 0$ **e** traccia $> 0$ (la *traccia* è la somma dei termini diagonali dell'Hessiana, $\text{tr}(H) = \Phi_{xx} + \Phi_{yy}$ che equivale alla somma dei due autovalori) il pixel è sopra un *minimo* del potenziale efficace (un pozzo gravitazionale di uno dei due corpi): pixel nero, escluso. Senza questo filtro, ogni corpo apparirebbe come un blob blu sovrapposto al proprio pozzo.
-   - altrimenti, il segno di $D$ decide il colore: sella ( $D < 0$ ) → **rosso** $(I,\;0.1\,I,\;0.1\,I)$ → L1, L2, L3; estremo stabile ( $D > 0$ con traccia $< 0$ ) → **blu** $(0.1\,I,\;0.4\,I,\;I)$ → L4, L5. L'intensità $I$ della gaussiana modula la brillantezza, così il centro del punto è pieno e i bordi si dissolvono.
+5. **Topological filter and coloring.** Before coloring the candidate pixel, two final checks:
+   - if $D > 0$ **and** trace $> 0$ (the *trace* is the sum of the diagonal terms of the Hessian, $\text{tr}(H) = \Phi_{xx} + \Phi_{yy}$, which is equivalent to the sum of the two eigenvalues), the pixel lies above a *minimum* of the effective potential (a gravitational well of one of the two bodies): black pixel, excluded. Without this filter, each body would appear as a blue blob superimposed on its own well.
+   - Otherwise, the sign of $D$ determines the color: saddle point ( $D < 0$ ) → **red** $(I,\;0.1\,I,\;0.1\,I)$ → L1, L2, L3; stable extreme ($D > 0$ with trace $< 0$) → **blue** $(0.1\,I,\;0.4\,I,\;I)$ → L4, L5. The intensity $I$ of the Gaussian modulates the brightness, so the center of the point is solid and the edges fade.
 
-In sintesi: la **curvatura locale fa da compasso** (localizza il punto critico tramite Newton-Raphson), la **gaussiana fa da pennello** (lo rende visibile) e i due filtri (spaziale e topologico) tengono fuori il rumore e i falsi positivi sui pozzi dei corpi.
+In summary: **local curvature acts as a compass** (it locates the critical point using Newton-Raphson), the **Gaussian acts as a brush** (it makes it visible), and the two filters (spatial and topological) filter out noise and false positives at the wells of the bodies.
 
-**Perché si leggono bene solo gli intorni degli zeri.** La linearizzazione $\nabla\Phi_{eff} \approx H\,\delta\vec{r}$ vale solo *vicino* a un punto critico; lontano, il modello lineare è sbagliato e $r_{est}$ perde di senso (satura). Per questo la mappa è nitida solo negli intorni dei punti di Lagrange, esattamente come una gaussiana è informativa solo attorno alla sua cresta: fuori, è buio.
+**Why only the neighborhoods of the zeros are clearly visible.** The linearization $\nabla\Phi_{eff} \approx H\,\delta\vec{r}$ holds only *near* a critical point; farther away, the linear model is incorrect and $r_{est}$ loses its meaning (it saturates). This is why the map is sharp only in the vicinity of the Lagrange points, just as a Gaussian distribution is informative only around its peak: outside that region, it is dark.
 
-**Overlay [M]: marker analitici teorici.** Premendo `M` in modalità Lagrange Hunter, alla heatmap vengono sovrapposti i cinque **punti di Lagrange analitici** della coppia, calcolati in forma chiusa dal problema dei tre corpi circolare ristretto (formule in [§9.4](#94-punti-di-lagrange-analitici-problema-dei-tre-corpi-circolare-ristretto)). Sono **benchmark fissi** che permettono di misurare a colpo d'occhio lo scostamento dei punti reali (illuminati dal Newton-Raphson) dalle posizioni ideali ed è il dettaglio che rende visibile la *respirazione* dei punti di Lagrange in orbite eccentriche o perturbate. La discussione completa della coesistenza dei due overlay (perché entrambi e cosa leggere da ciascuno) è in [§9.6](#96-perché-coesistono-loverlay-teorico-e-la-heatmap-dinamica).
+**Overlay [M]: theoretical analytical markers.** Pressing `M` in Lagrange Hunter mode overlays the five **analytic Lagrange points** of the pair onto the heatmap, calculated in closed-form from the restricted circular three-body problem (formulas in [§9.4](#94-analytical-lagrange-points-restricted-circular-three-body-problem)). These are **fixed benchmarks** that allow you to measure at a glance the deviation of the actual points (calculated by Newton-Raphson) from the ideal positions, and it is this detail that makes visible the *breathing* of the Lagrange points in eccentric or perturbed orbits. The complete discussion of the coexistence of the two overlays (why both are used and what to interpret from each) is in [§9.6](#96-why-do-the-theoretical-overlay-and-the-dynamic-heatmap-coexist).
 
-| Senza overlay | Con overlay teorico [M] |
+| Without overlay | With theoretical overlay [M] |
 |:---:|:---:|
-| <img src="docs/img/lagr.png" width="100%" alt="Media non trovato"> | <img src="docs/img/lagrM.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/img/lagr.png" width="100%" alt="Media not found"> | <img src="docs/img/lagrM.png" width="100%" alt="Media not found"> |
 
-*Il Lagrange Hunter che illumina i punti stabili L4/L5 (blu) e instabili L1/L2/L3 (rossi), mostrando come l'overlay teorico guidi alla loro localizzazione rapida.*
+*The Lagrange Hunter highlighting the stable L4/L5 points (blue) and unstable L1/L2/L3 points (red), showing how the theoretical overlay guides their rapid localization.*
 
-### 7.6 Deformazione proiettata (GW Strain Quadrupolare)
+### 7.6 Projected Strain (GW Quadrupole Strain)
 
-Questa heatmap, denominata **GW Strain (Quadrupole)** nell'interfaccia utente, rappresenta la visualizzazione più sofisticata del campo dinamico del simulatore. A differenza delle heatmap potenziali o tidali classiche, essa mappa direttamente lo *strain* gravitazionale causale proiettato, associato all'emissione di onde gravitazionali da parte di sistemi binari compatti.
+This heatmap, labeled **GW Strain (Quadrupole)** in the user interface, represents the most sophisticated visualization of the simulator’s dynamic field. Unlike classical potential or tidal heatmaps, it directly maps the projected causal gravitational *strain* associated with the emission of gravitational waves by compact binary systems.
 
 > [!NOTE]
-> **Introduzione teorica allo Strain e al Quadrupolo**
-> Se non si ha familiarità con i concetti di deformazione metrica (*strain*) e momento di quadrupolo di massa, si consiglia vivamente di consultare preventivamente le sezioni di approfondimento del [§8](#8-lanalizzatore-ligovirgo-dal-proxy-cinematico-allo-spettro), in particolare:
-> - **[§8.2](#82-cos%C3%A8-il-momento-di-quadrupolo-di-massa-i-due-punti-di-vista-sul-quadrupolo)** per comprendere la natura fisica del quadrupolo;
-> - **[§8.3](#83-la-formula-3d-camuffata-e-la-proiezione-ortogonale-al-piano)** per l'analisi della formula metrica proiettata;
-> - **[§8.4](#84-cosa-registra-la-sonda-virtuale-il-proxy-basato-sulle-velocit%C3%A0)** per il funzionamento pratico del proxy cinematico nel motore.
+> **Theoretical Introduction to Strain and the Quadrupole**
+> If you are not familiar with the concepts of metric strain and mass quadrupole moment, we strongly recommend that you first consult the in-depth sections of [§8](#8-the-ligovirgo-analyzer-from-kinematic-proxy-to-spectrum), in particular:
+> - **[§8.2](#82-what-is-the-mass-quadrupole-moment-two-perspectives-on-the-quadrupole)** to understand the physical nature of the quadrupole;
+> - **[§8.3](#83-the-disguised-3d-formula-and-the-orthogonal-projection-onto-the-plane)** for the analysis of the projected metric formula;
+> - **[§8.4](#84-what-the-virtual-probe-records-the-velocity-based-proxy)** for the practical operation of the kinematic proxy in the engine.
 
-#### 7.6.1 Formulazione matematica e proiezione
-La formulazione matematica usata dal motore per calcolare lo strain in ogni pixel condivide la stessa identica logica fisica e le medesime semplificazioni numeriche della [sonda virtuale LIGO](#81-lanalogia-con-ligo-e-virgo-sulla-terra). 
+#### 7.6.1 Mathematical Formulation and Projection
+The mathematical formulation used by the engine to calculate the strain in each pixel shares the exact same physics logic and numerical simplifications as the [LIGO virtual probe](#81-the-analogy-with-ligo-and-virgo-on-earth). 
 
-In particolare, per escludere il forte rumore numerico indotto dalle accelerazioni nel regime discreto ( $dt$ ) a ridosso del merger, si adotta una **regolarizzazione cinetica** (spiegata in dettaglio in [§8.5](#85-il-problema-numerico-dellaccelerazione-e-la-regolarizzazione-cinetica)), scartando il termine delle forze a favore del solo proxy basato sulle velocità relative. Questo approccio si basa sull'equivalenza esatta tra i due contributi nel caso limite di orbite circolari (discussa in [§8.3](#83-la-formula-3d-camuffata-e-la-proiezione-ortogonale-al-piano)).
+In particular, to eliminate the significant numerical noise induced by accelerations in the discrete time domain ( $dt$ ) immediately prior to the merger, a **kinetic regularization** is adopted (explained in detail in [§8.5](#85-the-numerical-problem-of-acceleration-and-kinetic-regularization)), discarding the force term in favor of the proxy based solely on relative velocities. This approach is based on the exact equivalence between the two contributions in the limiting case of circular orbits (discussed in [§8.3](#83-the-disguised-3d-formula-and-the-orthogonal-projection-onto-the-plane)).
 
-Mentre la sonda virtuale LIGO si limita a registrare lo strain in un unico punto dello schermo ipotizzando una direzione di vista fissa (equivalente a calcolare la sola componente $h_+$ lungo gli assi cardinali, [§8.4](#84-cosa-registra-la-sonda-virtuale-il-proxy-basato-sulle-velocità)), la heatmap deve determinare lo strain in ogni pixel dello schermo. Per farlo, essa calcola la proiezione della velocità del corpo lungo la direzione variabile pixel-sorgente.
+While the virtual LIGO probe is limited to recording the strain at a single point on the screen, assuming a fixed viewing direction (equivalent to calculating only the $h_+$ component along the cardinal axes, [§8.4](#84-what-the-virtual-probe-records-the-velocity-based-proxy)): the heatmap must determine the strain at every pixel on the screen. To do so, it calculates the projection of the body’s velocity along the variable pixel-to-source direction.
 
-Per ciascun pixel di coordinate $(x_{px}, y_{px})$ , calcoliamo la distanza lungo l'asse $x$ e l'asse $y$ rispetto alla posizione causale ritardata del corpo, $\vec{r}_{\text{ret}, k} = (x_{\text{ret}, k}, y_{\text{ret}, k})$ :
+For each pixel with coordinates $(x_{px}, y_{px})$, we calculate the distance along the $x$-axis and the $y$-axis relative to the body’s retarded causal position, $\vec{r}_{\text{ret}, k} = (x_{\text{ret}, k}, y_{\text{ret}, k})$:
 $$d_x = x_{px} - x_{\text{ret}, k}, \qquad d_y = y_{px} - y_{\text{ret}, k}$$
 
-La distanza geometrica effettiva $r$ (la lunghezza del vettore distanza $\vec{d}$ ) si calcola con il classico teorema di Pitagora:
+The effective geometric distance $r$ (the length of the distance vector $\vec{d}$) is calculated using the classic Pythagorean theorem:
 $$r = \sqrt{d_x^2 + d_y^2}$$
 
-Per conoscere la direzione che unisce il corpo al pixel, definiamo un **versore di direzione** (un vettore di lunghezza pari a 1, indicato solitamente con il simbolo $\hat{n}$ ) dividendo le distanze parziali per la distanza totale $r$ :
+To determine the direction connecting the object to the pixel, we define a **unit vector** (a unit vector, usually denoted by the symbol $\hat{n}$) by dividing the partial distances by the total distance $r$:
 $$n_x = \frac{d_x}{r}, \qquad n_y = \frac{d_y}{r}$$
 
-Allo stesso modo, definiamo una direzione trasversale (ortogonale) $\hat{t} = (t_x, t_y)$ ruotata di 90 gradi:
+Similarly, we define a transverse (orthogonal) direction $\hat{t} = (t_x, t_y)$ rotated by 90 degrees:
 $$t_x = -n_y, \qquad t_y = n_x$$
 
-Definita la velocità del corpo $k$ al tempo ritardato sottratta del moto del centro di massa comune (COM\*) della coppia binaria per isolare il solo moto orbitale interno, $\vec{v}_{\text{rel}} = (v_{\text{rel}, x}, v_{\text{rel}, y})$ , le due proiezioni della velocità rispetto alle direzioni del pixel sono espresse in modo algebrico semplice come:
-- **Velocità radiale** (proiettata lungo la direzione del pixel): $v_r = v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y$
-- **Velocità tangenziale** (proiettata lungo la direzione trasversale): $v_t = v_{\text{rel}, x} t_x + v_{\text{rel}, y} t_y = -v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x$
+Once the body’s velocity $k$ at the retarded time has been defined, subtracting the motion of the common center of mass (COM*) of the binary pair to isolate only the internal orbital motion, $\vec{v}_{\text{rel}} = (v_{\text{rel}, x}, v_{\text{rel}, y})$, the two projections of the velocity with respect to the pixel directions are expressed algebraically in a simple form as:
+- **Radial velocity** (projected along the pixel direction): $v_r = v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y$
+- **Tangential velocity** (projected along the transverse direction): $v_t = v_{\text{rel}, x} t_x + v_{\text{rel}, y} t_y = -v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x$
 
-Lo strain proiettato sul pixel è la differenza quadratica tra queste due componenti di velocità:
+The strain projected onto the pixel is the quadratic difference between these two velocity components:
 $$h_{\text{proj}, k} = v_r^2 - v_t^2$$
 
-Sviluppando algebricamente i quadrati delle due componenti, si ottiene la formula finale implementata nel kernel di rendering:
+By algebraically expanding the squares of the two components, we obtain the final formula implemented in the rendering kernel:
 $$h_{\text{proj}, k} = (v_{\text{rel}, x} n_x + v_{\text{rel}, y} n_y)^2 - (-v_{\text{rel}, x} n_y + v_{\text{rel}, y} n_x)^2 = (v_{\text{rel}, x}^2 - v_{\text{rel}, y}^2)(n_x^2 - n_y^2) + 4\,v_{\text{rel}, x}\,v_{\text{rel}, y}\,n_x\,n_y$$
 
-La grandezza totale visualizzata sullo schermo è la somma dei contributi dei singoli corpi, pesata sulla loro massa e attenuata con la distanza (decadimento geometrico $1/r$ tipico della radiazione di campo lontano):
+The total magnitude displayed on the screen is the sum of the contributions from the individual bodies, weighted by their mass and attenuated by distance (the $1/r$ geometric decay typical of far-field radiation):
 $$h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}$$
 
-Questa scomposizione geometrica proietta l'esatta simmetria angolare di quadrupolo ( $\ell=2$ , con pattern a quattro lobi alternati ciano/rosso) sul pixel osservante, impedendo che la heatmap collassi in un semplice gradiente radiale simile alla mappa potenziale $\Phi$ . In questo modo, l'analizzatore spaziale della heatmap e l'analizzatore puntuale di LIGO ([§8](#8-lanalizzatore-ligovirgo-dal-proxy-cinematico-allo-spettro)) sono resi matematicamente e concettualmente equivalenti.
+This geometric decomposition projects the exact quadrupole angular symmetry ( $\ell=2$ , with a four-lobe pattern alternating between cyan and red) onto the observing pixel, preventing the heatmap from collapsing into a simple radial gradient similar to the potential map $\Phi$ . In this way, the spatial analyzer of the heatmap and the pointwise analyzer of LIGO ([§8](#8-the-ligovirgo-analyzer-from-kinematic-proxy-to-spectrum)) are made mathematically and conceptually equivalent.
 
-#### 7.6.2 Causalità per-corpo: sorgente estesa contro quadrupolo puntiforme
-Nelle rappresentazioni analitiche standard lo strain viene calcolato da un **quadrupolo globale** riferito al centro di massa comune, con un unico tempo di ritardo $t_{\text{ret}} = t - R_{\text{COM}}/c$ : tutta la radiazione emana idealmente da un punto. Il simulatore fa una cosa diversa: somma i **contributi per-corpo**, ciascuno letto al proprio istante di emissione e proiettato lungo il proprio versore verso il pixel (il doppio ritrovamento causale di [§3](#3-aberrazione-causale-dead-reckoning-e-dinamica-relativistica)).
+#### 7.6.2 Per-body causality: extended source versus point-like quadrupole
+In standard analytical representations, the strain is calculated from a **global quadrupole** referenced to the common center of mass, with a single retarded time $t_{\text{ret}} = t - R_{\text{COM}}/c$: all radiation ideally emanates from a single point. The simulator does something different: it sums the **per-body contributions**, each read at its own emission instant and projected along its own unit vector toward the pixel (the double causal retrieval of [§3](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics)).
 
-Nel **campo lontano** le due costruzioni coincidono: essendo il contributo quadratico nella velocità, i pattern dei due corpi hanno lo stesso segno e si sommano in un'unica spirale rotante, con gli zeri nodali visibili come transizioni continue fra i bracci ciano e rossi. Nel **campo vicino**, invece, la sorgente estesa si fa sentire: i due contributi, letti a epoche e versori leggermente diversi ( $t - r_A/c \neq t - r_B/c$ e $\hat{n}_A \neq \hat{n}_B$ ), non si allineano perfettamente fra le due masse e producono un pattern di interferenza ravvicinato, visivamente a "forma di occhio" rosso: è la firma della coppia reale al posto del punto ideale.
+In the **far field**, the two wave functions coincide: since the contribution is quadratic in velocity, the patterns of the two bodies have the same sign and add together to form a single rotating spiral, with the nodal zeros visible as continuous transitions between the cyan and red arms. In the **near field**, however, the extended source makes itself felt: the two contributions, taken at slightly different times and with slightly different unit vectors ($t - r_A/c \neq t - r_B/c$ and $\hat{n}_A \neq \hat{n}_B$), do not align perfectly between the two masses and produce a close-in interference pattern, visually resembling a red “eye”: this is the signature of the real pair in place of the ideal point.
 
 <video src="https://github.com/user-attachments/assets/aee7fd2d-70f0-4d1d-9767-315d6bae5d28" controls="controls" width="700"></video>
 
-*Loop di una coalescenza di buchi neri binari renderizzata in modalità GW Strain. La sequenza alterna due punti di vista: una vista ravvicinata sulla regione fra i due corpi, dove si forma quella sorta di "occhio" rosso di interferenza ravvicinata fra i due contributi quadrupolari e una vista panoramica dezoommata, in cui si vedono le macro-spirali radiative propagarsi verso l'esterno a velocità $c$ , con le transizioni ciano/rosso continue su tutta la mappa.*
+*Loop of a binary black hole merger rendered in GW Strain mode. The sequence alternates between two viewpoints: a close-up view of the region between the two bodies, where a sort of red “eye” of close-range interference forms between the two quadrupole contributions, and a zoomed-out panoramic view, in which the radiative macrospirals are seen propagating outward at speed $c$, with continuous cyan/red transitions across the entire map.*
 
-#### 7.6.3 La coalescenza e l'artefatto del quadrupolo nudo
-La heatmap GW Strain è un proxy progettato per descrivere una **coppia di corpi** e si basa sul calcolo cinetico relativo al baricentro. Al momento della coalescenza, uno dei due corpi viene assorbito dall'altro. L'universo, tuttavia, non si aggiorna istantaneamente: il corpo morente persiste nello storico finché l'onda causale di "morte" (il tempo di volo che segnala la sua scomparsa) non raggiunge i bordi imposti della simulazione causale. 
+#### 7.6.3 Coalescence and the Bare Quadrupole Artifact
+The GW Strain heatmap is a proxy designed to describe a **pair of bodies** and is based on the barycenter-relative kinetic calculation. At the moment of coalescence, one of the two bodies is absorbed by the other. The universe, however, does not update instantly: the dying body persists in the history until the causal “death” wave (the time of flight signaling its disappearance) reaches the imposed boundaries of the causal simulation. 
 
-Poiché il raggio di questa simulazione è impostato a **3 AU**, il tempo di volo corrispondente è di circa **24 minuti** di tempo simulato ( $3\text{ AU} / c \approx 1500\text{ s}$ ). Eseguendo il calcolo a un passo temporale di $dt = 1\,\mu\text{s}$ (dove la velocità di simulazione reale dell'engine è al massimo di circa $600\text{ ms}$ simulati al secondo), questo transitorio dura in realtà moltissimo tempo reale di elaborazione (oltre 40 minuti), occupando gran parte della sessione utile di simulazione.
+Since the radius of this simulation is set to **3 AU**, the corresponding time of flight is approximately **24 minutes** of simulated time ( $3\text{ AU} / c \approx 1500\text{ s}$ ). When performing the calculation at a time step of $dt = 1\,\mu\text{s}$ (where the engine’s actual simulation speed is at most about $600\text{ ms}$ simulated per second), this transient actually lasts a very long time in real processing time (over 40 minutes), taking up most of the usable simulation session.
 
-Durante questa lunga finestra transitoria, il sistema di rendering dello strain si **rompe**:
-* Perdendo la relazione di baricentro con il compagno assorbito, il motore riscrive anche il passato delle spirali in espansione.
-* Questa rottura blocca l'avvitamento e congela l'intero pattern ondulatorio pregresso.
+During this long transient window, the strain rendering system **breaks down**:
+* By losing the center-of-mass relationship with the absorbed companion, the engine also rewrites the history of the expanding spirals.
+* This breakdown halts the spiral motion and freezes the entire previous wave pattern.
 
-Il risultato è un **artefatto visivo**, che ha però la rara utilità di mostrare a nudo il quadrupolo statico, singolo e non rotante del corpo superstite. Si tratta di una firma geometrica **rara** da osservare in condizioni ordinarie, poiché richiede velocità relative molto elevate (come discusso nel caso studio [§7.6.4](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro)).
+The result is a **visual artifact**, which, however, has the rare benefit of laying bare the static, single, non-rotating quadrupole of the surviving body. This is a **rare** geometric signature to observe under ordinary conditions, as it requires very high relative velocities (as discussed in the case study [§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter)).
 
-Per mantenere e osservare la spirale in espansione anche *dopo* la coalescenza, è necessario passare alla heatmap **$d\Phi/dt$**. Nonostante l'oscillazione in questo caso sia dipolare e non quadrupolare, la forma delle onde si conserva in modo morfologicamente molto simile. Le onde in $d\Phi/dt$ reggono l'impatto della coalescenza senza rompersi perché calcolano un campo scalare universale: non dipendono da una coppia selezionata come lo strain, ma si propagano autonomamente nello spazio anche dopo che il sistema si è fuso in un singolo oggetto.
+To maintain and observe the expanding spiral even *after* coalescence, it is necessary to switch to the **$d\Phi/dt$** heatmap. Although the oscillation in this case is dipolar rather than quadrupolar, the shape of the waves remains morphologically very similar. The waves in $d\Phi/dt$ withstand the impact of coalescence without breaking because they describe a universal scalar field: they do not depend on a selected pair such as strain, but propagate autonomously through space even after the system has merged into a single object.
 
-| GW Strain: rottura post-coalescenza | dΦ/dt: conservazione post-coalescenza |
+| GW Strain: post-merger breakage | dΦ/dt: post-merger conservation |
 |:---:|:---:|
-| <img src="docs/img/GWHEATMAP_post_merge.png" width="100%" alt="Artefatto del quadrupolo nudo in GW Strain"> | <img src="docs/img/DPHI_post_merge.png" width="100%" alt="Onde in dΦ/dt post-coalescenza"> |
-| La scomparsa del partner interrompe il calcolo del baricentro, congelando le spirali storiche in una croce rigida e non rotante. | Trattandosi di un campo scalare universale non vincolato alla coppia, le spirali continuano a propagarsi regolarmente all'indietro anche dopo la fusione. |
+| <img src="docs/img/GWHEATMAP_post_merge.png" width="100%" alt="Naked quadrupole artifact in GW Strain"> | <img src="docs/img/DPHI_post_merge.png" width="100%" alt="Post-coalescence waves in dΦ/dt"> |
+| The disappearance of the partner interrupts the calculation of the center of mass, freezing the historical spirals into a rigid, non-rotating cross. | Since this is a universal scalar field not bound to the pair, the spirals continue to propagate regularly backward even after the merger. |
 
-Da quanto sopra discende anche una conseguenza pratica sulla **visibilità** del pattern. Il proxy è quadratico nella velocità relativa, $|h_{proj}| \propto |v_{rel}|^2$ , e questa proporzionalità coincide qualitativamente con la dipendenza della potenza radiativa GW reale dalle alte potenze di $v/c$ . Significa che la croce diventa percettibile **solo per coppie compatte in orbita stretta** (NS, BH, ultimi cicli di inspiral, dove $|v_{rel}|$ è una frazione apprezzabile di $c$ ); per i sistemi planetari ordinari, anche con il fader di sensibilità al massimo, l'ampiezza resta sotto il floor del rendering, esattamente come nella realtà fisica le coppie planetarie non sono rilevabili dagli interferometri terrestri.
+The above also implies a practical consequence regarding the **visibility** of the pattern. The proxy is quadratic in the relative velocity, $|h_{proj}| \propto |v_{rel}|^2$, and this proportionality qualitatively coincides with the dependence of the actual GW radiative power on high powers of $v/c$. This means that the cross becomes detectable **only for compact binaries in tight orbits** (NS, BH, final spiraling cycles, where $|v_{rel}|$ is a significant fraction of $c$); for ordinary planetary systems, even with the sensitivity slider set to maximum, the amplitude remains below the rendering threshold, just as in physical reality planetary pairs are not detectable by ground-based interferometers.
 
 > [!NOTE]
-> **L'artefatto del fantasma del campo.** Una persistenza simile si osserva anche in Lagrange Hunter, Topologia di Roche e mappa Tidale: alla morte di un corpo per merger o accrescimento, il suo contributo resta visibile per un tempo pari al limite causale corrente. Qui però va detto onestamente che si tratta di un limite architetturale, non di fisica. Queste tre mappe sono istantanee ([§7.8](#78-riepilogo-come-ogni-heatmap-converte-la-fisica-in-colore)) e non leggono alcuno storico ritardato. Il corpo morente resta però nei buffer, congelato nel punto della scomparsa, finché la sua dissolvenza causale non si completa, perché il ciclo di vita dei corpi è agganciato all'orizzonte causale a beneficio delle mappe che causali lo sono davvero (il garbage collector asincrono, [§8 di ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#6-il-garbage-collector-asincrono-dei-corpi-causalmente-morti)). Le mappe istantanee ne ereditano un fantasma immobile che continuano a sommare. Per le mappe di coppia il discorso si estende al sistema co-rotante, che resta costruito su un partner ormai fermo. Nelle due mappe causali pure ( $\Phi$ e $d\Phi/dt$ ) la stessa persistenza è invece fisica genuina: la notizia della scomparsa viaggia a $c$ e il campo residuo esiste davvero finché il fronte non ha spazzato il volume visibile.
+> **The field ghost artifact.** A similar persistence is also observed in Lagrange Hunter, Roche Topology, and the Tidal Map: upon the death of a body due to merger or accretion, its contribution remains visible for a time equal to the current causal limit. Here, however, it must be honestly stated that this is an architectural limitation, not a physical one. These three maps are snapshots ([§7.8](#78-summary-how-each-heatmap-converts-physics-into-color)) and do not read any retarded history. The dying body, however, remains in the buffers, frozen at the point of its disappearance, until its causal fading is complete, because the life cycle of bodies is tied to the causal horizon for the benefit of the maps that are truly causal (the asynchronous garbage collector, [§8 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md#6-the-asynchronous-garbage-collector-for-causally-dead-bodies)). The instantaneous maps inherit a motionless ghost of it, which they continue to sum. For pair maps, the discussion extends to the co-rotating frames, which remain built upon a partner that is now stationary. In the two purely causal maps ( $\Phi$ and $d\Phi/dt$ ), however, this persistence is genuine physics: the news of the disappearance travels at $c$, and the residual field truly exists until the front has swept through the visible volume.
 
-#### 7.6.4 Caso di studio: Il quadrupolo dinamico nell'EMRI all'apocentro
-Un comportamento particolarmente affascinante ed emergente si osserva nello scenario **EMRI** (Extreme Mass Ratio Inspiral). Per facilitare la visualizzazione geometrica di questo tipo di orbita fortemente eccentrica, riproponiamo qui in piccolo la sua traiettoria caratteristica (già discussa in precedenza):
+#### 7.6.4 Case Study: The Dynamic Quadrupole in EMRI at the Apocenter
+A particularly fascinating and emergent behavior is observed in the **EMRI** (Extreme Mass Ratio Inspiral) scenario. To facilitate the geometric visualization of this type of highly eccentric orbit, we reproduce here, on a small scale, its characteristic trajectory (already discussed earlier):
 
-<img src="docs/gif/EMRI_rosetta.gif" width="220" alt="Traiettoria EMRI rosetta">
+<img src="docs/gif/EMRI_rosetta.gif" width="220" alt="EMRI Rosetta trajectory">
 
-Quando l'oggetto compatto leggero percorre la sua orbita fortemente eccentrica attorno al buco nero supermassiccio, la sua velocità lineare varia sensibilmente lungo la traiettoria:
-* **Al pericentro (massima velocità):** L'emissione di strain è intensa e la rapida rotazione genera fronti d'onda d'interferenza complessi.
+As the light compact object travels along its highly eccentric orbit around the supermassive black hole, its linear velocity varies appreciably along the trajectory:
+* **At pericenter (maximum velocity):** Strain emission is intense, and the rapid rotation generates complex interference wavefronts.
   
-  <img src="docs/img/GWH_EMRI_peri.png" width="450" alt="Emissione al pericentro in EMRI">
+  <img src="docs/img/GWH_EMRI_peri.png" width="450" alt="Emission at pericenter in EMRI">
   
-  *Emissione di strain al pericentro: la rapida accelerazione rilascia un impulso energetico che si propaga come fronte d'onda circolare, un guscio isolato in espansione a velocità $c$ .*
+  *Strain emission at the pericenter: the rapid acceleration releases an energy pulse that propagates as a circular wavefront, an isolated shell expanding at speed $c$.*
   
-* **All'apocentro (minima velocità):** La dinamica orbitale rallenta drasticamente. Con la velocità angolare quasi ferma, lo strain si indebolisce, ma rivela chiaramente la firma geometrica del **quadrupolo nudo e stazionario** associato al corpo leggero. L'osservatore può vedere questo schema a quattro lobi accendersi e cambiare direzione lentamente nello spazio, riorientando il proprio asse spettrale in tempo reale mentre l'oggetto esegue lentamente la sua svolta apocentrica prima di precipitare nuovamente verso il centro.
+* **At the apocenter (minimum velocity):** The orbital dynamics slow down drastically. With the angular velocity nearly at a standstill, the strain weakens but clearly reveals the geometric signature of the **naked, stationary quadrupole** associated with the light body. The observer can see this four-lobed pattern light up and slowly change direction in space, reorienting its spectral axis in real time as the object slowly performs its apocenter turn before plunging back toward the center.
   
-  <img src="docs/img/GWH_EMRI_afe.png" width="450" alt="Quadrupolo nudo all'apocentro in EMRI">
+  <img src="docs/img/GWH_EMRI_afe.png" width="450" alt="Bare quadrupole at apocenter in EMRI">
   
-  *Il quadrupolo statico nudo all'apocentro: un'inquadratura molto ravvicinata (zoomata) e con guadagno (gain) aumentato rende visibile la caratteristica croce quadrilobata dello strain (ciano/rosso alternato) del corpo leggero, altrimenti invisibile per via del rallentamento cinetico.*
+  *The static, naked quadrupole at apocenter: a very close-up (zoomed) view with increased gain reveals the characteristic four-lobed cross of the strain (alternating cyan and red) of the light body, which would otherwise be invisible due to kinetic deceleration.*
  
 <video src="https://github.com/user-attachments/assets/8d30ed55-33fe-4897-b678-e1e165158f21" controls="controls" width="700"></video>
 
-*Ciclo orbitale completo dell'EMRI (apocentro → pericentro → apocentro) renderizzato in modalità GW Strain. Il video mostra chiaramente la transizione dinamica tra l'emissione stazionaria e debole all'apocentro (in cui spicca il quadrupolo nudo del corpo leggero orientato lungo l'asse orbitale) e la violenta scarica ondulatoria concentrica rilasciata durante il passaggio ravvicinato al pericentro, che si propaga nello spazio.*
+*Complete orbital cycle of the EMRI (apocenter → pericenter → apocenter) rendered in GW Strain mode. The video clearly shows the dynamic transition between the stationary, weak emission at apocenter (where the naked quadrupole of the light body oriented along the orbital axis stands out) and the violent concentric wave discharge released during the close passage at pericenter, which propagates through space.*
 
-*(È disponibile anche come GIF in loop reale in `docs/gif/GWH_EMRI_LOOP.gif`.)*
+*(It is also available as a real-time looping GIF at `docs/gif/GWH_EMRI_LOOP.gif`.)*
 
-| Vista macro: Early Inspiral (decine di AU) | Vista macro: Late Inspiral (decine di AU) |
+| Macro view: Early Inspiral (tens of AU) | Macro view: Late Inspiral (tens of AU) |
 |:---:|:---:|
-| <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Orbita rosetta early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Orbita rosetta late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern late inspiral"> |
-| **Emissione a impulsi discreti sul cono di luce**: Nelle prime fasi dell'inspiral l'emissione avviene per impulsi separati. Ad ogni passaggio al pericentro il corpo rilascia una perturbazione che viaggia sul cono di luce a velocità $c$ come un guscio isolato. Poiché il periodo orbitale è lungo, i fronti d'onda successivi restano separati da ampie regioni di silenzio, propagandosi come anelli concentrici ben spaziati. | **La transizione a spirale continua**: Negli ultimi stadi prima della cattura (regime di chirp), la frequenza orbitale cresce vertiginosamente e l'emissione diventa un flusso continuo. Gli impulsi vengono rilasciati senza sosta: i singoli fronti d'onda perdono la propria individualità e si fondono, tessendo una spirale densa che riempie omogeneamente lo spaziotempo circostante. |
+| <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Rosette orbit (early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern) early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Rosette orbit during late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern during late inspiral"> |
+| **Discrete-pulse emission on the light cone**: In the early stages of inspiral, emission occurs in separate pulses. At each passage through the pericenter, the body releases a disturbance that travels along the light cone at speed $c$ as an isolated shell. Since the orbital period is long, successive wavefronts remain separated by large regions of silence, propagating as well-spaced concentric rings. | **The transition to a continuous spiral**: In the final stages before capture (chirp regime), the orbital frequency increases dramatically, and the emission becomes a continuous flow. The pulses are released without pause: the individual wavefronts lose their distinctiveness and merge, weaving a dense spiral that uniformly fills the surrounding spacetime. |
 
-#### 7.6.5 Caso di studio: BNS a doppia eccentricità estrema
+#### 7.6.5 Case Study: BNS with Extreme Double Eccentricity
 
-Uno scenario fittizio, costruito con la stessa logica dell'EMRI di [§7.6.4](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro) ma con una differenza sostanziale: qui **entrambi** i corpi sono stelle di neutroni gemelle, ciascuna su un'orbita fortemente eccentrica attorno al baricentro comune, invece di un solo corpo leggero attorno a un attrattore fermo. Il risultato è una **doppia precessione apsidale** simultanea, non una singola.
+A hypothetical scenario, constructed using the same logic as the EMRI in [§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter) but with one substantial difference: here **both** bodies are twin neutron stars, each in a highly eccentric orbit around the common center of mass, rather than a single light body orbiting a stationary attractor. The result is simultaneous **double apsidal precession**, not a single one.
 
-| Doppia precessione (in tempo reale) | Fase avanzata: il pattern a conchiglia |
+| Double precession (in real time) | Advanced stage: the shell pattern |
 |:---:|:---:|
-| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Media non trovato"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Media not found"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Media not found"> |
 
-A sinistra le due stelle di neutroni gemelle (ciano e magenta, ~1,5 masse solari ciascuna) precessano simultaneamente attorno al comune baricentro: sono solo due corpi, nessun terzo attrattore al centro, il "centro" dell'immagine è semplicemente il punto medio del sistema. A destra una fase più avanzata della stessa simulazione: la sovrapposizione delle scie storiche delle due precessioni disegna uno schema a conchiglia, non programmato, emerso semplicemente lasciando accumulare la storia delle due orbite sullo schermo.
+On the left, the two twin neutron stars (cyan and magenta, ~1.5 solar masses each) precess simultaneously around their common center of mass: there are only two bodies, no third attractor at the center; the “center” of the image is simply the midpoint of the system. On the right is a later stage of the same simulation: the overlap of the historical trails of the two precessions draws a shell-like pattern that is unplanned and emerged simply by allowing the history of the two orbits to accumulate on the screen.
 
-| Formazione del fronte d'onda | Stesso periodo, zoomato |
+| Wavefront Formation | Same time period, zoomed in |
 |:---:|:---:|
 | <video src="https://github.com/user-attachments/assets/719e9fea-ed25-4c43-80c3-796fcd6925ef" controls="controls" width="100%"></video> | <video src="https://github.com/user-attachments/assets/873bd2bb-6058-450d-a23b-013addb7fd5c" controls="controls" width="100%"></video> |
 
-Il primo video mostra una formazione del fronte d'onda molto simile a quella già vista per l'EMRI. Il secondo, stesso intervallo ma zoomato, rivela bene i due quadrupoli formarsi statici prima e dopo l'apocentro (lo stesso "quadrupolo nudo" di [§7.6.4](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro), qui doppio) per poi ruotare e fondersi nell'emissione violenta al pericentro.
+The first video shows a wavefront formation very similar to the one already seen for the EMRI. The second, covering the same interval but zoomed in, clearly reveals the two quadrupoles forming statically before and after the apocenter (the same “naked quadrupole” as in [§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter), here doubled) and then rotating and merging in the violent emission at the pericenter.
 
-Come nell'EMRI, ma qui in modo più marcato, la coppia alterna di continuo tra il **dead reckoning di 2° ordine** ([§3.2](#32-la-compensazione-dead-reckoning-ibrido)) e il bypass **2.5PN** ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)): quest'ultimo si attiva solo quando $v_{rel} > 0{,}1c$ **e** la distanza scende sotto $1000\ R_s$ del corpo sorgente (la soglia esatta del gate `is_gw`, [§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)). Per questa coppia, la seconda condizione è quasi sempre soddisfatta (anche all'apocentro, 4.000 km restano sotto i $1000\ R_s\approx4.456$ km di ciascuna stella), quindi è la sola velocità relativa a decidere: $v_{rel}\approx0{,}0103c$ all'apocentro (sotto soglia) contro $v_{rel}\approx0{,}2060c$ al pericentro (sopra soglia). Il 2.5PN si accende quindi a ogni passaggio al pericentro, non una tantum come nei BBH comparabili, e fuori da quella finestra resta attivo il solo dead reckoning, il cui residuo di troncamento produce un effetto frenante *simile* al 2.5PN, ma non quantitativamente equivalente, come discusso (con tutte le cautele del caso) in [§3.3](#33-lequilibrio-tra-freno-e-spinta). Con l'avvicinarsi della coalescenza, l'intera orbita si restringe e $v_{rel}$ cresce ovunque, finché la soglia resta superata anche lontano dal pericentro: l'alternanza a scatti dei primi cicli sfuma così in un regime 2.5PN continuativo nell'ultimo secondo. Questo scenario, oltre a essere raro da osservare, è visivamente ricco anche per questo: è probabilmente proprio l'intreccio dei due meccanismi, non uno solo, a dare forma al pattern.
-
-
+As in the EMRI, but here more pronounced, the pair continuously alternates between **2nd-order dead reckoning** ([§3.2](#32-compensation-hybrid-dead-reckoning)) and the **2.5PN** bypass ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)): the latter is activated only when $v_{rel} > 0.1c$ **and** the distance falls below $1000\ R_s$ from the source body (the exact threshold of the `is_gw` gate, [§6.3](#63-how-the-25pn-is-used-in-the-simulator)). For this pair, the second condition is almost always satisfied (even at apocenter, 4,000 km remains below $1000\ R_s\approx4.456$ km for each star), so the relative velocity is the sole determining factor: $v_{rel}\approx0{,}0103c$ at apocenter (below the threshold) versus $v_{rel}\approx0{,}2060c$ at pericenter (above the threshold). The 2.5PN therefore activates at every passage through the pericenter (not just once, as in comparable BBHs) and outside that window, only dead reckoning remains active; its truncation residue produces a braking effect *similar* to that of the 2.5PN, but not quantitatively equivalent, as discussed (with all due caution) in [§3.3](#33-the-balance-between-braking-and-thrust). As coalescence approaches, the entire orbit contracts and $v_{rel}$ increases everywhere, until the threshold remains exceeded even far from the pericenter: the jerky alternation of the first cycles thus fades into a continuous 2.5PN regime in the last second. This scenario, in addition to being rare to observe, is visually rich for this very reason: it is likely the interplay of the two mechanisms (not just one) that shapes the pattern.
 
 
 
-### 7.7 La natura delle onde del simulatore (livelli di astrazione)
 
-Chiuse le sei famiglie, un passo indietro concettuale: che cosa *sono*, fisicamente, le onde che si vedono in $d\Phi/dt$ ([§7.2](#72-variazione-temporale-dφdt)) e in GW Strain ([§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare)) e quanto somigliano davvero alle onde gravitazionali della Relatività Generale?
 
-| Heatmap dΦ/dt | Heatmap GW Strain |
+### 7.7 The Nature of the Simulator’s Waves (Levels of Abstraction)
+
+Now that we’ve covered the six families, let’s take a conceptual step back: what *are*, physically speaking, the waves seen in $d\Phi/dt$ ([§7.2](#72-time-derivative-dφdt)) and in GW Strain ([§7.6](#76-projected-strain-gw-quadrupole-strain)), and how much do they actually resemble the gravitational waves of General Relativity?
+
+| dΦ/dt Heatmap | GW Strain Heatmap |
 |:---:|:---:|
 | <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
-| **Variazione temporale del potenziale scalare ( $d\Phi/dt$ ):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato: dice quanto e dove si sta spostando il pozzo gravitazionale scalare di ciascun corpo. I fronti a spirale visibili indicano la propagazione a velocità finita $c$ di queste variazioni del potenziale (il dipolo indotto dal moto delle sorgenti). Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
+| **Temporal variation of the scalar potential ($d\Phi/dt$):** Maps the variation over time of the retarded causal gravitational potential: it indicates how much and where the scalar gravitational well of each body is shifting. The visible spiral fronts indicate the propagation at finite speed $c$ of these potential variations (the dipole induced by the motion of the sources). This visualization captures pure scalar radiation, which serves as a qualitative and visual analog for the chirp frequencies. | **Projected Strain (GW Quadrupole Strain):** Maps the tensor projection of the mass quadrupole’s gravitational strain. The alternating cyan and red lobes indicate the polarities of the quadrupole radiation projected along the observer’s line of sight, highlighting the actual spin-2 symmetry of the rotating binary system and eliminating spurious monopoles or gradients. |
 
-**Dove si vedono queste onde e cosa sono realmente.** 
-Il modello non risolve le equazioni di campo di Einstein nello spazio-tempo per calcolare le heatmap. Esso offre due distinti livelli di astrazione visiva per rappresentare l'irraggiamento energetico del sistema:
+**Where these waves are seen and what they really are.** 
+The model does not solve Einstein’s field equations in spacetime to calculate the heatmaps. Instead, it offers two distinct levels of visual abstraction to represent the system’s energy radiation:
 
-1. **L'analogo scalare ( $d\Phi/dt$ ):** Emerge spontaneamente dalla sola propagazione causale del potenziale. Non calcola il quadrupolo, ma mostra l'onda di fase generata dal doppio dipolo rotante, cioè dallo spostamento causale dei singoli pozzi gravitazionali della coppia, condividendo con la fisica delle onde gravitazionali reali la sola frequenza orbitale e il fenomeno del chirp spettrale.
-2. **Lo strain quadrupolare proiettato:** Calcola esplicitamente la proiezione del quadrupolo delle velocità ritardate sul piano dell'osservatore, implementando la classica **formula del quadrupolo** (l'approssimazione standard di campo debole e moto lento con cui si deriva l'emissione di onde gravitazionali senza risolvere le equazioni di campo complete). Questo layer riproduce fedelmente la simmetria angolare di quadrupolo dello spin-2 reale, eliminando gli effetti dipolari spuri e offrendo un quadro geometricamente coerente della radiazione gravitazionale.
+1. **The scalar analogue ($d\Phi/dt$):** It emerges spontaneously from the causal propagation of the potential alone. It does not calculate the quadrupole, but shows the phase wave generated by the rotating double dipole (that is, by the causal displacement of the pair’s individual gravitational wells) sharing with the physics of real gravitational waves only the orbital frequency and the phenomenon of spectral chirp.
+2. **The projected quadrupole strain:** It explicitly calculates the projection of the quadrupole of the retarded velocities onto the observer’s plane, implementing the classical **quadrupole formula** (the standard weak-field and slow-motion approximation used to derive gravitational wave emission without solving the full field equations). This layer faithfully reproduces the quadrupole angular symmetry of real spin-2, eliminating spurious dipolar effects and providing a geometrically consistent picture of gravitational radiation.
 
-La tabella seguente riassume schematicamente le differenze fisiche e geometriche tra le onde reali e le due visualizzazioni del simulatore:
+The following table schematically summarizes the physical and geometric differences between real waves and the two simulator representations:
 
-| Caratteristica | Onde reali (Relatività Generale) | Analogo scalare $d\Phi/dt$ | Strain simulato (GW Strain) |
+| Characteristic | Real Waves (General Relativity) | Scalar Analog $d\Phi/dt$ | Simulated Strain (GW Strain) |
 |---|---|---|---|
-| **Natura del campo** | Campo tensoriale di **spin-2** ( $h_{\mu\nu}$ ) | Campo **scalare** ( $\Phi$ ) | Campo tensoriale proiettato lungo la visuale |
-| **Polarizzazioni** | Due polarizzazioni indipendenti ( $h_+$ e $h_\times$ ) sfasate di 45° | Nessuna polarizzazione (variazione scalare pura) | Singola polarizzazione proiettata ( $h_+$ efficace) |
-| **Sorgente fisica** | Variazione temporale del quadrupolo di massa ( $\ddot{Q}_{ij}$ ) | Moto e variazione temporale del monopolo ( $\partial\Phi/\partial t$ ) | Proiezione cinetica del quadrupolo di ciascuna massa |
-| **Simmetria angolare** | Quadrupolare (quattro lobi alternati a 90°) | Dipolare attorno al singolo corpo in moto | Quadrupolare pura ( $\ell=2$ con quattro lobi alternati) |
-| **Propagazione** | Radiazione ondulatoria tensoriale alla velocità della luce $c$ | Onde di fase del potenziale ritardato a velocità $c$ | Fronte d'onda causale ritardato a velocità $c$ |
-| **Accoppiamento** | Generato da accelerazioni asimmetriche nel COM* | Generato anche da moto uniforme traslatorio del corpo | Si annulla per moti uniformi di COM* (sottratto dal codice) |
+| **Nature of the field** | **Spin-2** tensor field ( $h_{\mu\nu}$ ) | **Scalar** field ( $\Phi$ ) | Tensor field projected along the line of sight |
+| **Polarizations** | Two independent polarizations ( $h_+$ and $h_\times$ ) out of phase by 45° | No polarization (pure scalar variation) | Single projected polarization (effective $h_+$) |
+| **Physical source** | Temporal variation of the mass quadrupole ( $\ddot{Q}_{ij}$ ) | Motion and temporal variation of the monopole ( $\partial\Phi/\partial t$ ) | Kinetic projection of the quadrupole of each mass |
+| **Angular symmetry** | Quadrupolar (four lobes alternating at 90°) | Dipolar around the single moving body | Pure quadrupolar ( $\ell=2$ with four alternating lobes) |
+| **Propagation** | Tensor wave radiation at the speed of light $c$ | Phase waves of the retarded potential at speed $c$ | Retarded wavefront at speed $c$ |
+| **Coupling** | Generated by asymmetric accelerations in the COM* | Also generated by uniform translational motion of the body | Cancels out for uniform motions of the COM* (subtracted from the code) |
 
-\* COM (*Center of Mass* / Centro di Massa): il baricentro gravitazionale del sistema binario, utile a sottrarre la velocità di traslazione globale della coppia.
+\* COM (*Center of Mass*): the gravitational center of mass of the binary pair, used to subtract the overall translational velocity of the pair.
 
-In sintesi, mentre la modalità $d\Phi/dt$ funge da semplice indicatore qualitativo di moto ondulatorio, lo strain quadrupolare proietta la reale impronta geometrica dell'onda gravitazionale. Questo permette di esplorare i lobi e le spirali di fase in modo fisicamente coerente, senza dover ricorrere a complesse simulazioni di relatività numerica.
+In summary, while the $d\Phi/dt$ mode serves as a simple qualitative indicator of wave motion, the quadrupolar strain projects the actual geometric imprint of the gravitational wave. This allows us to explore phase lobes and spirals in a physically consistent manner, without having to resort to complex numerical relativity simulations.
 
-### 7.8 Riepilogo: come ogni heatmap converte la fisica in colore
+### 7.8 Summary: How Each Heatmap Converts Physics into Color
 
-Le sei heatmap del simulatore usano strategie di normalizzazione e mapping cromatico anche molto diverse, calibrate sulla **grandezza fisica** che ciascuna deve rendere visibile. La tabella seguente riassume in modo schematico i conti effettivi che ogni kernel esegue per arrivare al colore del pixel.
+The simulator’s six heatmaps use normalization and color-mapping strategies that vary considerably, tailored to the **physical quantity** that each is designed to visualize. The following table schematically summarizes the actual calculations each kernel performs to determine the pixel color.
 
-| Heatmap | Grandezza misurata | Normalizzazione | Scala | Mapping cromatico | Fader utente |
+| Heatmap | Measured quantity | Normalization | Scale | Color mapping | User fader |
 |---|---|---|---|---|---|
-| **Φ** ([§7.1](#71-potenziale-scalare-φ)) | $\Phi = \sum_k GM_k/r_k$ (causale) | dinamica per-frame su $\Phi_{\max}$ (massa più grande / raggio effettivo) | **log₁₀**, intervallo di 6 ordini di grandezza | rampa a 3 stop sequenziali: blu profondo → indaco → arancio → bianco | nessuno |
-| **dΦ/dt** ([§7.2](#72-variazione-temporale-dφdt)) | $\partial\Phi/\partial t = \sum_k GM_k v_{rad,k}/r_k^2$ (causale) | gain calibrato su scala interna, modulato dal fader | $\tanh(\text{val})$ (compressione asintotica a $\pm 1$ , niente saturazione netta) | divergente: blu/ciano per avvicinamento ( $+$ ), rosso per allontanamento ( $-$ ) | sì (**GAIN**, $\pm$ , default $0$ in scala log₁₀) |
-| **Tidal Stress** ([§7.3](#73-stress-di-marea-e-una-nota-sullhessiana)) | $\sigma = \sqrt{(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2}$ (autovalori discordi) | nessuna (scala assoluta in $(\text{m/s}^2)$ per metro, come descritto in [§7.3](#73-stress-di-marea-e-una-nota-sullhessiana)) | **log₁₀** + Offset utente | 6 fasce calibrate su soglie fisiche reali (resistenza dei materiali), interpolate linearmente all'interno di ciascuna; legenda apribile con `M` | via astro_settings.ini |
-| **Topologia di Roche** ([§7.4](#74-topologia-di-roche-il-segno-del-determinante)) | due quantità sovrapposte: segno di $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ + modulo $\|\nabla\Phi_{\text{eff}}\|$ | $D$ adimensionalizzato su $\omega^4$ (scala naturale del frame corotante); forza normalizzata su $f_{\text{norm}} = \tfrac{27}{4}q(1-q)\omega^2 r$ (scala caratteristica L4/L5) | **log₁₀** clampato $[-3,+3]$ per la tinta; **log₁₀** lineare per la luminosità | tinta dal segno di $D$ : rampa cremisi → giallo neon ( $D<0$ ) o indaco → ciano ( $D>0$ ); luminosità = forza, nucleo nero nei punti di stallo | sì (**sensibilità** + **contrasto**) |
-| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)) | $r_{\text{est}} = \|H^{-1}\nabla\Phi_{\text{eff}}\|$ (stimatore di distanza Newton-Raphson) | conversione $r_{\text{est}}/\text{scala camera}$ → distanza in pixel | lineare (nessuna log: la stima è già una distanza) | gaussiana $\exp\!\big(-2(d/r_{\text{soglia}})^2\big)$ centrata sullo zero del gradiente; tinta dal segno di $D$ : rosso ( $D<0$ , L1/L2/L3) o blu ( $D>0$ , L4/L5) | sì (**sensibilità** → raggio $r_{\text{soglia}}$ della gaussiana) |
-| **GW Strain** ([§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare)) | $h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}$ (causale) | gain calibrato internamente, modulato dal fader | $\text{asinh}(h \cdot \text{sensitivity})$ (compressione a $\pm 1$ ) | divergente: ciano per strain positivo ( $+$ ), rosso per strain negativo ( $-$ ) | sì (sensibilità via fader Roche) |
+| **Φ** ([§7.1](#71-scalar-potential-φ)) | $\Phi = \sum_k GM_k/r_k$ (causal) | per-frame dynamics relative to $\Phi_{\max}$ (largest mass / effective radius) | **log₁₀**, 6-order-of-magnitude range | ramp with 3 sequential stops: deep blue → indigo → orange → white | none |
+| **dΦ/dt** ([§7.2](#72-time-derivative-dφdt)) | $\partial\Phi/\partial t = \sum_k GM_k v_{rad,k}/r_k^2$ (causal) | gain calibrated on internal scale, modulated by the fader | $\tanh(\text{val})$ (asymptotic compression to $\pm 1$, no net saturation) | divergent: blue/cyan for approaching ( $+$ ), red for receding ( $-$ ) | yes (**GAIN**, $\pm$ , default $0$ on log₁₀ scale) |
+| **Tidal Stress** ([§7.3](#73-tidal-stress-and-a-note-on-the-hessian)) | $\sigma = \sqrt{(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2}$ (discordant eigenvalues) | none (absolute scale in $(\text{m/s}^2)$ per meter, as described in [§7.3](#73-tidal-stress-and-a-note-on-the-hessian)) | **log₁₀** + User offset | 6 bands calibrated to real physical thresholds (material strength), linearly interpolated within each; legend can be opened with `M` | via astro_settings.ini |
+| **Roche Topology** ([§7.4](#74-roche-topology-the-sign-of-the-determinant)) | two superimposed quantities: sign of $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$ + modulus $\|\nabla\Phi_{\text{eff}}\|$ | $D$ dimensionless with respect to $\omega^4$ (natural scale of the co-rotating frame); normalized force on $f_{\text{norm}} = \tfrac{27}{4}q(1-q)\omega^2 r$ (characteristic scale L4/L5) | **log₁₀** clamped to $[-3,+3]$ for hue; **log₁₀** linear for brightness | hue determined by the sign of $D$: crimson → neon yellow ramp ($D<0$) or indigo → cyan ($D>0$); brightness = force, black core at stall points | yes (**sensitivity** + **contrast**) |
+| **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)) | $r_{\text{est}} = \|H^{-1}\nabla\Phi_{\text{eff}}\|$ (Newton-Raphson distance estimator) | conversion of $r_{\text{est}}/\text{camera scale}$ → distance in pixels | linear (no log: the estimate is already a distance) | Gaussian $\exp\!\big(-2(d/r_{\text{threshold}})^2\big)$ centered on the zero of the gradient; colored by the sign of $D$: red ($D<0$, L1/L2/L3) or blue ($D>0$, L4/L5) | yes (**sensitivity** → radius $r_{\text{threshold}}$ of the Gaussian) |
+| **GW Strain** ([§7.6](#76-projected-strain-gw-quadrupole-strain)) | $h_{\text{total}} = \sum_k \frac{M_k \cdot h_{\text{proj}, k}}{r_k}$ (causal) | internally calibrated gain, modulated by the fader | $\text{asinh}(h \cdot \text{sensitivity})$ (compression to $\pm 1$) | divergent: cyan for positive strain ( $+$ ), red for negative strain ( $-$ ) | yes (sensitivity via Roche fader) |
 
 > [!NOTE]
-> **E le unità di misura?** Manca una colonna dedicata perché qui le grandezze SI perdono spesso il loro significato intuitivo, coprendo più ordini di grandezza di quanti un numero assoluto ne comunichi: la priorità visiva è quindi il *range dinamico* (gestito coi logaritmi) e il *segno topologico*, non l'unità. L'eccezione è il Tidal Stress, ancorato di proposito a un'unità intellegibile, $(\text{m/s}^2)$ per metro, per confrontare lo sforzo di marea con la resistenza reale dei materiali. Le unità vere, numero per numero, sono nella sonda di campo del [§7.9](#79-il-doppio-clic-in-scena-pannello-di-telemetria-e-sonda-di-campo-le-unità-di-misura).
+> **What about units of measurement?** There is no dedicated column because here SI quantities often lose their intuitive meaning, covering more orders of magnitude than an absolute number can convey: the visual priority is therefore the *dynamic range* (handled using logarithms) and the *topological sign*, not the unit. The exception is Tidal Stress, which is intentionally anchored to an intelligible unit, $(\text{m/s}^2)$ per meter, to compare tidal stress with the actual strength of materials. The actual units, value by value, are found in the field probe in [§7.9](#79-double-clicking-on-the-scene-telemetry-panel-and-field-probe-units-of-measurement).
 
 > [!TIP]
-> **Analogia acustica: Compressione dinamica ( $\text{asinh}$ ) vs Hard Clipping ( $\tanh$ ).**
-> La scelta tra la compressione dello strain via $\text{asinh}$ e quella del potenziale via $\tanh$ equivale esattamente alla differenza tra due trattamenti del segnale acustico:
-> - La **$\tanh$** si comporta come un **hard clipper** (distorsore): mappa i valori in un intervallo rigido tagliando asintoticamente le creste del segnale oltre una soglia bassa. Questo è ideale in $d\Phi/dt$ per dare contorni netti, definiti e contrastati alle onde di fase, ma appiattisce la dinamica interna saturando rapidamente al massimo di intensità.
-> - La **$\text{asinh}$** si comporta come un **compressore dinamico da mastering**: attenua logaritmicamente i picchi monumentali nel vicino campo (near-field) impedendo che si brucino in un blocco di colore solido, lasciando al contempo i segnali deboli in periferia (far-field) lineari, leggibili e liberi di sfumare con naturalezza nel nero del vuoto cosmico.
+> **Acoustic analogy: Dynamic compression ( $\text{asinh}$ ) vs. hard clipping ( $\tanh$ ).**
+> The choice between compressing strain via $\text{asinh}$ and compressing potential via $\tanh$ corresponds exactly to the difference between two ways of processing an acoustic signal:
+> - The **$\tanh$** behaves like a **hard clipper** (distortion filter): it maps values to a rigid range by asymptotically clipping the signal peaks beyond a low threshold. This is ideal in $d\Phi/dt$ for giving phase waves sharp, well-defined, and high-contrast contours, but it flattens the internal dynamics by rapidly saturating at maximum intensity.
+> - The **$\text{asinh}$** behaves like a **dynamic mastering compressor**: it logarithmically attenuates monumental peaks in the near field, preventing them from burning out into a solid block of color, while leaving the weak signals in the far field linear, legible, and free to fade naturally into the blackness of cosmic space.
 
-**Pattern comuni**
-- **Tre heatmap sono causali a tempo ritardato** (Φ, dΦ/dt e GW Strain): leggono lo stato delle sorgenti dai ring buffer L0/L1/L2 al tempo ritardato $r/c$ e mostrano come l'informazione gravitazionale (rispettivamente: il pozzo monopolare, la sua variazione temporale, la proiezione del quadrupolo) si propaga nello spazio a velocità finita. Le altre tre (Tidal, Roche, Lagrange) sono **istantanee**: usano posizioni e velocità presenti, perché interpretano la geometria locale del campo, non la sua propagazione.
-- **Il logaritmo compare ovunque tranne nel Lagrange Hunter**: è imposto dal range fisico in gioco, che attraversa decine di ordini di grandezza in tutte le mappe scalari (potenziale, derivata temporale, stress di marea, curvatura del potenziale efficace).
-- **La normalizzazione è quasi sempre "fisica"**, non puramente numerica: si appoggia su $\Phi_{\max}$ , $\omega^4$ , $f_{\text{norm}}$ o soglie meccaniche reali. L'unica scala assoluta (senza alcuna normalizzazione) è quella della Tidal, perché le sue fasce coincidono con la resistenza dei materiali misurata in laboratorio (silicati, ghiaccio, metalli).
+**Common Patterns**
+- **Three heatmaps are retarded causal** (Φ, dΦ/dt, and GW Strain): they read the state of the sources from the L0/L1/L2 ring buffers at the retarded time $r/c$ and show how gravitational information (respectively: the monopolar well, its temporal variation, and the quadrupole projection) propagates through space at a finite speed. The other three (Tidal, Roche, Lagrange) are **snapshots**: they use current positions and velocities because they interpret the local geometry of the field, not its propagation.
+- **The logarithm appears everywhere except in the Lagrange Hunter**: it is imposed by the physical range involved, which spans tens of orders of magnitude in all scalar maps (potential, time derivative, tidal stress, curvature of the effective potential).
+- **Normalization is almost always “physical”**, not purely numerical: it is based on $\Phi_{\max}$, $\omega^4$, $f_{\text{norm}}$, or actual mechanical thresholds. The only absolute scale (without any normalization) is that of Tidal, because its ranges coincide with the strength of materials measured in the laboratory (silicates, ice, metals).
 
-**Showcase: Alpha Centauri, la stessa inquadratura in quattro modalità**
+**Showcase: Alpha Centauri, the same frame in four modes**
 
-| 1. dΦ/dt | 2. Topologia di Roche |
+| 1. dΦ/dt | 2. Roche topology |
 |:---:|:---:|
-| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="Media non trovato"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Media non trovato"> |
+| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="Media not found"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Media not found"> |
 
 | 3. Lagrange Hunter | 4. Lagrange Hunter + overlay [M] |
 |:---:|:---:|
-| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Media non trovato"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Media not found"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Media not found"> |
 
-Alpha Centauri è il sistema stellare più vicino al Sole (4,37 anni luce), un sistema triplo di cui A e B (qui inquadrate) formano la coppia stretta, rispettivamente una stella simile al Sole di tipo G (1,1 masse solari) e una nana arancione di tipo K (0,9 masse solari), in orbita reciproca con semiasse ~23 UA e periodo ~80 anni.
+Alpha Centauri is the closest star system to the Sun (4.37 light-years), a triple star system in which A and B (shown here) form the close pair (respectively, a Sun-like G-type star (1.1 solar masses) and an orange K-type dwarf (0.9 solar masses)) in mutual orbit with a semi-major axis of ~23 AU and a period of ~80 years.
 
-Nei quattro esempi precedenti è stata proposta la stessa identica inquadratura del sistema binario **Alpha Centauri AB** vista in quattro modalità selezionate da questo capitolo:
+In the four previous examples, the exact same view of the **Alpha Centauri AB** binary system was presented, as seen in four modes selected from this chapter:
 
-1. **dΦ/dt** ([§7.2](#72-variazione-temporale-dφdt)): il dipolo controfase; ogni stella genera il proprio dipolo, ruotato di 180° rispetto all'altra perché si muovono in direzioni opposte attorno al baricentro.
-2. **Topologia di Roche** ([§7.4](#74-topologia-di-roche-il-segno-del-determinante)): la classica "clessidra" a due lobi, col collo stretto proprio su L1.
-3. **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)): i cinque punti emersi, rosso per L1/L2/L3 e blu per L4/L5.
-4. **Lagrange Hunter + overlay [M]**: lo stesso, affiancato dall'overlay a marker analitici per il confronto diretto.
+1. **dΦ/dt** ([§7.2](#72-time-derivative-dφdt)): the out-of-phase dipole; each star generates its own dipole, rotated by 180° relative to the other because they move in opposite directions around the center of mass.
+2. **Roche topology** ([§7.4](#74-roche-topology-the-sign-of-the-determinant)): the classic two-lobed “hourglass,” with the narrow neck located precisely at L1.
+3. **Lagrange Hunter** ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)): the five points that emerge, red for L1/L2/L3 and blue for L4/L5.
+4. **Lagrange Hunter + overlay [M]**: the same, flanked by an overlay of analytical markers for direct comparisons.
 
-Questi pattern non sono una peculiarità di Alpha Centauri: valgono qualitativamente per **qualunque binaria non estrema** (masse comparabili, separazione ordinaria, nessun regime relativistico). È per questo il caso "di base" da cui partire per leggere le heatmap prima di affrontare gli scenari compatti dei capitoli successivi.
+These patterns are not unique to Alpha Centauri: they apply qualitatively to **any non-extreme binary system** (comparable masses, ordinary separation, no relativistic regime). This is therefore the “basic” case from which to start interpreting the heatmaps before tackling the compact scenarios in the following chapters.
 
 
-### 7.9 Il doppio clic in scena: Pannello di Telemetria e sonda di campo (le unità di misura)
+### 7.9 Double-clicking on the Scene: Telemetry Panel and Field Probe (Units of Measurement)
 
-Lo stesso gesto, il **doppio clic**, apre due strumenti diversi a seconda del bersaglio: su un corpo mostra il suo stato cinematico completo (il Pannello di Telemetria che segue), la camera si "aggancia" al corpo seguendolo e appaiono due vettori, verde per la velocità e viola per la forza, mentre il doppio clic sul vuoto campiona il campo in quel punto esatto e lo stampa in console (la sonda a fine paragrafo). È lì che le unità di misura tornano a contare.
+The same action (the **double-click**) opens two different tools depending on the target: on a body, it displays its complete kinematic state (the Telemetry Panel shown below); the camera “locks onto” the body, tracking it, and two vectors appear (green for velocity and purple for force) while a double-click in empty space samples the field at that exact point and displays it in the console (the probe at the end of the paragraph). That’s where the units of measurement come into play again.
 
-#### Il Pannello di Telemetria Orbitale (HUD)
+#### The Orbital Telemetry Panel (HUD)
 
-Il simulatore non si limita a visualizzare qualitativamente la fisica tramite le heatmap, ma espone in tempo reale l'intero stato cinematico e dinamico di qualunque corpo selezionato. Questa interfaccia informativa è denominata **Pannello di Telemetria Orbitale** (indicato comunemente come *cruscotto di volo* o *HUD*).
+The simulator does not merely display physics qualitatively via heatmaps, but shows the entire kinematic and dynamic state of any selected body in real time. This informational interface is called the **Orbital Telemetry Panel** (commonly referred to as the *flight dashboard* or *HUD*).
 
-##### Attivazione e funzionamento
-L'HUD appare nella parte inferiore dello schermo e si attiva:
-* Effettuando un **doppio clic** su uno qualsiasi dei corpi presenti nello scenario.
-* Premendo il tasto **[TAB]** per scorrere ciclicamente tra tutti i corpi attivi.
+##### Activation and Operation
+The HUD appears at the bottom of the screen and is activated by:
+* **Double-clicking** on any of the bodies present in the scenario.
+* Pressing the **[TAB]** key to cycle through all active bodies.
 
-Una volta selezionato un corpo (denominato *target*), il motore calcola dinamicamente le sue grandezze fisiche sia in senso assoluto (riferite all'origine inerziale del motore) sia in senso relativo (riferite all'attrattore gravitazionale dominante in quel momento). La determinazione del corpo di riferimento avviene tramite il calcolo locale della forza di marea ( $M/r^3$ ), identificando quale massa eserciti l'influenza gravitazionale prevalente sull'oggetto (la stessa logica utilizzata per definire la sfera di Hill).
+Once a body (referred to as the *target*) has been selected, the engine dynamically calculates its physical quantities both in absolute terms (referenced to the engine’s inertial origin) and in relative terms (referenced to the dominant gravitational attractor at that moment). The reference body is determined by calculating the local tidal force ($M/r^3$) to identify which mass exerts the predominant gravitational influence on the object (the same logic used to define the Hill sphere).
 
-<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media not found"></div>
 
-##### Parametri e grandezze visualizzate
-Il pannello di telemetria è strutturato in colonne che organizzano i dati fisici calcolati dal risolutore:
+##### Parameters and Displayed Quantities
+The telemetry panel is organized into columns that present the physical data calculated by the solver:
 
-1. **Dati Anagrafici e di Riferimento** (Prima colonna):
-   * **TARGET**: Nome del corpo selezionato e colore identificativo dello scenario.
-   * **Mass**: Massa dell'oggetto in chilogrammi (espressa in notazione scientifica).
-   * **Dist**: Identificativo del corpo di riferimento dominante seguito dalla distanza istantanea espressa in formato scalato (chilometri o Unità Astronomiche) ed evidenziata in due modalità: **CC** (*Center-Center* / Centro-Centro, ossia la distanza geometrica tra i baricentri dei due corpi) e **SS** (*Surface-Surface* / Superficie-Superficie, ossia la distanza netta tra le rispettive superfici fisiche o relative atmosfere o orizzonti degli eventi, al netto dei loro raggi visivi). Viene inoltre indicata la conversione di tale distanza in pixel schermo.
+1. **Basic and Reference Data** (First column):
+   * **TARGET**: Name of the selected body and its identifying color in the scenario.
+   * **Mass**: Mass of the object in kilograms (expressed in scientific notation).
+   * **Dist**: Identifier of the dominant reference body followed by the instantaneous distance expressed in a scaled format (kilometers or Astronomical Units) and highlighted in two ways: **CC** (*Center-Center*, i.e., the geometric distance between the centers of mass of the two bodies) and **SS** (*Surface-Surface*, i.e., the net distance between their respective physical surfaces, atmospheres, or event horizons, net of their visual radii). The conversion of this distance to screen pixels is also indicated.
 
-2. **Posizione Assoluta** (Seconda colonna):
-   * **PX, PY**: Coordinate cartesiane del target espresse in formato scalato (chilometri o Unità Astronomiche) rispetto all'origine (zero relativo) del sistema di coordinate dello scenario.
+2. **Absolute Position** (Second column):
+   * **PX, PY**: Cartesian coordinates of the target expressed in a scaled format (kilometers or Astronomical Units) relative to the origin (relative zero) of the scenario’s coordinate system.
 
-3. **Velocità Lineare** (Terza e Quarta colonna):
-   * **VX, VY, V (Abs)** (Velocità Assoluta): Vettori e modulo della velocità dell'oggetto riferiti al sistema eliocentrico/inerziale di simulazione. Mostrano la velocità complessiva del corpo all'interno del sistema (es. i ~30 km/s dell'orbita terrestre attorno al Sole).
-   * **VX, VY, V (Rel)** (Velocità Relativa): Vettori e modulo della velocità calcolati rispetto all'attrattore principale (ad es. la velocità di allontanamento/avvicinamento di Orion rispetto alla Terra, pari a ~2,04 km/s).
+3. **Linear Velocity** (Third and Fourth columns):
+   * **VX, VY, V (Abs)** (Absolute Velocity): Velocity vectors and magnitude of the object relative to the heliocentric/inertial simulation system. These show the object’s overall velocity within the system (e.g., the ~30 km/s of Earth’s orbit around the Sun).
+   * **VX, VY, V (Rel)** (Relative Velocity): Velocity vectors and magnitude calculated relative to the main attractor (e.g., Orion’s speed of recession/approach relative to Earth, equal to ~2.04 km/s).
 
-4. **Accelerazione Gravitazionale** (Quinta e Sesta colonna):
-   * **AX, AY, A (Abs)** (Accelerazione Assoluta): Vettori e modulo dell'accelerazione totale istantanea subita dal corpo, derivante dalla somma di tutte le attrazioni gravitazionali $O(N^2)$ (incluso l'influsso del Sole).
-   * **AX, AY, A (Rel)** (Accelerazione Relativa): Vettori e modulo dell'accelerazione calcolati al netto dell'accelerazione dell'attrattore dominante, evidenziando le forze differenziali e di marea.
+4. **Gravitational Acceleration** (Fifth and Sixth Columns):
+   * **AX, AY, A (Abs)** (Absolute Acceleration): Vectors and magnitude of the total instantaneous acceleration experienced by the body, resulting from the sum of all gravitational attractions $O(N^2)$ (including the influence of the Sun).
+   * **AX, AY, A (Rel)** (Relative Acceleration): Vectors and magnitude of the acceleration calculated net of the acceleration of the dominant attractor, highlighting differential and tidal forces.
 
-#### La sonda di campo: doppio clic sul vuoto, le unità di misura vere
+#### The Field Probe: Double-click on empty space for true units of measurement
 
-Se il doppio clic non centra nessun corpo, il motore non apre l'HUD: campiona il campo esattamente in quel pixel e stampa il risultato in console (riga `[SONDA]`). Sono varianti puntuali delle heatmap causali e istantanee di questo capitolo, la stessa matematica dei kernel di rendering applicata a un solo punto invece che all'intera griglia, dove infatti restituiscono il colore e non il numero.
+If the double-click does not hit any body, the engine does not open the HUD: it samples the field at that exact pixel and prints the result to the console (line `[SONDA]`). These are pointwise variants of the causal and instantaneous heatmaps in this chapter; the same rendering kernel mathematics is applied to a single point rather than the entire grid, where they actually return a color rather than a number.
 
-| Grandezza | Unità nativa stampata | Equivalente leggibile |
+| Quantity | Native unit printed | Readable equivalent |
 |---|---|---|
-| **Φ** ([§7.1](#71-potenziale-scalare-φ)) | $\text{km}^2/\text{s}^2$ | numericamente identico a $\text{MJ/kg}$ (energia specifica) |
-| **dΦ/dt** ([§7.2](#72-variazione-temporale-dφdt)) | $\text{km}^2/\text{s}^3$ | il codice stesso lo converte già in $\text{kW/kg}$ (potenza specifica, ×1000) prima di stamparlo |
-| **Tidal Stress** ([§7.3](#73-stress-di-marea-e-una-nota-sullhessiana)) | $\text{s}^{-2}$ | lo stesso numero letto come $(\text{m/s}^2)$ per metro, l'unità della legenda del §7.3 |
-| **GW Strain** ([§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare)) | adimensionale | già leggibile così: è una frazione di deformazione dello spazio, nessuna conversione necessaria |
+| **Φ** ([§7.1](#71-scalar-potential-φ)) | $\text{km}^2/\text{s}^2$ | numerically identical to $\text{MJ/kg}$ (specific energy) |
+| **dΦ/dt** ([§7.2](#72-time-derivative-dφdt)) | $\text{km}^2/\text{s}^3$ | the code itself already converts this to $\text{kW/kg}$ (specific power, ×1000) before printing it |
+| **Tidal Stress** ([§7.3](#73-tidal-stress-and-a-note-on-the-hessian)) | $\text{s}^{-2}$ | the same number read as $(\text{m/s}^2)$ per meter, the unit in the legend of §7.3 |
+| **GW Strain** ([§7.6](#76-projected-strain-gw-quadrupole-strain)) | dimensionless | already readable as is: it is a fraction of spatial deformation; no conversion necessary |
 
-Un vincolo asimmetrico chiude il quadro: le prime tre sonde funzionano su qualunque punto dello scenario, la riga GW Strain compare in console solo se una coppia è già bloccata (lo stesso target/attrattore dell'overlay Roche/Lagrange), perché lo strain di una coppia non è definito finché non si sa quale coppia.
+An asymmetric constraint completes the picture: the first three probes work at any point in the scenario; the GW Strain line appears in the console only if a pair is already locked (the same target/attractor as in the Roche/Lagrange overlay), because the strain of a pair is not defined until you know which pair it is.
 
 ---
 
-## 8. L'analizzatore LIGO/Virgo: dal proxy cinematico allo spettro
+## 8. The LIGO/Virgo Analyzer: From Kinematic Proxy to Spectrum
 
-Una premessa dovuta, prima di tutto: chiamare "LIGO" la sonda e "analizzatore LIGO/Virgo" la pipeline è un **omaggio concettuale** ai rivelatori reali che hanno aperto quest'era dell'astronomia, non una pretesa di equivalenza strumentale. La sonda non simula interferometria, bracci ortogonali né rumore strumentale: ne mutua il ruolo (registrare lo strain in un punto dello spazio) e il vocabolario. Ciò premesso, questa sezione descrive cosa sono LIGO e Virgo e come sono stati concettualmente virtualizzati nella sonda della simulazione. In seguito la pipeline di analisi (`ligo_analyzer.py`), costruita su funzioni standard di `scipy.signal` (SciPy: la libreria Python standard per calcolo scientifico, qui usata per l'elaborazione di segnali).
+First, a necessary clarification: calling the probe “LIGO” and the pipeline the “LIGO/Virgo analyzer” is a **conceptual homage** to the real detectors that ushered in this era of astronomy, not a claim of instrumental equivalence. The probe does not simulate interferometry, orthogonal arms, or instrumental noise: it borrows their role (recording the strain at a point in space) and their terminology. That said, this section describes what LIGO and Virgo are and how they have been conceptually virtualized in the simulation probe. Next, the analysis pipeline (`ligo_analyzer.py`), built on standard functions from `scipy.signal` (SciPy: the standard Python library for scientific computing, used here for signal processing).
 
-### 8.1 L'analogia con LIGO e Virgo sulla Terra
+### 8.1 The Analogy with LIGO and Virgo on Earth
 
-I rivelatori reali sulla Terra (come LIGO negli Stati Uniti o Virgo in Italia) sono giganteschi interferometri laser a forma di "L" con due bracci perpendicolari lunghi 3 o 4 km. Quando un'onda gravitazionale attraversa il rivelatore, essa comprime lo spazio lungo un braccio e lo stira lungo l'altro.
+The real detectors on Earth (such as LIGO in the United States or Virgo in Italy) are gigantic “L”-shaped laser interferometers with two perpendicular arms 3 or 4 km long. When a gravitational wave passes through the detector, it compresses space along one arm and stretches it along the other.
 
-LIGO e Virgo misurano questa piccolissima variazione relativa della lunghezza dei bracci, chiamata **strain ( $h$ )**:
+LIGO and Virgo measure this very small relative change in the length of the arms, called **strain ( $h$ )**:
 
 $$h = \frac{\Delta L}{L}$$
 
-La **sonda LIGO virtuale** nel simulatore rappresenta l'esatta analogia software di questo processo:
-* Viene posizionata **dall'utente**, in tempo reale, in un punto qualsiasi dello schermo (lo spazio 2D).
-* Registra a ogni istante temporale un valore di strain $s(t)$ che rappresenta l'intensità locale di questa deformazione (lo stiramento e la compressione dello spazio) causata dal movimento delle masse del sistema binario.
+The **virtual LIGO probe** in the simulator represents the exact software analog of this process:
+* It is positioned **by the user**, in real time, at any point on the screen (2D space).
+* At every instant in time, it records a strain value $s(t)$ that represents the local intensity of this deformation (the stretching and compression of space) caused by the motion of the masses in the binary system.
 
-Quel segnale grezzo $s(t)$ è tutto ciò che la sonda produce: è poi la **pipeline di analisi** ([§8.8](#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy)) a ripulirlo, elaborarlo e trasformarlo negli spettrogrammi e nelle stime che compaiono come grafici in questa guida.
+That raw signal $s(t)$ is all the probe produces: it is then the **analysis pipeline** ([§8.8](#88-the-analyzers-analysis-pipeline-ligo_analyzerpy)) that cleans it up, processes it, and transforms it into the spectrograms and estimates that appear as graphs in this guide.
 
-### 8.2 Cos'è il momento di quadrupolo di massa? (I due punti di vista sul quadrupolo)
+### 8.2 What Is the Mass Quadrupole Moment? (Two Perspectives on the Quadrupole)
 
-Per capire cos'è il quadrupolo, è utile guardarlo da due punti di vista: come viene generato dalla sorgente (la fisica) e come deforma lo spazio quando si propaga (la geometria).
+To understand what the quadrupole is, it is helpful to look at it from two perspectives: how it is generated by the source (physics) and how it distorts space as it propagates (geometry).
 
-**Dal punto di vista della sorgente (perché le masse devono orbitare):** In elettromagnetismo, la radiazione è prodotta principalmente da un dipolo oscillante (una carica positiva e una negativa che si muovono l'una contro l'altra). In gravità l'analogo non esiste, non solo perché manca una "carica" di segno opposto: la ragione è più stringente. Il momento di dipolo di massa del sistema è $d_i = \sum_a m_a x_{a,i}$ , la cui derivata prima è la quantità di moto totale, $\dot d_i = P_i$ . Per un sistema isolato $P_i$ è conservata, quindi $\ddot d_i = \dot P_i = 0$ **sempre**, qualunque sia il moto interno delle masse: non è un limite di intensità, è un'identità esatta imposta dalla conservazione della quantità di moto. Il quadrupolo (sotto) è il primo momento non vincolato da questa identità. Per questo l'emissione gravitazionale più bassa possibile richiede masse in orbita, non semplice oscillazione.
+**From the source’s perspective (why the masses must orbit):** In electromagnetism, radiation is produced primarily by an oscillating dipole (a positive and a negative charge moving toward and away from each other). In gravity, there is no such analogue, not only because there is no “charge” of opposite sign: the reason is more compelling. The mass dipole moment of the system is $d_i = \sum_a m_a x_{a,i}$, whose first derivative is the total momentum, $\dot d_i = P_i$. For an isolated system, $P_i$ is conserved, so $\ddot d_i = \dot P_i = 0$ **always**, regardless of the internal motion of the masses: this is not an intensity limit; it is an exact identity imposed by the conservation of momentum. The quadrupole (below) is the first moment that is not constrained by this identity. This is why the lowest possible gravitational emission requires masses in orbit, not simple oscillation.
 
-**Dal punto di vista dell'onda (come si deforma lo spaziotempo):** Un'onda elettromagnetica è un campo *vettoriale* (spin-1): nel punto attraversato, il campo oscilla lungo un asse e una carica di prova viene spinta avanti e indietro lungo quella direzione. Un'onda gravitazionale è un campo *tensoriale* (spin-2): non spinge i punti in una direzione, **cambia le distanze relative tra loro**. Stira lo spazio lungo un asse trasverso e contemporaneamente lo comprime lungo l'asse ortogonale, invertendo il ciclo a ogni mezza oscillazione. Un anello di particelle di prova investito dall'onda si deforma in un'ellisse che pulsa alternando gli assi. È questa deformazione a croce, che ritorna identica dopo una rotazione di 180° (e non di 360°, come accadrebbe per un campo vettoriale), la natura di spin-2 citata nella sezione [§7.7](#77-la-natura-delle-onde-del-simulatore-livelli-di-astrazione).
+**From the wave’s perspective (how spacetime is distorted):** An electromagnetic wave is a *vector* field (spin-1): at the point it passes through, the field oscillates along an axis, and a test charge is pushed back and forth along that direction. A gravitational wave is a *tensor* field (spin-2): it does not push points in one direction; rather, **it changes the relative distances between them**. It stretches space along a transverse axis and simultaneously compresses it along the orthogonal axis, reversing the cycle with every half-oscillation. A ring of test particles struck by the wave deforms into an ellipse that pulses by alternating the axes. It is this cross-shaped deformation (which returns to its identical state after a 180° rotation (and not a 360° rotation, as would occur for a vector field)) that constitutes the spin-2 nature mentioned in section [§7.7](#77-the-nature-of-the-simulators-waves-levels-of-abstraction).
 
-Il momento di quadrupolo di massa (nella sua forma discreta, $I_{ij} = \sum m_a x_{a,i} x_{a,j}$ ) misura proprio la distribuzione geometrica della materia. Se il sistema possiede una perfetta simmetria sferica o assiale rispetto all'asse di rotazione (come una stella singola e liscia che ruota su se stessa), il suo momento di quadrupolo resta costante e non c'è radiazione. 
-Affinché ci sia emissione, serve una **deviazione dalla simmetria sferica** (un "rigonfiamento" o un sistema multicorpo). Anche un sistema binario composto da due masse gemelle identiche in un'orbita circolare perfetta genera onde: orbitando, la distribuzione della materia si sposta ciclicamente dall'asse X all'asse Y e viceversa. Questa continua ridistribuzione geometrica fa variare $I_{ij}$ nel tempo, increspando lo spaziotempo circostante e propagando l'onda.
+The mass quadrupole moment (in its discrete form, $I_{ij} = \sum m_a x_{a,i} x_{a,j}$) measures precisely the geometric distribution of matter. If the system possesses perfect spherical or axial symmetry with respect to the axis of rotation (such as a single, smooth star rotating on its axis), its quadrupole moment remains constant and there is no radiation. 
+For emission to occur, there must be a **deviation from spherical symmetry** (a “bulge” or a multi-body system). Even a binary system consisting of two identical twin masses in a perfect circular orbit generates waves: as they orbit, the distribution of matter shifts cyclically from the X-axis to the Y-axis and back again. This continuous geometric redistribution causes $I_{ij}$ to vary over time, rippling the surrounding spacetime and propagating the wave.
 
-### 8.3 La formula 3D "camuffata" e la proiezione ortogonale al piano
+### 8.3 The “Disguised” 3D Formula and the Orthogonal Projection onto the Plane
 
-Una premessa importante: in Relatività Generale **in 2+1 dimensioni non esistono onde gravitazionali propaganti** (la gravità non ha gradi di libertà locali nel piano), quindi *non esiste una "formula del quadrupolo in 2D"* da applicare. Si tratta di un fatto noto in fisica teorica, enunciato da Steve Carlip come: *"there are no propagating gravitational degrees of freedom"* (non esistono gradi di libertà gravitazionali propaganti) nel suo lavoro [*Lower dimensional gravity*](https://phys.libretexts.org/Bookshelves/Astronomy__Cosmology/Supplemental_Modules_%28Astronomy_and_Cosmology%29/Cosmology/Carlip/Lower_dimensional_gravity).
+An important premise: in General Relativity, **there are no propagating gravitational waves in 2+1 dimensions** (gravity has no local degrees of freedom in the plane), so *there is no “2D quadrupole formula”* to apply. This is a well-known fact in theoretical physics, stated by Steve Carlip as: *“there are no propagating gravitational degrees of freedom”* in his paper [*Lower dimensional gravity*](https://phys.libretexts.org/Bookshelves/Astronomy__Cosmology/Supplemental_Modules_%28Astronomy_and_Cosmology%29/Cosmology/Carlip/Lower_dimensional_gravity).
 
-A differenza della gravità del modello ([§1.1](#11-cosa-risolve-davvero-il-motore)), dove una legge nativamente bidimensionale esiste ( $1/r$ di un vero universo 2D) ma viene scartata deliberatamente a favore di quella tridimensionale vera ( $1/r^2$ ), qui non c'è alcuna legge 2D da scartare: Carlip dimostra che semplicemente non esiste, quindi l'unica opzione fisicamente sensata resta importare la formula 3D e proiettarla con una convenzione geometrica precisa.
+Unlike the gravity in the model ([§1.1](#11-what-the-engine-actually-solves)), where a natively two-dimensional law exists ( $1/r$ in a true 2D universe) but is deliberately discarded in favor of the true three-dimensional one ( $1/r^2$ ), here there is no 2D law to discard: Carlip demonstrates that it simply does not exist, so the only physically sensible option is to import the 3D formula and project it using a precise geometric convention.
 
-Quella che viene usata è la **formula del quadrupolo 3D standard di Einstein (1918)**, camuffata in 2D. Questa tecnica nota assume che il sistema orbiti sul piano equatoriale ( $z = 0$ ), il che azzera identicamente tutti i termini legati all'altezza (I_{zz} = 0$ : nella forma discreta usata qui ogni termine contenente $z$ si annulla e il quadrupolo si riduce al blocco 2×2 nel piano) e si ipotizza una sonda LIGO posta direttamente sull'asse orbitale polare (lungo l'asse $z$ , orientamento *perpendicolare al piano* o *assiale*). In questa configurazione geometrica, la formula 3D si proietta esattamente nel nostro piano come:
+The formula used is the **standard 3D quadrupole formula by Einstein (1918)**, adapted to 2D. This well-known technique assumes that the system orbits in the equatorial plane ($z = 0$), which identically sets all height-related terms to zero ($I_{zz} = 0$: in the discrete form used here, every term containing $z$ cancels out, and the quadrupole reduces to a 2×2 block in the plane) and posits a LIGO probe placed directly on the polar orbital axis (along the $z$-axis, oriented *perpendicular to the plane* or *axially*). In this geometric configuration, the 3D formula projects exactly onto our plane as:
 
 $$h_+ \propto \ddot{I}_{xx} - \ddot{I}_{yy}$$
 
-con $I_{ij} = \sum_a m_a\, x_{a,i}\, x_{a,j}$ (la stessa forma discreta di [§8.2](#82-cosè-il-momento-di-quadrupolo-di-massa-i-due-punti-di-vista-sul-quadrupolo)). Sviluppando analiticamente la derivata seconda temporale tramite la regola del prodotto, otteniamo la formula del quadrupolo reale completa:
+where $I_{ij} = \sum_a m_a\, x_{a,i}\, x_{a,j}$ (the same discrete form as in [§8.2](#82-what-is-the-mass-quadrupole-moment-two-perspectives-on-the-quadrupole)). By analytically expanding the second time derivative using the product rule, we obtain the complete real quadrupole formula:
 
-$$\ddot{I}_{xx} - \ddot{I}_{yy} = 2\sum_j m_j\Big[\,\underbrace{(v_{x,j}^2 - v_{y,j}^2)}_{\text{parte di velocità}} + \underbrace{(x_j\,a_{x,j} - y_j\,a_{y,j})}_{\text{parte di accelerazione}}\,\Big]$$
+$$\ddot{I}_{xx} - \ddot{I}_{yy} = 2\sum_j m_j\Big[\,\underbrace{(v_{x,j}^2 - v_{y,j}^2)}_{\text{velocity component}} + \underbrace{(x_j\,a_{x,j} - y_j\,a_{y,j})}_{\text{acceleration component}}\,\Big]$$
 
-La formula reale contiene quindi due contributi fisici: uno legato alle velocità dei corpi e uno legato alle loro accelerazioni.
+The complete formula therefore contains two physical contributions: one related to the velocities of the bodies and one related to their accelerations.
 
-Nel simulatore, tuttavia, per calcolare lo strain registrato dalla sonda utilizzeremo **esclusivamente la parte legata alle velocità**, escludendo del tutto il contributo delle accelerazioni. Questa scelta consente di ottenere un segnale estremamente pulito e privo di rumore di calcolo: i motivi tecnici dietro l'esclusione delle accelerazioni saranno approfonditi nel **[§8.5](#85-il-problema-numerico-dellaccelerazione-e-la-regolarizzazione-cinetica)**. Vale la pena anticipare che questa stessa formula, applicata pixel-per-pixel e proiettata lungo la direzione di osservazione, è il cuore della heatmap **GW Strain** di [§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare): la sonda LIGO ne è la versione *puntuale* (un singolo numero $s(t)$ per il punto in cui è piazzata), la heatmap ne è la versione *spaziale* (proiezione tensoriale del quadrupolo nel piano dell'osservatore).
+In the simulator, however, to calculate the strain recorded by the probe, we will use **only the component related to velocities**, completely excluding the contribution of accelerations. This choice allows us to obtain an extremely clean signal free of computational noise: the technical reasons behind the exclusion of accelerations will be discussed in detail in **[§8.5](#85-the-numerical-problem-of-acceleration-and-kinetic-regularization)**. It is worth noting in advance that this same formula, applied pixel-by-pixel and projected along the direction of observation, is at the heart of the **GW Strain** heatmap in [§7.6](#76-projected-strain-gw-quadrupole-strain): the LIGO probe is its *pointwise* version (a single number $s(t)$ for the point where it is placed), while the heatmap is its *spatial* version (a tensor projection of the quadrupole onto the observer’s plane).
 
-### 8.4 Cosa registra la sonda virtuale (Il proxy basato sulle velocità)
+### 8.4 What the Virtual Probe Records (The Velocity-Based Proxy)
 
-La sonda virtuale registra a ogni tick, in un singolo numero scalare per il punto in cui è piazzata, un **proxy basato sulle velocità per lo strain** derivato dalla formula del quadrupolo ([§8.3](#83-la-formula-3d-camuffata-e-la-proiezione-ortogonale-al-piano)). La stessa formula, applicata punto per punto su tutto il piano e proiettata lungo la direzione $\hat n$ pixel-osservatore, genera la heatmap **GW Strain** di [§7.6](#76-deformazione-proiettata-gw-strain-quadrupolare), che è il suo equivalente spaziale a piena risoluzione tensoriale proiettata. Per la sonda, l'espressione vale:
+At each tick, the virtual probe records, as a single scalar value for the point where it is placed, a **velocity-based proxy for the strain** derived from the quadrupole formula ([§8.3](#83-the-disguised-3d-formula-and-the-orthogonal-projection-onto-the-plane)). The same formula, applied point by point across the entire plane and projected along the $\hat n$ observer-pixel direction, generates the **GW Strain** heatmap from [§7.6](#76-projected-strain-gw-quadrupole-strain), which is its spatial equivalent at full projected tensor resolution. For the probe, the expression is:
 
 $$s(t) = \sum_j \frac{m_j\,(v_{x,j}^2 - v_{y,j}^2)}{r_j}$$
 
-con le velocità riferite al centro di massa. Il motivo per cui questo proxy cattura la frequenza giusta è presto detto: per un'orbita circolare le velocità oscillano come $v_x = -v\sin(\omega t)$ e $v_y = v\cos(\omega t)$ , quindi
+where the velocities are referenced to the center of mass. The reason this proxy captures the correct frequency is straightforward: for a circular orbit, the velocities oscillate as $v_x = -v\sin(\omega t)$ and $v_y = v\cos(\omega t)$, so
 
 $$v_x^2 - v_y^2 = -v^2\cos(2\omega t)$$
 
-oscilla a $2\omega$ , cioè **esattamente la frequenza dell'onda gravitazionale** (il doppio di quella orbitale). La sonda inoltre legge sempre il buffer L0 ad alta risoluzione, mai i livelli compressi, per non introdurre aliasing nella forma d'onda.
+oscillates at $2\omega$, that is, **exactly the frequency of the gravitational wave** (twice the orbital frequency). The probe also always reads the high-resolution L0 buffer, never the compressed levels, to avoid introducing aliasing in the waveform.
 
 > [!NOTE]
-> **Compromesso geometrico "ludico":** Sebbene la formula di Einstein con proiezione ortogonale ipotizzi un osservatore posto "sopra" il sistema (sull'asse $z$ ), per ovvie ragioni ludiche e di interazione l'utente posiziona la sonda LIGO direttamente sullo schermo (il piano 2D), ipotizzata ludicamente "perfetta" indipendentemente dall'angolazione reale. Il simulatore unisce queste due cose calcolando il decadimento dell'ampiezza dell'onda ( $1/r$ ) usando la semplice distanza bidimensionale sullo schermo: $r = \sqrt{dx^2 + dy^2}$ .
+> **"Playful" geometric compromise:** Although Einstein’s formula with orthogonal projection assumes an observer positioned “above” the system (on the $z$-axis), for obvious playful and interactive reasons, the user places the LIGO probe directly on the screen (the 2D plane), which is playfully assumed to be “perfect” regardless of the actual angle. The simulator combines these two aspects by calculating the decay of the wave amplitude ($1/r$) using the simple two-dimensional distance on the screen: $r = \sqrt{dx^2 + dy^2}$.
 
-### 8.5 Il problema numerico dell'accelerazione e la regolarizzazione cinetica
+### 8.5 The Numerical Problem of Acceleration and Kinetic Regularization
 
-Perché il modello tiene solo la parte di velocità escludendo quella di accelerazione?
-Molto banalmente: **la formula completa numericamente non funziona.**
+Why does the model retain only the velocity component while excluding the acceleration component?
+Quite simply: **the complete formula does not work numerically.**
 
-Sebbene il termine contenente le accelerazioni tracci correttamente la frequenza fisica dell'onda, esso introduce una grave instabilità numerica nello strain proprio vicino al momento della collisione (*merger*). In questo regime di gravità estrema ( $r \to 0$ ), anche utilizzando le accelerazioni reali calcolate direttamente dall'engine fisico (anziché stimate per differenze finite), l'esplosione delle forze gravitazionali divergenti come $1/r^2$ a passi temporali discreti ( $dt$ ) produce inevitabili sbalzi e fluttuazioni ad altissima frequenza nell'accelerazione istantanea. Il risultato è uno strain completo che diverge e oscilla violentemente (come mostrato nei grafici dell'analizzatore), compromettendo la pulizia del segnale.
+Although the term containing the accelerations correctly tracks the physical frequency of the wave, it introduces a serious numerical instability in the strain just before the moment of collision (*merger*). In this regime of extreme gravity ( $r \to 0$ ), even when using the true accelerations calculated directly by the physics engine (rather than estimated via finite differences), the explosion of gravitational forces diverging as $1/r^2$ at discrete time steps ( $dt$ ) produces inevitable spikes and very high-frequency fluctuations in the instantaneous acceleration. The result is a strain signal that diverges and oscillates violently (as shown in the analyzer graphs), compromising signal cleanliness.
 
-<img src="docs/img/strain_quadrupolo_reale.png" alt="Media non trovato">
+<img src="docs/img/strain_quadrupolo_reale.png" alt="Media not found">
 
-*Lo strain con la formula del quadrupolo completa (velocità + accelerazioni): lo scenario registrato è la GW170817 simulata di [§6.6](#66-le-prove-confronto-col-dato-reale).*
+*The strain calculated using the complete quadrupole formula (velocity + accelerations): the recorded scenario is the simulated GW170817 from [§6.6](#66-the-evidence-comparison-with-actual-data).*
 
-Provando invece a eliminare la derivata delle accelerazioni e mantenendo solo il pezzo di velocità ( $v_x^2 - v_y^2$ ), si ottiene uno strain ideale: liscio, pulito e stabile.
+However, if we try eliminating the derivative of the accelerations and keeping only the velocity component ($v_x^2 - v_y^2$), we obtain an ideal strain: smooth, clean, and stable.
 
-<img src="docs/img/strain_proxy_velocita.png" alt="Media non trovato">
+<img src="docs/img/strain_proxy_velocita.png" alt="Media not found">
 
-*Lo stesso scenario (la GW170817 simulata), tenendo il solo proxy di velocità.*
+*The same scenario (the simulated GW170817), using only the velocity proxy.*
 
-Questa semplificazione è a tutti gli effetti un'**approssimazione pratica**. Dal punto di vista fisico, si basa su un'identità che vale rigorosamente solo per le orbite perfettamente circolari: in quel caso limite, l'accelerazione centripeta punta sempre verso il centro dell'orbita ( $a \propto -r$ ), rendendo il termine di accelerazione e quello di velocità identici in ogni istante:
+This simplification is, to all intents and purposes, a **practical approximation**. From a physical standpoint, it is based on an identity that holds strictly only for perfectly circular orbits: in that limiting case, the centripetal acceleration always points toward the center of the orbit ($a \propto -r$), making the acceleration term and the velocity term identical at every instant:
 
 $$x \cdot a_x - y \cdot a_y = v_x^2 - v_y^2$$
 
-Questo dimezzamento è chiaramente visibile confrontando le due immagini soprastanti: l'oscillazione dello strain "pulito" (proxy di velocità) ha un'ampiezza massima dimezzata rispetto allo strain teorico completo, ma i picchi, i ventri e i passaggi per lo zero avvengono nello stesso identico istante, preservando intatta la coerenza di fase. Inoltre, sul piano computazionale la velocità è molto più stabile: essendo l'accumulo (integrale) delle accelerazioni passo dopo passo, agisce come una sorta di media mobile che "smussa" i dossi e i saltelli numerici derivanti dalla griglia discreta del simulatore.
+This halving is clearly visible when comparing the two images above: the oscillation of the “clean” strain (a proxy for velocity) has a maximum amplitude that is half that of the complete theoretical strain, but the peaks, troughs, and zero crossings occur at exactly the same instant, preserving phase coherence intact. Furthermore, from a computational standpoint, velocity is much more stable: since it is the (integral) accumulation of accelerations step by step, it acts as a sort of moving average that “smooths out” the numerical bumps and jumps resulting from the simulator’s discrete grid.
 
-Naturalmente si tratta di un'approssimazione: per orbite molto eccentriche o sistemi caotici i due termini non sarebbero affatto equivalenti, ma per catturare la modulazione di frequenza tipica dei merger (dove le orbite tendono a circolarizzarsi rapidamente prima dello scontro) si rivela un compromesso ingegneristico efficace e pulito.
+Of course, this is an approximation: for highly eccentric orbits or chaotic systems, the two terms would not be equivalent at all, but for capturing the frequency modulation typical of mergers (where orbits tend to circularize rapidly before the collision), it proves to be an effective and clean engineering compromise.
 
 > [!NOTE]
-> **Limiti del formalismo e nota dell'autore:** Essendo un programmatore e non un astrofisico teorico, il grado di complessità matematica del formalismo del quadrupolo in Relatività Generale va oltre le mie competenze per poter indagare a fondo le cause analitiche di questa discrepanza. Mi limito quindi a documentare e mostrare le mie soluzioni e osservazioni pratiche.
+> **Limitations of the formalism and author’s note:** As a programmer rather than a theoretical astrophysicist, the mathematical complexity of the quadrupole formalism in General Relativity exceeds my expertise to thoroughly investigate the analytical causes of this discrepancy. I therefore limit myself to documenting and presenting my practical solutions and observations.
 
-### 8.6 Il troncamento netto dello strain (L'assenza del Ringdown)
+### 8.6 The Sharp Truncation of the Strain (The Absence of Ringdown)
 
-Si nota facilmente che nei grafici temporali dello strain simulato (e nei relativi spettrogrammi), il segnale **si interrompe in modo netto e improvviso** al momento della collisione, contrariamente alle forme d'onda reali che mostrano una coda di smorzamento. Questo comportamento è una limitazione fisica intrinseca del nostro modello N-body.
+It is easy to see that in the time plots of the simulated strain (and in the corresponding spectrograms), the signal **abruptly and suddenly cuts off** at the moment of collision, unlike real waveforms, which exhibit a damping tail. This behavior is an intrinsic physical limitation of our N-body model.
 
-Nelle onde gravitazionali reali emesse da una coalescenza (CBC), il segnale attraversa tre fasi distinte:
-1. **Inspiral**: Le due masse spiraleggiano verso l'interno avvicinandosi. Frequenza e ampiezza dell'onda crescono rapidamente (la fase di *chirp*).
-2. **Merger**: I due corpi si fondono fisicamente in un unico oggetto finale deformato.
-3. **Ringdown**: Il corpo neonato (ad esempio un buco nero perturbato) oscilla nei suoi modi quasi-normali ("vibra"), irradiando la sua asimmetria geometrica sotto forma di onde gravitazionali smorzate esponenzialmente, fino a stabilizzarsi in una configurazione finale sferica o di Kerr (silenzio gravitazionale).
+In real gravitational waves emitted by a coalescence (CBC), the signal goes through three distinct phases:
+1. **Inspiral**: The two masses spiral inward toward each other. The wave’s frequency and amplitude increase rapidly (the *chirp* phase).
+2. **Merger**: The two bodies physically merge into a single, deformed final object.
+3. **Ringdown**: The newly formed body (e.g., a perturbed black hole) oscillates in its quasi-normal modes (“vibrates”), radiating its geometric asymmetry in the form of exponentially damped gravitational waves, until it stabilizes into a final spherical or Kerr configuration (gravitational silence).
 
-Perché nel modello lo strain si interrompe di colpo?
-* Il motore computazionale calcola lo strain basandosi sulle posizioni e velocità relative dei corpi, considerandoli come **punti materiali** o sfere rigide.
-* Al momento del contatto geometrico (il merger), il sistema binario cessa istantaneamente di esistere: i due corpi vengono fusi dall'algoritmo di collisione in un unico oggetto statico (nel pratico, una delle sorgenti viene rimossa e l'altra aggiornata e riposizionata).
-* Non essendoci una simulazione dinamica del campo spaziotemporale (che richiederebbe di risolvere le equazioni di Einstein della Relatività Generale Numerica completa per calcolare le oscillazioni di un orizzonte degli eventi perturbato), l'emissione crolla istantaneamente a zero.
-* Di conseguenza lo strain viene **tagliato di netto** (cut-off) al momento del contatto, saltando completamente la fase di **ringdown** che rappresenta una firma post-merger relativistica.
+Why does the strain stop abruptly in the model?
+* The computational engine calculates the strain based on the relative positions and velocities of the bodies, treating them as **material points** or rigid spheres.
+* At the moment of geometric contact (the merger), the binary system instantly ceases to exist: the two bodies are merged by the collision algorithm into a single static object (in practice, one of the sources is removed and the other is updated and repositioned).
+* Since there is no dynamic simulation of the spacetime field (which would require solving Einstein’s equations of full numerical general relativity to calculate the oscillations of a perturbed event horizon), the emission instantly drops to zero.
+* Consequently, the strain is **abruptly cut off** (cut-off) at the moment of contact, completely skipping the **ringdown** phase, which represents a relativistic post-merger signature.
 
 <div align="center">
-  <img src="docs/img/ringdown_example.webp" width="450" alt="Media non trovato">
+  <img src="docs/img/ringdown_example.webp" width="450" alt="Media not found">
 </div>
 
-### 8.7 Cos'è uno spettrogramma e come si ottiene
+### 8.7 What Is a Spectrogram and How Is It Obtained
 
-Prima di scendere nei dettagli del codice, capiamo lo strumento visivo principale dell'analizzatore: lo **spettrogramma**.
+Before diving into the details of the code, let’s understand the analyzer’s main visual tool: the **spectrogram**.
 
-#### Cos'è e la metafora musicale
-Un segnale d'onda registrato nel tempo (lo *strain*) è come una traccia audio: una sequenza di oscillazioni. 
-* Se guardiamo solo il grafico nel tempo, vediamo l'onda oscillare, ma è difficile dire quale frequenza precisa ci sia in ogni istante.
-* Se facciamo una classica **Trasformata di Fourier** sull'intero segnale, scopriamo *quali* frequenze sono presenti in totale, ma perdiamo ogni informazione sul *quando* (non sappiamo in quale istante sia stata suonata una certa nota).
+#### What It Is and the Musical Metaphor
+A wave signal recorded over time (the *strain*) is like an audio track: a sequence of oscillations. 
+* If we look only at the graph over time, we see the wave oscillating, but it’s hard to tell exactly what frequency is present at any given moment.
+* If we perform a classic **Fourier transform** on the entire signal, we discover *which* frequencies are present in total, but we lose all information about *when* (we don’t know at which moment a certain note was played).
 
-Lo **spettrogramma** risolve questo problema unendo tempo e frequenza. È l'equivalente di un **pentagramma musicale**:
-* L'asse orizzontale ( $x$ ) è il **tempo**.
-* L'asse verticale ( $y$ ) è la **frequenza** (l'altezza della nota, da grave ad acuta).
-* Il **colore** (la terza dimensione, espressa in decibel dB) indica l'**intensità** o potenza di quella specifica frequenza in quel momento (quanto forte viene suonata la nota).
+The **spectrogram** solves this problem by combining time and frequency. It is the equivalent of a **musical staff**:
+* The horizontal axis ( $x$ ) is **time**.
+* The vertical axis ( $y$ ) is **frequency** (the pitch of the note, from low to high).
+* The **color** (the third dimension, expressed in decibels, dB) indicates the **intensity** or power of that specific frequency at that moment (how loudly the note is played).
 
-* **Lo Strain come file WAV**: Lo strain $s(t)$ registrato dalla sonda virtuale non è altro che un segnale audio digitale a canale singolo (monofonico). Proprio come un file audio `.wav` registra la fluttuazione della pressione dell'aria nel tempo a una certa frequenza di campionamento (ad esempio 44.1 kHz), lo strain registra la fluttuazione metrica dello spaziotempo campionata nel simulatore ad alta frequenza ( $1\text{ MHz}$ ).
-* **Lo Spettrogramma come equalizzatore visivo**: Lo spettrogramma fa esattamente quello che fa un analizzatore di spettro in uno studio di registrazione (o il display grafico di un equalizzatore): mostra quali frequenze (alti, medi o bassi) sono presenti nel segnale e a quale volume (dB) in ogni istante.
-* **Il Chirp come un Glissando**: Dal punto di vista acustico, la coalescenza gravitazionale è a tutti gli effetti un **glissando** ascendente (simile a un fischietto che sale rapidamente di tono fino a interrompersi bruscamente al momento del merger).
+* **The Strain as a WAV File**: The strain $s(t)$ recorded by the virtual probe is nothing more than a single-channel (mono) digital audio signal. Just as a `.wav` audio file records fluctuations in air pressure over time at a certain sampling rate (e.g., 44.1 kHz), the strain records the metric fluctuations of spacetime sampled in the simulator at a high frequency ( $1\text{ MHz}$ ).
+* **The Spectrogram as a Visual Equalizer**: The spectrogram does exactly what a spectrum analyzer in a recording studio (or the graphic display of an equalizer) does: it shows which frequencies (high, mid, or low) are present in the signal and at what volume (dB) at any given moment.
+* **The Chirp as a Glissando**: From an acoustic standpoint, a gravitational merger is, to all intents and purposes, an ascending **glissando** (similar to a whistle that rapidly rises in pitch until it stops abruptly at the moment of merger).
 
-#### Perché LIGO e la sonda lo usano
-I segnali dei merger sono **chirp**: segnali transitori in cui sia l'ampiezza sia la frequenza aumentano rapidamente mentre i due corpi compatti spiraleggiano verso la collisione. 
+#### Why LIGO and the probe use it
+Merger signals are **chirps**: transient signals in which both amplitude and frequency increase rapidly as the two compact objects spiral toward collision. 
 
-Nello strain temporale grezzo, questo segnale è spesso completamente sommerso dal rumore (sia dal rumore sismico/termico nei rivelatori terrestri reali, sia dal rumore di griglia discreta nella sonda virtuale). Lo spettrogramma è fondamentale perché consente di **identificare visivamente il segnale in modo qualitativo**: mentre il rumore di fondo si distribuisce disordinatamente su tutta la mappa tempo-frequenza come un disturbo casuale, l'energia coerente del chirp si concentra lungo una traiettoria ben definita. Il segnale emerge così sotto forma di una caratteristica **curva luminosa che sale verso l'alto** (la "firma" o *track* spettrale del merger), rendendolo immediatamente riconoscibile all'occhio umano o ad algoritmi di pattern recognition anche in condizioni di forte rumore.
+In the raw time strain, this signal is often completely buried by noise (both seismic/thermal noise in real ground-based detectors and discrete grid noise in the virtual probe). The spectrogram is essential because it allows us to **visually identify the signal in a qualitative manner**: while background noise is distributed randomly across the entire time-frequency map like random noise, the coherent energy of the chirp is concentrated along a well-defined trajectory. The signal thus emerges in the form of a characteristic **bright curve rising upward** (the spectral “signature” or *track* of the merger), making it immediately recognizable to the human eye or to pattern recognition algorithms even under conditions of heavy noise.
 
-Ecco un confronto diretto tra il chirp simulato e quello reale:
+Here is a direct comparison between the simulated and real chirps:
 
-* **Il chirp simulato (pulito)**: Questa immagine mostra lo spettrogramma dello strain registrato dalla sonda virtuale in uno scenario di binaria di stelle di neutroni (GW170817), focalizzato sugli ultimi **0.5 secondi** prima del merger. Trattandosi di dati di simulazione puri, la traccia spettrale del chirp risulta perfettamente nitida e priva di rumore di fondo.
+* **The simulated (clean) chirp**: This image shows the spectrogram of the strain recorded by the virtual probe in a neutron star binary scenario (GW170817), focused on the last **0.5 seconds** before the merger. Since this is pure simulation data, the spectral trace of the chirp is perfectly sharp and free of background noise.
 
-  <img src="docs/img/sim_GW170817.png" alt="Media non trovato">
+  <img src="docs/img/sim_GW170817.png" alt="Media not found">
 
-* **Il chirp reale di LIGO Hanford (rumoroso)**: Questa immagine mostra lo spettrogramma reale ottenuto dai dati pubblici del rivelatore LIGO Hanford (H1) per lo stesso evento (GW170817), focalizzato sugli ultimi **1.75 secondi** prima del merger. Qui si nota come il chirp reale (la rampa di frequenza ascendente) sia immerso nel rumore strumentale di fondo, ma rimanga chiaramente identificabile grazie al contrasto visivo dello spettrogramma.
+* **The real (noisy) chirp from LIGO Hanford**: This image shows the real spectrogram obtained from public data from the LIGO Hanford (H1) detector for the same event (GW170817), focusing on the last **1.75 seconds** before the merger. Here, you can see how the real chirp (the rising frequency ramp) is embedded in the instrumental background noise but remains clearly identifiable thanks to the visual contrast of the spectrogram.
 
-  <img src="docs/img/real_h1_GW170817.png" alt="Media non trovato">
+  <img src="docs/img/real_h1_GW170817.png" alt="Media not found">
 
 
-#### Come si ottiene: la STFT (Short-Time Fourier Transform)
-Matematicamente, lo spettrogramma si ottiene tramite la **STFT (Trasformata di Fourier a tempo parziale)**. Il processo si articola in tre fasi principali:
-1. **Finestratura temporale (Windowing)**: Il segnale completo viene suddiviso in segmenti temporali di breve durata (ad esempio, intervalli di pochi millisecondi), parzialmente sovrapposti tra loro (overlap) per non perdere informazioni ai confini. Ciascun segmento viene moltiplicato per una funzione smussante (come la *finestra di Hann*), che azzera dolcemente il segnale all'inizio e alla fine dell'intervallo, evitando che i tagli netti introducano frequenze spurie inesistenti (fenomeno dello *spectral leakage*).
-2. **Analisi spettrale locale (FFT)**: Su ciascun segmento finestrato viene applicata la *Fast Fourier Transform* (FFT). Questo algoritmo converte la porzione di segnale dal dominio del tempo a quello della frequenza, calcolando l'ampiezza di ogni singola componente spettrale presente esclusivamente in quella specifica finestra temporale.
-3. **Mappatura tempo-frequenza**: Gli spettri calcolati per ogni singolo segmento vengono disposti in colonna, uno dopo l'altro, seguendo l'ordine cronologico. Questa matrice di dati bidimensionale viene poi visualizzata colorando l'intensità di ciascun punto (in decibel), generando la mappa finale dello spettrogramma.
+#### How It’s Obtained: The STFT (Short-Time Fourier Transform)
+Mathematically, the spectrogram is obtained using the **STFT (Short-Time Fourier Transform)**. The process consists of three main steps:
+1. **Time Windowing**: The complete signal is divided into short-duration time segments (for example, intervals of a few milliseconds), which partially overlap one another to prevent loss of information at the boundaries. Each segment is multiplied by a smoothing function (such as the *Hann window*), which gently smooths the signal to zero at the beginning and end of the interval, preventing sharp cuts from introducing spurious frequencies that do not exist (a phenomenon known as *spectral leakage*).
+2. **Local Spectral Analysis (FFT)**: The *Fast Fourier Transform* (FFT) is applied to each windowed segment. This algorithm converts the signal portion from the time domain to the frequency domain, calculating the amplitude of each individual spectral component present exclusively within that specific time window.
+3. **Time-frequency mapping**: The spectra calculated for each individual segment are arranged in columns, one after another, in chronological order. This two-dimensional data matrix is then visualized by coloring the intensity of each point (in decibels), generating the final spectrogram map.
 
 > [!TIP]
-> ### Approfondimento: Il "suono" delle onde gravitazionali
-> L'idea di "ascoltare" l'Universo tramite le onde gravitazionali non è un'invenzione dei giornalisti, ma ha solide basi fisiche ed elettroacustiche:
+> ### In-Depth: The "Sound" of Gravitational Waves
+> The idea of "listening" to the Universe through gravitational waves is not a journalistic invention, but has a solid foundation in physics and electroacoustics:
 > 
-> * **Corrispondenza fisica**: Lo strain $h(t)$ misura una fluttuazione metrica dello spaziotempo (una compressione e dilatazione fisica dello spazio), concettualmente del tutto analoga a come un'onda acustica di pressione comprime e dilata l'aria.
-> * **Banda di frequenza udibile**: La frequenza delle onde gravitazionali emesse nei merger di sistemi binari compatti (buchi neri stellari o stelle di neutroni) si colloca precisamente nella **banda udibile dall'orecchio umano** (da circa $20\text{ Hz}$ a oltre $1\text{-}2\text{ kHz}$ ). Ad esempio, la storica prima rivelazione **GW150914** ha spazzato la banda $35\text{-}250\text{ Hz}$ (si veda l'articolo della scoperta: B. P. Abbott et al., LIGO Scientific Collaboration and Virgo Collaboration, [Phys. Rev. Lett. 116, 061102 (2016)](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.061102) / preprint gratuito [arXiv:1602.03837](https://arxiv.org/abs/1602.03837)), mentre il merger di stelle di neutroni **GW170817** è arrivato a circa $2\text{ kHz}$ .
-> * **Sonificazione diretta**: Poiché il segnale dello strain registrato è una serie temporale ad alta frequenza, inviando la traccia dati opportunamente filtrata e amplificata a un altoparlante (mappando lo strain alla tensione elettrica di pilotaggio), la bobina del diffusore vibra riproducendo fisicamente il suono nel mezzo aereo.
-> La sonificazione delle onde gravitazionali è un filone di ricerca attivo a livello internazionale. Tra i centri più rilevanti vi è l'[European Gravitational Observatory (EGO)](https://www.ego-gw.it/) a Cascina (Pisa), sede del rivelatore Virgo, attivo nello sviluppo di progetti e installazioni di sonificazione dei dati interferometrici. Per una libreria interattiva di sonificazioni reali, si rimanda al portale [Sounds of Spacetime](https://www.soundsofspacetime.org/). Quando i media titolano *"Ecco il suono di due buchi neri che collidono"*, descrivono dunque una traduzione elettroacustica diretta e fisicamente fondata, non una metafora arbitraria.
+> * **Physical Correspondence**: The strain $h(t)$ measures a metric fluctuation of spacetime (a physical compression and expansion of space), conceptually entirely analogous to how an acoustic pressure wave compresses and expands air.
+> * **Audible frequency range**: The frequency of gravitational waves emitted during the mergers of compact binary systems (stellar black holes or neutron stars) falls precisely within the **range audible to the human ear** (from about $20\text{ Hz}$ to over $1\text{–}2\text{ kHz}$). For example, the historic first detection **GW150914** spanned the $35\text{-}250\text{ Hz}$ band (see the discovery paper: B. P. Abbott et al., LIGO Scientific Collaboration and Virgo Collaboration, [Phys. Rev. Lett. 116, 061102 (2016)](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.061102) / free preprint [arXiv:1602.03837](https://arxiv.org/abs/1602.03837)), while the neutron star merger **GW170817** reached approximately $2\text{ kHz}$ .
+> * **Direct sonification**: Since the recorded strain signal is a high-frequency time series, sending the appropriately filtered and amplified data trace to a loudspeaker (by mapping the strain to the drive voltage) causes the speaker coil to vibrate, physically reproducing the sound in the air.
+> The sonification of gravitational waves is an active area of research internationally. Among the most prominent centers is the [European Gravitational Observatory (EGO)](https://www.ego-gw.it/) in Cascina (Pisa), home to the Virgo detector, which is active in developing projects and installations for the sonification of interferometric data. For an interactive library of real sonifications, see the [Sounds of Spacetime](https://www.soundsofspacetime.org/) portal. When the media run headlines such as *“Here is the sound of two black holes colliding,”* they are describing a direct, physically grounded electroacoustic translation, not an arbitrary metaphor.
 
 
 ---
 
-### 8.8 La pipeline di analisi dell'analizzatore (`ligo_analyzer.py`)
+### 8.8 The Analyzer’s Analysis Pipeline (`ligo_analyzer.py`)
 
-Il segnale grezzo è sporco e va ripulito (è dominato da una lenta deriva di fondo a bassa frequenza). La matematica complessa dietro le tecniche di filtraggio è stata delegata ai **filtraggi standard offerti da `scipy.signal`**, nell'ordine suggerito dalla pratica comune. La pipeline lo ripulisce e lo interpreta in passi successivi:
+The raw signal is noisy and needs to be cleaned up (it is dominated by a slow, low-frequency background drift). The complex mathematics behind the filtering techniques has been delegated to the **standard filters provided by `scipy.signal`**, in the order suggested by common practice. The pipeline cleans up and interprets the signal in successive steps:
 
-1. **Detrend + finestra di Tukey** (`scipy.signal.windows.tukey`). Si rimuove l'offset medio e si "smussano" i bordi del buffer, per evitare che le discontinuità ai margini creino artefatti spettrali.
-2. **Gatekeeper automatico.** Un classificatore decide se il segnale è un chirp coerente (ramo **SPECTRAL**) o un impulso/rumore (ramo **RADIOMETRIC**). In modalità radiometric salta filtraggio e spettrogramma e mostra lo **strain grezzo sull'intero tempo registrato** (asse temporale assoluto, non zoomato sul merger), affiancato dalla curva di **energia irradiata cumulativa**.
-3. **Filtro passa-alto Butterworth (5 Hz)** (`scipy.signal.butter` + `sosfiltfilt`, a fase zero). Taglia la deriva di fondo sub-Hz, isolando l'oscillazione orbitale.
-4. **Spettrogramma STFT** (Short-Time Fourier Transform; `scipy.signal.spectrogram`, finestra di Hann, sovrapposizione 95%, zero-padding). Produce la mappa tempo-frequenza ad alta risoluzione: è lì che il chirp appare come una curva che sale.
-5. **Frequenza istantanea via trasformata di Hilbert** (`scipy.signal.hilbert`). Costruisce il segnale analitico, da cui si estrae la fase e quindi la **frequenza istantanea** $f(t)$ , poi lisciata con un filtro di Savitzky-Golay (`scipy.signal.savgol_filter`).
-6. **Stima della massa chirp.** Dalla traccia di frequenza si stima $\mathcal{M}$ adattando direttamente la **legge di potenza di Peters** $f(\tau)\propto\tau^{-3/8}$ nella finestra pulita prima del merger (mediana delle stime punto per punto), non più con una regressione lineare di $\dot{f}$ contro $f$ : quest'ultima amplificava la curvatura del chirp in un errore sistematico, mentre il fit della legge di potenza recupera la massa chirp attesa quasi esattamente.
+1. **Detrend + Tukey window** (`scipy.signal.windows.tukey`). The mean offset is removed and the edges of the buffer are “smoothed” to prevent discontinuities at the edges from creating spectral artifacts.
+2. **Automatic gatekeeper.** A classifier determines whether the signal is a coherent chirp (**SPECTRAL** branch) or a pulse/noise (**RADIOMETRIC** branch). In radiometric mode, it skips filtering and the spectrogram and displays the **raw strain over the entire recorded time** (absolute time axis, not zoomed in on the merger), alongside the **cumulative radiated energy** curve.
+3. **Butterworth high-pass filter (5 Hz)** (`scipy.signal.butter` + `sosfiltfilt`, zero-phase). It cuts off the sub-Hz background drift, isolating the orbital oscillation.
+4. **STFT spectrogram** (Short-Time Fourier Transform; `scipy.signal.spectrogram`, Hann window, 95% overlap, zero-padding). This produces a high-resolution time-frequency map: this is where the chirp appears as a rising curve.
+5. **Instantaneous frequency via the Hilbert transform** (`scipy.signal.hilbert`). This constructs the analytic signal, from which the phase (and thus the **instantaneous frequency** $f(t)$) is extracted, then smoothed with a Savitzky-Golay filter (`scipy.signal.savgol_filter`).
+6. **Estimation of the chirp mass.** From the frequency trace, $\mathcal{M}$ is estimated by directly fitting the **Peters power law** $f(\tau)\propto\tau^{-3/8}$ to the clean window before the merger (median of the point-by-point estimates), rather than using a linear regression of $\dot{f}$ against $f$: the latter amplified the chirp curvature into a systematic error, whereas the power law fit recovers the expected chirp mass almost exactly.
 
-> **NdA.** Questa è la parte in cui mi sono affidato di più a librerie esterne e a consigli (presi prevalentemente da LLM e da materiale online sull'uso *pratico* di scipy): ho sempre avuto chiaro *cosa* cercavo (un chirp pulito e la sua massa chirp), ma la pulizia DSP (Digital Signal Processing) fine è fuori dal mio pieno controllo.
+> **Note.** This is the part where I relied most heavily on external libraries and advice (drawn primarily from LLM and online material on the *practical* use of scipy): I always knew exactly *what* I was looking for (a clean chirp and its chirp mass), but fine-tuning the DSP (Digital Signal Processing) cleanup is beyond my full control.
 
-*(Tutte le funzioni citate sono nella documentazione ufficiale di [`scipy.signal`](https://docs.scipy.org/doc/scipy/reference/signal.html) e [`scipy.optimize`](https://docs.scipy.org/doc/scipy/reference/optimize.html).)*
+*(All functions mentioned are in the official documentation for [`scipy.signal`](https://docs.scipy.org/doc/scipy/reference/signal.html) and [`scipy.optimize`](https://docs.scipy.org/doc/scipy/reference/optimize.html).)*
 
-<img src="docs/img/GW150914_STFT_STRAIN.png" width="700" alt="STFT dello strain di GW150914 con overlay della curva di chirp simulata e di Peters">
+<img src="docs/img/GW150914_STFT_STRAIN.png" width="700" alt="STFT of the GW150914 strain with an overlay of the simulated chirp curve and Peters' curve">
 
-**Showcase, Spettrogramma di GW150914.** STFT (Short-Time Fourier Transform) dello strain del rivelatore con la curva di chirp simulata sovrapposta alla teorica di Peters: la traccia simulata segue il *ridge* spettrale dell'evento reale lungo l'intera salita di frequenza, dai $\sim 30$ Hz iniziali fino al picco di $\sim 250$ Hz al merger.
+**Showcase, Spectrogram of GW150914.** STFT (Short-Time Fourier Transform) of the detector strain with the simulated chirp curve overlaid on Peters’ theoretical curve: the simulated trace follows the spectral *ridge* of the real event along the entire frequency rise, from the initial $\sim 30$ Hz up to the peak of $\sim 250$ Hz at merger.
 
 ---
 
-## 9. Inizializzazione degli scenari: calcolo analitico delle orbite
+## 9. Initialization of Scenarios: Analytical Calculation of Orbits
 
-Per garantire che le orbite partano esattamente con la geometria desiderata (circolare, ellittica, parabolica) o nei punti di equilibrio gravitazionale corretti, tutte le condizioni iniziali sono calcolate rigorosamente tramite soluzioni analitiche, implementate direttamente nel modulo `utils/orbital_math.py`.
+To ensure that the orbits start exactly with the desired geometry (circular, elliptical, parabolic) or at the correct gravitational equilibrium points, all initial conditions are rigorously calculated using analytical solutions, implemented directly in the `utils/orbital_math.py` module.
 
-### 9.1 Velocità orbitale e di fuga nel potenziale di Paczyński-Wiita
-Nel potenziale PW ([§6.1](#61-lo-pseudo-potenziale-di-paczyński-wiita)), le velocità caratteristiche di un corpo di prova a distanza $r$ da una massa sorgente $M$ (con raggio di Schwarzschild $R_s = 2GM/c^2$ ) differiscono da quelle kepleriane classiche:
+### 9.1 Orbital and escape velocities in the Paczyński-Wiita potential
+In the PW potential ([§6.1](#61-the-paczyński-wiita-pseudo-potential)), the characteristic velocities of a test body at a distance $r$ from a source mass $M$ (with Schwarzschild radius $R_s = 2GM/c^2$) differ from the classical Keplerian velocities:
 
-* **Velocità circolare relativistica**: Si ricava imponendo l'uguaglianza tra l'accelerazione centripeta $v^2/r$ e la forza gravitazionale per unità di massa del potenziale PW:
+* **Relativistic circular velocity**: These are derived by equating the centripetal acceleration $v^2/r$ with the gravitational force per unit mass of the PW potential:
   $$\frac{v^2}{r} = \frac{GM}{(r - R_s)^2} \implies v_{circ} = \frac{\sqrt{G M r}}{r - R_s}$$
-* **Velocità di fuga**: Si ricava imponendo che l'energia orbitale specifica sia nulla ( $E = 0$ ), ovvero che l'energia cinetica eguagli l'energia potenziale PW:
+* **Escape velocity**: This is derived by requiring that the specific orbital energy be zero ($E = 0$), i.e., that the kinetic energy equals the potential energy PW:
   $$\frac{1}{2}v_{escape}^2 = \frac{GM}{r - R_s} \implies v_{escape} = \sqrt{\frac{2GM}{r - R_s}}$$
 
-### 9.2 Lancio all'apocentro o al pericentro
-Per impostare un'orbita ellittica specifica caratterizzata da un pericentro $r_{peri}$ e un apocentro $r_{apo}$ , la velocità iniziale al lancio viene ricavata risolvendo analiticamente il sistema formato dalla **conservazione dell'energia totale** e del **momento angolare** nel potenziale PW:
-* **Lancio all'apocentro** (per far "cadere" il corpo fino al pericentro voluto):
+### 9.2 Launch at the Apocenter or Pericenter
+To establish a specific elliptical orbit characterized by a pericenter $r_{peri}$ and an apocenter $r_{apo}$, the initial velocity at launch is obtained by analytically solving the system formed by the **conservation of total energy** and **angular momentum** in the PW potential:
+* **Launch at the apocenter** (to cause the body to “fall” to the desired pericenter):
   $$v_{apo} = \sqrt{\frac{2 G M (r_{apo} - r_{peri})}{(r_{apo} - R_s)(r_{peri} - R_s) \left[ \left(\frac{r_{apo}}{r_{peri}}\right)^2 - 1 \right]}}$$
-* **Lancio al pericentro** (per far salire il corpo fino all'apocentro voluto):
+* **Launch from the pericenter** (to cause the body to rise to the desired apocenter):
   $$v_{peri} = \sqrt{\frac{2 G M (r_{apo} - r_{peri})}{(r_{apo} - R_s)(r_{peri} - R_s) \left[ 1 - \left(\frac{r_{peri}}{r_{apo}}\right)^2 \right]}}$$
 
-### 9.3 Velocità di lancio per binarie compatte (coppie strette)
-Mentre il [§9.1](#91-velocità-orbitale-e-di-fuga-nel-potenziale-di-paczyński-wiita) descrive il moto circolare di una **massa di prova trascurabile** attorno a un singolo centro attrattore massivo $M$ , questa sezione risolve il **problema a due corpi reali** con masse confrontabili ( $m_1 \approx m_2$ ), come una coppia di buchi neri o stelle di neutroni.
+### 9.3 Escape Velocity for Compact Binary Systems (Close Pairs)
+While [§9.1](#91-orbital-and-escape-velocities-in-the-paczyński-wiita-potential) describes the circular motion of a **negligible test mass** around a single massive attractor center $M$, this section solves the **true two-body problem** with comparable masses ($m_1 \approx m_2$), such as a pair of black holes or neutron stars.
 
-In questo scenario, ciascun corpo risente del potenziale di Paczyński-Wiita generato dall'altro, calcolato a partire dai singoli raggi di Schwarzschild $R_{s1} = 2Gm_1/c^2$ e $R_{s2} = 2Gm_2/c^2$ . Inoltre, la formula tiene conto del fattore di softening $S_{soft}$ utilizzato dal kernel fisico per prevenire divergenze numeriche a distanza zero:
+In this scenario, each body is subject to the Paczyński-Wiita potential generated by the other, calculated from the individual Schwarzschild radii $R_{s1} = 2Gm_1/c^2$ and $R_{s2} = 2Gm_2/c^2$. Furthermore, the formula takes into account the softening factor $S_{soft}$ used by the physics kernels to prevent numerical divergences at zero distance:
 
-* Definito il raggio effettivo ammorbidito $d = \sqrt{r^2 + S_{soft}^2}$ (con $S_{soft}^2 = 100\ \text{km}^2$ , cioè il softening da 10 km di [§6.1](#61-lo-pseudo-potenziale-di-paczyński-wiita)), la frequenza angolare orbitale $\omega$ del sistema binario è calcolata sommando i contributi dei potenziali individuali:
+* Once the softened effective radius $d = \sqrt{r^2 + S_{soft}^2}$ is defined (with $S_{soft}^2 = 100\ \text{km}^2$, i.e., the 10-km softening from [§6.1](#61-the-paczyński-wiita-pseudo-potential)) is defined, the orbital angular frequency $\omega$ of the binary system is calculated by summing the contributions of the individual potentials:
   $$\omega^2 = \frac{G m_2}{d (d - R_{s2})^2} + \frac{G m_1}{d (d - R_{s1})^2}$$
-* La velocità orbitale relativa di lancio è quindi calcolata come $v = r \cdot \omega$ .
+* The relative orbital velocity at launch is therefore calculated as $v = r \cdot \omega$.
 
-### 9.4 Punti di Lagrange analitici (Problema dei tre corpi circolare ristretto)
-Le posizioni teoriche dei 5 punti di Lagrange per una coppia binaria di masse $m_1$ e $m_2$ ( $m_1 > m_2$ ) sono calcolate tramite espansioni in forma chiusa e coordinate geometriche anziché con una ricerca degli zeri numerica:
+### 9.4 Analytical Lagrange Points (Restricted Circular Three-Body Problem)
+The theoretical positions of the 5 Lagrange points for a binary pair of masses $m_1$ and $m_2$ ( $m_1 > m_2$ ) are calculated using closed-form expansions and geometric coordinates rather than a numerical search for zeros:
 
-* **Punti collineari ( $L_1, L_2, L_3$ )**: Definiti la distanza tra i corpi $r$ , la frazione di massa $\mu = m_2 / (m_1 + m_2)$ e il parametro adimensionale della sfera di Hill $\alpha = (\mu/3)^{1/3}$ , le posizioni rispetto al baricentro lungo l'asse del sistema sono:
-  * **$L_1$** (punto di sella interno, tra i due corpi): $x_{L1} = x_{2} - r \cdot \alpha (1 - \alpha/3)$
-  * **$L_2$** (esterno, oltre la massa minore $m_2$ ): $x_{L2} = x_{2} + r \cdot \alpha (1 + \alpha/3)$
-  * **$L_3$** (opposto, oltre la massa maggiore $m_1$ ): $x_{L3} = -r (1 + \frac{5}{12}\mu)$
-* **Punti triangolari ( $L_4, L_5$ )**: Sono posizionati esattamente sui vertici dei due triangoli equilateri con base il segmento $m_1 - m_2$ (ovvero a $\pm 60^\circ$ di inclinazione e a distanza $r$ da $m_1$ ). Il verso di rotazione (se sommare $+60^\circ$ o $-60^\circ$ per definire quale sia $L_4$ o $L_5$ ) è calcolato dinamicamente tramite il segno del prodotto vettoriale delle velocità relative dei due corpi.
+* **Collinear points ($L_1, L_2, L_3$)**: Given the distance between the bodies $r$, the mass fraction $\mu = m_2 / (m_1 + m_2)$, and the dimensionless Hill sphere parameter $\alpha = (\mu/3)^{1/3}$, the positions relative to the center of mass along the system’s axis are:
+  * **$L_1$** (inner saddle point, between the two bodies): $x_{L1} = x_{2} - r \cdot \alpha (1 - \alpha/3)$
+  * **$L_2$** (external, beyond the smaller mass $m_2$): $x_{L2} = x_{2} + r \cdot \alpha (1 + \alpha/3)$
+  * **$L_3$** (opposite, beyond the larger mass $m_1$): $x_{L3} = -r (1 + \frac{5}{12}\mu)$
+* **Triangular points ($L_4, L_5$)**: These are located exactly at the vertices of the two equilateral triangles with base $m_1 - m_2$ (i.e., at an angle of $\pm 60^\circ$ and a distance $r$ from $m_1$). The direction of rotation (whether to add $+60^\circ$ or $-60^\circ$ to define which is $L_4$ or $L_5$) is calculated dynamically using the sign of the cross product of the relative velocities of the two bodies.
 
-### 9.5 Velocità co-rotante sui punti di Lagrange
-Quando un satellite viene generato in un punto di Lagrange (o in un punto corotante qualsiasi), esso deve possedere la velocità di rotazione del sistema di riferimento solidale alla coppia binaria per non essere immediatamente scagliato via. Questa velocità di trascinamento viene calcolata come segue:
-1. Si calcola la velocità angolare istantanea del sistema binario:
+### 9.5 Co-rotating Velocity at Lagrange Points
+When a satellite is generated at a Lagrange point (or at any co-rotating point), it must have the rotational velocity of the reference frame fixed to the binary pair in order not to be immediately flung away. This drag velocity is calculated as follows:
+1. Calculate the instantaneous angular velocity of the binary system:
 $$\omega = \frac{(\vec{r}_2 - \vec{r}_1) \times (\vec{v}_2 - \vec{v}_1)}{|\vec{r}_2 - \vec{r}_1|^2}$$
-2. Si ricava la velocità corotante sommando alla velocità del baricentro del sistema ( $\vec{v}_{\text{bary}}$ ) la velocità angolare applicata al raggio rispetto al baricentro stesso ( $\vec{R} = \vec{r}_{\text{spawn}} - \vec{r}_{\text{bary}}$ ):
+2. The corotational velocity is obtained by adding the velocity of the system’s center of mass ( $\vec{v}_{\text{bary}}$ ) to the angular velocity applied to the radius relative to the center of mass itself ( $\vec{R} = \vec{r}_{\text{spawn}} - \vec{r}_{\text{bary}}$ ):
 $$\vec{v}_{\text{corot}} = \vec{v}_{\text{bary}} + \vec{\omega} \times \vec{R}$$
 
-### 9.6 Perché coesistono l'overlay teorico e la heatmap dinamica?
-Nel simulatore, i punti di Lagrange vengono visualizzati su schermo in due modalità sovrapposte: tramite marcatori geometrici precisi (**overlay teorico**, ricavato in [§9.4](#94-punti-di-lagrange-analitici-problema-dei-tre-corpi-circolare-ristretto)) e tramite una mappa spettrale continua (**heatmap dinamica**, basata sull'inversa dell'Hessiana descritta in **[§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)**). Questa coesistenza risponde a importanti esigenze fisiche e di interazione:
+### 9.6 Why do the theoretical overlay and the dynamic heatmap coexist?
+In the simulator, the Lagrange points are displayed on screen in two overlapping modes: via precise geometric markers (**theoretical overlay**, derived in [§9.4](#94-analytical-lagrange-points-restricted-circular-three-body-problem)) and via a continuous spectral map (**dynamic heatmap**, based on the inverse of the Hessian described in **[§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)**). This coexistence addresses important physical and interaction requirements:
 
-1. **Confronto tra modello ideale e fisica reale**: L'overlay teorico assume un'orbita perfettamente circolare e priva di perturbazioni esterne. Nella simulazione reale, le orbite possono essere eccentriche o risentire dell'attrazione di altri pianeti. La heatmap mostra dove si trovano *realmente* i minimi locali e i punti di sella del potenziale efficace istantaneo, mentre l'overlay teorico funge da benchmark ideale fisso per misurare a colpo d'occhio lo scostamento dovuto alle perturbazioni.
-2. **Identificazione dei punti**: La heatmap individua i gradienti di forza, ma non assegna etichette testuali. L'overlay teorico funge da guida visiva immediata per denominare e localizzare al volo la posizione generica delle singole regioni ( $L_1 \dots L_5$ ).
-3. **Limite di visibilità per rapporti di massa estremi**: Quando il rapporto di massa tra i due corpi è di centinaia di migliaia di volte (es. Sole-Terra: la Terra è circa 330.000 volte più leggera del Sole), i punti **$L_3$ , $L_4$ e $L_5$ spariscono quasi completamente dalla heatmap**. L'influenza gravitazionale di $m_2$ a grande distanza è così debole che i pozzi di potenziale di $L_4$/$L_5$ e il punto di sella di $L_3$ presentano gradienti quasi nulli, confondendosi interamente con lo sfondo piatto dell'orbita. Al contrario, $L_1$ e $L_2$ (essendo immersi nella sfera di Hill di $m_2$ e situati nelle sue immediate vicinanze) rimangono ben visibili come picchi locali. In questi casi estremi, l'overlay teorico diventa l'unico marker visivo per individuare al volo $L_3$ , $L_4$ e $L_5$ sullo schermo.
+1. **Comparison between the ideal model and real physics**: The theoretical overlay assumes a perfectly circular orbit free of external perturbations. In the true simulation, orbits may be eccentric or affected by the gravitational pull of other planets. The heatmap shows where the local minima and saddle points of the instantaneous effective potential *actually* lie, while the theoretical overlay serves as a fixed ideal benchmark for measuring, at a glance, the deviation caused by perturbations.
+2. **Point Identification**: The heatmap identifies force gradients but does not assign textual labels. The theoretical overlay serves as an immediate visual guide for naming and quickly locating the general position of individual regions ( $L_1 \dots L_5$ ).
+3. **Visibility Limit for Extreme Mass Ratios**: When the mass ratio between the two bodies is hundreds of thousands to one (e.g., Sun-Earth: the Earth is about 330,000 times lighter than the Sun), the points **$L_3$, $L_4$, and $L_5$ almost completely disappear from the heatmap**. The gravitational influence of $m_2$ at such a great distance is so weak that the potential wells at $L_4$/$L_5$ and the saddle point at $L_3$ have gradients that are nearly zero, blending entirely into the flat background of the orbit. In contrast, $L_1$ and $L_2$ (being immersed in the Hill sphere of $m_2$ and located in its immediate vicinity) remain clearly visible as local peaks. In these extreme cases, the theoretical overlay becomes the only visual marker for quickly identifying $L_3$, $L_4$, and $L_5$ on the screen.
 
-| L5 teorico contro L5 emerso (Luna-Terra) | L3/L4/L5 al limite della visibilità (Venere-Sole) |
+| Theoretical L5 vs. Emerged L5 (Moon-Earth) | L3/L4/L5 at the Limit of Visibility (Venus-Sun) |
 |:---:|:---:|
-| <img src="docs/img/es_L5_unmatch.png" width="100%" alt="Discrepanza tra L5 teorico ed emerso"> | <img src="docs/img/venus_l3_l4_l5_noise.png" width="60%" alt="L3, L4 e L5 indistinguibili lungo il bordo del lobo"> |
-| Un chiaro esempio di discrepanza tra il punto di Lagrange teorico e il punto *emerso* dal Lagrange Hunter (in blu, punto L5 Luna-Terra). | L'esempio del punto 3 qui sopra: nel sistema Venere-Sole i segnali di L3, L4 e L5 sono così deboli da spalmarsi lungo la sottile linea a bassa forza che corre sull'orbita (il confine del lobo di Roche), senza mai distinguersi da essa come punti: a individuarli resta solo l'overlay teorico. |
+| <img src="docs/img/es_L5_unmatch.png" width="100%" alt="Discrepancy between theoretical and emerged L5"> | <img src="docs/img/venus_l3_l4_l5_noise.png" width="60%" alt="L3, L4, and L5 indistinguishable along the edge of the lobe"> |
+| A clear example of a discrepancy between the theoretical Lagrange point and the point *detected* by the Lagrange Hunter (in blue, Moon-Earth L5 point). | The example from point 3 above: in the Venus-Sun system, the signals from L3, L4, and L5 are so weak that they spread out along the thin line of low force running along the orbit (the boundary of the Roche lobe), without ever standing out from it as distinct points; only the theoretical overlay can identify them. |
 
 > [!NOTE]
-> **Stabilità fisica dei punti di Lagrange:**
-> * **L1, L2, L3 (Intrinsecamente instabili)**: Sono punti di sella gravitazionali. Un satellite posizionato su di essi si trova in un equilibrio perennemente instabile: qualsiasi perturbazione minima (numerica o gravitazionale) lo farà deviare e allontanare indefinitamente (nella realtà, richiedono accensioni di motori per correzioni orbitali attive).
-> * **L4, L5 (Stabili)**: Se il rapporto tra le masse del sistema binario è elevato ( $m_1/m_2 > 24{,}96$ ), questi punti si comportano come veri e propri pozzi di potenziale. I corpi catturati al loro interno vi orbitano attorno stabilmente a lunghissimo termine senza richiedere alcuna propulsione correttiva.
+> **Physical stability of Lagrange points:**
+> * **L1, L2, L3 (Intrinsically unstable)**: These are gravitational saddle points. A satellite positioned at these points is in a perpetually unstable equilibrium: any minimal perturbation (numerical or gravitational) will cause it to deviate and drift away indefinitely (in reality, they require engine firings for active orbital corrections).
+> * **L4, L5 (Stable)**: If the mass ratio of the binary system is high ( $m_1/m_2 > 24.96$ ), these points behave as true potential wells. Bodies captured within them orbit stably over the very long term without requiring any corrective propulsion.
 
 > [!TIP]
-> **La strategia di "boot" ottimale per il lancio:**
-> Il simulatore permette di generare satelliti direttamente sulle coordinate dell'**overlay teorico**. Tuttavia, in sistemi reali ed eccentrici, i punti fisici reali (visibili sulla heatmap) oscillano e descrivono delle traiettorie attorno alle posizioni teoriche ideali.
+> **The optimal “boot” strategy for launch:**
+> The simulator allows you to generate satellites directly at the coordinates of the **theoretical overlay**. However, in real, eccentric systems, the real physical points (visible on the heatmap) oscillate and follow trajectories around the ideal theoretical positions.
 > 
-> Per massimizzare la stabilità dell'orbita, il "boot" ottimale consiste nell'**attendere che i punti di Lagrange reali della heatmap intersechino quelli teorici** (un evento che, per via dell'eccentricità orbitale, avviene tipicamente 1 o 2 volte per rivoluzione completa). Il momento di perfetta sovrapposizione tra la fisica emergente e la geometria teorica è l'istante perfetto per lanciare il satellite, poiché minimizza la deriva iniziale e massimizza il tempo di cattura del satellite all'interno del punto di equilibrio.
+> To maximize orbital stability, the optimal “boot” consists of **waiting for the true Lagrange points on the heatmap to intersect the theoretical ones** (an event that, due to orbital eccentricity, typically occurs 1 or 2 times per complete revolution). The moment of perfect overlap between the emerging physics and the theoretical geometry is the ideal time to launch the satellite, as it minimizes initial drift and maximizes the satellite’s capture time within the equilibrium point.
 >
-> Un altro modo consiste nell'aspettare, tramite la heatmap della Topologia di Roche, che la rivoluzione intersechi l'orbita ideale circolare disegnata sullo schermo (attivabile premendo 'M').
+> Another method is to wait, using the Roche Topology heatmap, for the revolution to intersect the ideal circular orbit drawn on the screen (which can be activated by pressing 'M').
 
 ---
 
-## 10. Fenomeni emergenti
+## 10. Emerging Phenomena
 
-Questi comportamenti **non sono programmati esplicitamente**: emergono dall'interazione delle equazioni precedenti.
+These behaviors **are not explicitly programmed**: they emerge from the interaction of the preceding equations.
 
-### 10.1 Caso di studio: GW190814, la sovradissipazione in campo profondo
+### 10.1 Case Study: GW190814, Overdissipation in Deep Space
 
-Lo scenario GW190814 ( $q = 0{,}112$ : un buco nero da 24,4 masse solari detector-frame contro un oggetto del *mass gap* da 2,7) è il banco di prova più estremo del motore: separazione iniziale di appena 16 raggi di Schwarzschild del primario, con il corpo leggero immerso per l'*intero* inspiral nel pozzo di Paczyński-Wiita del compagno, in regime quasi da particella di prova.
+The GW190814 scenario ( $q = 0{,}112$ : a 24.4-solar-mass black hole in the detector frame versus a 2.7-solar-mass *mass gap* object) is the engine’s most extreme test case: an initial separation of just 16 Schwarzschild radii from the primary, with the lighter body immersed for the *entire* inspiral in the companion’s Paczyński-Wiita well, in a regime nearly equivalent to that of a test particle.
 
-**Osservazioni oggettive.** Il chirp è monotono, liscio e subluminale fino alla cattura: la forma del segnale è quella giusta e "supera" Peters in modo coerente con quanto già visto per GW150914, dove anche la vera relatività numerica coalesce più in fretta di Peters ([§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)). Il tempo però no: la coalescenza avviene in **~13,9 secondi contro i 20,25 attesi da Peters**, con un eccesso che cresce monotonicamente avvicinandosi al merger, non un semplice coefficiente sbagliato (che darebbe un rapporto costante):
+**Objective observations.** The chirp is monotonic, smooth, and subluminal until capture: the signal shape is correct and “outperforms” Peters in a manner consistent with what was already observed for GW150914, where true numerical relativity also converges faster than Peters ([§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity)). The time, however, does not: the merger occurs in **~13.9 seconds versus the 20.25 seconds expected by Peters**, with an excess that increases monotonically as it approaches the merger, not simply a wrong coefficient (which would yield a constant ratio):
 
-| T | D | $\tau$ residuo Peters | $\tau$ residuo reale | eccesso locale |
+| T | D | Peters’ residual $\tau$ | True residual $\tau$ | Local excess |
 |---|---|---|---|---|
-| 11,50 s | 785 km | 4,25 s | 2,37 s | ×1,79 |
-| 13,00 s | 635 km | 1,82 s | 0,87 s | ×2,09 |
-| 13,50 s | 535 km | 0,92 s | 0,37 s | ×2,46 |
-| 13,75 s | 432 km | 0,39 s | 0,12 s | ×3,16 |
+| 11.50 s | 785 km | 4.25 s | 2.37 s | ×1.79 |
+| 13.00 s | 635 km | 1.82 s | 0.87 s | ×2.09 |
+| 13.50 s | 535 km | 0.92 s | 0.37 s | ×2.46 |
+| 13.75 s | 432 km | 0.39 s | 0.12 s | ×3.16 |
 
-**Un limite fisico primario e due meccanismi secondari della fase finale.** L'eccesso è già presente a 785 km (~10,8 $R_s$ , tabella sopra), ben lontano dalla fascia dove la forza di Wiita diverge davvero: lì un singolo passo temporale sposta il corpo di una frazione trascurabile di $R_s$ (anche a $0{,}79c$ servono ~300 passi per attraversarne uno solo), quindi non è un problema di risoluzione numerica. La spiegazione più probabile riguarda quanta fisica non perturbativa **2.5PN + Paczyński-Wiita** riescono davvero a catturare: per GW150914 la combinazione supera nettamente Peters e si avvicina alla relatività numerica (1,27% di scarto, [§6.6.2](#662-lo-scenario-bbh-gw150914-confronto-con-la-relatività-numerica-sxs)), prova che qualcosa di non perturbativo viene davvero replicato, non il solo 2.5PN puro. Ma i due scenari differiscono nella ripartizione di $v_{rel}$ tra i corpi: quasi simmetrica per GW150914 (55%/45%), contro il 90%/10% di GW190814, dove il corpo leggero porta quasi tutta la velocità relativa su di sé. È plausibile che la fisica non catturata dal modello fosse abbastanza mite da non far divergere la curva in GW150914, mentre nel regime di ripartizione così sbilanciata di GW190814 quella stessa fisica mancante diventi determinante, sia per il collasso vero e proprio sia per la dissipazione corretta.
+**A primary physical limit and two secondary mechanisms of the final phase.** The excess is already present at 785 km (~10.8 $R_s$, table above), well away from the range where Wiita’s force truly diverges: there, a single time step moves the body by a negligible fraction of $R_s$ (even at $0.79c$, it takes ~300 steps to traverse just one), so it is not a problem of numerical resolution. The most likely explanation concerns how much non-perturbative physics **2.5PN + Paczyński-Wiita** actually manage to capture: for GW150914, the combination clearly outperforms Peters and approaches numerical relativity (1.27% discrepancy, [§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity)), proving that some non-perturbative physics is indeed replicated, not just pure 2.5PN. However, the two scenarios differ in the distribution of $v_{rel}$ among the bodies: nearly symmetric for GW150914 (55%/45%), compared to 90%/10% for GW190814, where the lighter body carries almost all of the relative velocity. It is plausible that the physics not captured by the model was mild enough not to cause the curve to diverge in GW150914, whereas in the regime of such an unbalanced distribution in GW190814, that same missing physics becomes decisive, both for the actual collapse and for the correct dissipation.
 
-Due meccanismi più circoscritti si aggiungono solo nell'ultimissimo tratto, a ridosso della cattura, e non spiegano l'eccesso già presente prima: il **freno relativistico d'inerzia** ([§3.4](#34-compressione-relativistica-dellaccelerazione)), che si innesca quando il corpo leggero supera $0{,}79c$ nell'ultimo millisecondo; e l'**espansione virtuale del raggio di cattura** dell'algoritmo di collisione, che non serve tanto a evitare che un singolo $dt$ scavalchi la singolarità, quanto ad **anticipare una cattura che altrimenti non avverrebbe affatto**. Al modello mancano gli elementi frenanti non perturbativi dell'ultimo millisecondo che, nella realtà, portano la coppia dentro la fase di merger.
+Two more localized mechanisms come into play only in the very final stretch, just before capture, and do not explain the excess already present earlier: the **relativistic inertial braking** ([§3.4](#34-relativistic-compression-of-acceleration)), which is triggered when the light body exceeds $0.79c$ in the last millisecond; and the **virtual expansion of the capture radius** of the collision algorithm, which serves not so much to prevent a single $dt$ from crossing the singularity as to **anticipate a capture that would otherwise not occur at all**. The model lacks the non-perturbative braking elements of the last millisecond that, in reality, bring the pair into the merger phase.
 
-**Perché rimane un ottimo risultato.** Con un divario di questa entità, un confronto diretto con una waveform NR di riferimento (es. SXS a $q \approx 0{,}1$ ) sarebbe poco utile: la differenza è già troppo ampia perché il confronto aggiunga informazione. Resta comunque un buonissimo risultato, che cavalca consapevolmente i limiti del modello (fisici, prima ancora che numerici) in un regime di campo profondo in cui nessun altro preset si spinge così a fondo restando vicino alla circolarità: lo scenario EMRI arriva a un rapporto di massa ancora più estremo (100:1), ma lì la coalescenza è facilitata dall'eccentricità estrema dell'orbita, un regime fisicamente diverso e non direttamente confrontabile con questo. Per GW190814, la forma del chirp è validata, il tempo di coalescenza dichiaratamente no.
+**Why this is still an excellent result.** With a discrepancy of this magnitude, a direct comparison with a reference NR waveform (e.g., SXS at $q \approx 0.1$) would be of little use: the difference is already too large for the comparison to add any information. It remains, however, a very good result, which consciously pushes the limits of the model (physical, even before numerical) in a deep-field regime where no other preset goes this deep while remaining close to circularity: the EMRI scenario reaches an even more extreme mass ratio (100:1), but there, coalescence is facilitated by the extreme eccentricity of the orbit, a physically different regime that is not directly comparable to this one. For GW190814, the chirp shape is validated, while the coalescence time is explicitly not.
 
-<div align="center"><img src="docs/img/GW190814_STFT_STRAIN.png" width="800" alt="Strain e spettrogramma STFT di GW190814"></div>
+<div align="center"><img src="docs/img/GW190814_STFT_STRAIN.png" width="800" alt="Strain and STFT spectrogram of GW190814"></div>
 
-Strain $h_+$ e spettrogramma STFT dello scenario, negli ultimi 0,5 secondi prima del merger: il chirp cresce in modo monotono e liscio fino al taglio netto ([§8.6](#86-il-troncamento-netto-dello-strain-lassenza-del-ringdown), nessun ringdown), toccando una frequenza di picco di ~2.936,5 Hz.
+Strain $h_+$ and STFT spectrogram of the scenario, during the last 0.5 seconds before the merger: the chirp increases monotonically and smoothly until the sharp cutoff ([§8.6](#86-the-sharp-truncation-of-the-strain-the-absence-of-ringdown), no ringdown), reaching a peak frequency of ~2,936.5 Hz.
 
-### 10.2 Altri fenomeni emergenti
+### 10.2 Other Emerging Phenomena
 
-- **La "respirazione" dei lobi di Roche.** Se una luna ha orbita eccentrica, la sua distanza dall'attrattore varia lungo l'orbita: il lobo di Roche si **espande all'apogeo e si contrae al perigeo**, pulsando in fase con l'eccentricità. Nasce spontaneamente dal calcolo di $\omega = h/r^2$ istantaneo.
+- **The “breathing” of the Roche lobes.** If a moon has an eccentric orbit, its distance from the attractor varies along the orbit: the Roche lobe **expands at apogee and contracts at perigee**, pulsating in phase with the eccentricity. This arises spontaneously from the calculation of the instantaneous $\omega = h/r^2$.
 
-- **L'asimmetria del dipolo Sole-Giove.** Nella heatmap dΦ/dt, Giove produce un dipolo gravitazionale visibile quanto quello del Sole, pur essendo molto più leggero. Il motivo è cinematico: il termine $\partial\Phi/\partial t \propto M\,v_{rad}/r^2$ dipende dalla **velocità** della sorgente nel baricentro e Giove, più lontano dal centro di massa comune, si muove abbastanza da compensare la massa minore. Il perché il Sole stesso, che dovrebbe essere il corpo "fermo", produca comunque un dipolo proprio ben visibile è approfondito in **[§10.3](#103-il-wobble-del-corpo-di-riferimento)**.
+- **The asymmetry of the Sun-Jupiter dipole.** In the dΦ/dt heatmap, Jupiter produces a gravitational dipole as visible as that of the Sun, even though it is much lighter. The reason is kinematic: the term $\partial\Phi/\partial t \propto M\,v_{rad}/r^2$ depends on the **velocity** of the source relative to the center of mass, and Jupiter, being farther from the common center of mass, moves enough to compensate for its smaller mass. The reason why the Sun itself (which should be the “stationary” body) nevertheless produces its own clearly visible dipole is discussed in detail in **[§10.3](#103-the-wobble-of-the-reference-body)**.
 
-  | Venere e Mercurio: dipoli immersi in quello del Sole | Grandangolo: il dipolo di Giove rivaleggia con quello del Sole |
+  | Venus and Mercury: dipoles embedded in the Sun’s dipole | Wide-angle view: Jupiter’s dipole rivals that of the Sun |
   |:---:|:---:|
-  | <img src="docs/img/dphi_dt_sun.png" width="100%" alt="Venere e Mercurio immersi nel dipolo del Sole"> | <img src="docs/img/dphi_sun_jupiter_comparison.png" width="100%" alt="Confronto grandangolare Sole-Giove"> |
+  | <IMG src="docs/img/dphi_dt_sun.png" width="100%" alt="Venus and Mercury immersed in the Sun’s dipole"> | <IMG src="docs/img/dphi_sun_jupiter_comparison.png" width="100%" alt="Wide-angle comparison of the Sun and Jupiter"> |
 
-- **L'effetto "fionda" negli ammassi caotici.** Negli ammassi densi, il mix tra orizzonti causali finiti e Dead Reckoning genera occasionali **espulsioni pseudo-relativistiche**: un corpo che attraversa una configurazione stretta riceve un calcio anomalo. Va letto come un artefatto qualitativo della dinamica causale discreta, non come fisica rigorosa, ed è connesso all'assenza di disgregazione mareale (i corpi non si frantumano, quindi sopravvivono a incontri che nella realtà li distruggerebbero).
+- **The "slingshot" effect in chaotic clusters.** In dense clusters, the interplay between finite causal horizons and Dead Reckoning generates occasional **pseudo-relativistic ejections**: a body passing through a tight configuration receives an anomalous kick. This should be interpreted as a qualitative artifact of discrete causal dynamics, not as rigorous physics, and is related to the absence of tidal disruption (bodies do not shatter, so they survive encounters that would destroy them in reality).
 
-- **I punti L1/L2 "mobili/instabili" nelle orbite eccentriche (dubbio aperto).** Nel [Lagrange Hunter](#75-lagrange-hunter-determinante-e-hessiana-inversa) ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)), per coppie con rapporto di massa molto piccolo e orbita eccentrica (Marte, Mercurio), L1 e L2 non si limitano a respirare in ampiezza in fase l'uno con l'altro come ci si aspetterebbe dalla sola eccentricità (punto precedente). Il ciclo osservato è a staffetta:
-  1. partono equidistanti dal corpo;
-  2. uno dei due si allontana bruscamente mentre l'altro resta fermo vicino;
-  3. il primo torna al proprio posto mentre, nello stesso istante, è il secondo a schizzare via;
-  4. il pattern si alterna in fase con l'afelio e il perielio.
+- **"Mobile/unstable" L1/L2 points in eccentric orbits (open question).** In the [Lagrange Hunter](#75-lagrange-hunter-determinant-and-inverse-hessian) ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)), for pairs with a very small mass ratio and an eccentric orbit (Mars, Mercury), L1 and L2 do not merely oscillate in amplitude in phase with each other as one would expect from eccentricity alone (previous point). The observed cycle is a relay pattern:
+  1. they start out equidistant from the body;
+  2. one of them abruptly moves away while the other remains stationary nearby;
+  3. the first returns to its position while, at the same instant, the second shoots away;
+  4. the pattern alternates in phase with aphelion and perihelion.
 
-  Il comportamento non è riconducibile a un errore di implementazione verificabile nel codice. La causa esatta resta un dubbio aperto.
+  This behavior cannot be attributed to a verifiable implementation error in the code. The exact cause remains unclear.
 
-  <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Media non trovato"></div>
+  <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Media not found"></div>
 
-- **Cattura quasi-stabile in L4/L5 (Terra-Sole).** Lanciando un satellite con il boot co-rotante guidato dall'interfaccia di simulazione esattamente su L4 o L5 nel sistema Terra-Sole, il corpo non fugge subito: orbita attorno al punto teorico per molti periodi orbitali prima di perdere gradualmente l'aggancio.
+- **Quasi-stable capture at L4/L5 (Earth-Sun).** When launching a satellite with a co-rotating boot guided by the simulation interface precisely to L4 or L5 in the Earth-Sun system, the body does not escape immediately: it orbits around the theoretical point for many orbital periods before gradually losing its lock.
 
-- **Adattabilità del campo causale a perturbazioni complesse.** Uno scenario caotico fittizio, costruito a runtime direttamente nel simulatore, con diverse stelle di neutroni disperse in orbita attorno a Sagittarius A*, in modalità dΦ/dt: mostra come il campo causale si adatti senza problemi a configurazioni multi-corpo complesse e non curate a mano, ben oltre gli scenari degli altri capitoli.
+- **Adaptability of the causal field to complex perturbations.** A fictitious chaotic scenario, constructed at runtime directly within the simulator, featuring several neutron stars scattered in orbit around Sagittarius A*, in dΦ/dt mode: it demonstrates how the causal field seamlessly adapts to complex, non-hand-tuned multi-body configurations, far beyond the scenarios covered in the other chapters.
 
   <div align="center"><video src="https://github.com/user-attachments/assets/03e80460-fa52-413f-8dbc-311698c9bd78" controls="controls" width="100%"></video></div>
 
-### 10.3 Il *wobble* del corpo di riferimento
+### 10.3 The *wobble* of the reference body
 
-Con *wobble* si intende qui l'oscillazione di riflesso di un corpo attorno alla propria posizione nominale di "centro fermo", indotta dall'attrazione di ciò che gli orbita intorno: non un termine tecnico del motore, solo il nome comune per questo tipo di moto.
+Here, *wobble* refers to the oscillation of a body around its nominal “fixed center” position, induced by the gravitational pull of what orbits it: not a technical term from the engine, just the common name for this type of motion.
 
-Negli scenari eliocentrici il Sole viene inizializzato fermo all'origine ( $\vec r = \vec v = 0$ a $t=0$ ): è la scelta naturale per un "centro" di riferimento. Ma è solo una condizione iniziale, non un vincolo: da quel momento il Sole risente della gravità di tutti i pianeti come chiunque altro e comincia a muoversi di riflesso attorno al vero baricentro del sistema.
+In heliocentric scenarios, the Sun is initially set at rest at the origin ( $\vec r = \vec v = 0$ at $t=0$ ): this is the natural choice for a reference “center.” But it is only an initial condition, not a constraint: from that moment on, the Sun is subject to the gravity of all the planets just like any other body and begins to move reflexively around the system’s true center of mass.
 
-**Perché il suo dipolo è comunque ben visibile.** La sensibilità della heatmap dΦ/dt (come discusso in [§7.2](#72-variazione-temporale-dφdt) e in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md)) è tarata sulla massa più grande presente in scena, cioè il Sole stesso. Con una massa di quella scala, basta una velocità di riflesso minuscola per generare un termine $M\,v_{rad}/r^2$ tutt'altro che trascurabile: il Sole non deve muoversi *tanto* per essere ben visibile, deve solo muoversi *quel poco che gli impone la fisica*.
+**Because its dipole is still clearly visible.** The sensitivity of the dΦ/dt heatmap (as discussed in [§7.2](#72-time-derivative-dφdt) and in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md)) is calibrated to the largest mass present in the scene, namely the Sun itself. With a mass of that magnitude, even a minuscule reflection velocity is enough to generate a $M\,v_{rad}/r^2$ term that is far from negligible: the Sun does not have to move *that much* to be clearly visible; it only has to move *the small amount dictated by physics*.
 
-**Chi lo muove e con che periodo.** Fra i pianeti, Giove domina il riflesso: con $1{,}898\times10^{27}$ kg è più massiccio di tutti gli altri pianeti messi insieme ed è proprio per questo che, nella realtà, il baricentro Sole-Giove cade fuori dalla superficie solare. Il *wobble* che ne risulta eredita il periodo orbitale di Giove: con il semiasse usato dal preset (5,2044 AU) quel periodo è di **circa 11,9 anni (~4.333 giorni)**, non poche centinaia. È lo stesso conto di Keplero che il motore usa già per lanciare Giove in orbita, applicato alla scala del Sole.
+**What moves it and with what period.** Among the planets, Jupiter dominates the reflection: with a mass of $1{,}898\times10^{27}$ kg, it is more massive than all the other planets combined, and this is precisely why, in reality, the Sun-Jupiter center of mass lies outside the Sun’s surface. The resulting *wobble* inherits Jupiter’s orbital period: with the semi-major axis used by the preset (5.2044 AU), that period is **approximately 11.9 years (~4,333 days)**, not just a few hundred. It’s the same calculation Kepler used to launch Jupiter into orbit, applied on the scale of the Sun.
 
-**La forma: archi separati da cuspidi.** Come si vede nello screenshot sotto, il cammino del Sole attorno al baricentro è fatto di archi lisci separati da cuspidi nette, il punto in cui la direzione del riflesso si inverte bruscamente. Con il sistema solare completo attivo (non il solo Giove isolato), il riflesso del Sole è la somma di più contributi planetari sovrapposti con periodi diversi (Giove dominante, ma non solo): è questa sovrapposizione, non un singolo termine periodico, a produrre le cuspidi. È la stessa firma qualitativa dei classici diagrammi di moto solare intorno al baricentro discussi in letteratura eliofisica.
+**The shape: arcs separated by cusps.** As seen in the screenshot below, the Sun’s path around the center of mass consists of smooth arcs separated by sharp cusps, the points where the direction of the reflection reverses abruptly. With the entire solar system active (not just Jupiter in isolation), the Sun’s reflection is the sum of multiple overlapping planetary contributions with different periods (Jupiter is dominant, but not the only one): it is this overlap (not a single periodic term) that produces the cusps. This is the same qualitative signature found in the classic diagrams of solar motion around the center of mass discussed in heliophysical literature.
 
-**Non è un'esclusiva Sole-Giove.** Lo stesso riflesso compare in ogni sistema con un corpo dominante e uno o più corpi leggeri in orbita: la Terra, per dire, compie un *wobble* analogo (più piccolo in ampiezza, dominato dalla Luna) attorno al baricentro Terra-Luna. È generico all'N-corpi, non un caso speciale cablato per il Sole. A renderlo leggibile a schermo è la risoluzione delle **scie** (il budget fisso a buffer circolare per corpo, [ARCHITECTURE_DEEP_DIVE.md §6](ARCHITECTURE_DEEP_DIVE.md#8-le-scie-dei-corpi)): la traiettoria del riflesso, per quanto piccola in ampiezza assoluta, viene tracciata con la stessa fedeltà di qualunque altra orbita.
+**This is not exclusive to the Sun-Jupiter system.** The same reflection appears in any system with a dominant body and one or more lighter bodies in orbit: the Earth, for example, undergoes a similar *wobble* (smaller in amplitude, dominated by the Moon) around the Earth-Moon center of mass. It is a general property of the N-body system, not a special case tailored to the Sun. What makes it visible on screen is the resolution of the **trails** (the fixed circular buffer budget per body, [ARCHITECTURE_DEEP_DIVE.md §6](ARCHITECTURE_DEEP_DIVE.md#8-body-trails)): the trajectory of the reflection, however small in absolute magnitude, is plotted with the same fidelity as any other orbit.
 
-| *Wobble* del Sole | *Wobble* della Terra | *Wobble* del buco nero in EMRI |
+| *Wobble* of the Sun | *Wobble* of the Earth | *Wobble* of the black hole in EMRI |
 |:---:|:---:|:---:|
-| <img src="docs/img/sun_wobble.png" width="70%" alt="Wobble del Sole"> | <img src="docs/img/earth_wobble.png" width="30%" alt="Wobble della Terra"> | <img src="docs/img/wobble_BH_EMRI.png" width="40%" alt="Wobble del buco nero in EMRI"> |
-| Dominato da Giove: si vedono i due archi separati dalla cuspide descritti sopra. Essendo il Sole il corpo target (bloccato), è visibile anche il vettore viola dell'accelerazione netta: pur essendo infinitesimale in quell'istante, punta comunque verso Giove, fuori dall'inquadratura. | Dominato dalla Luna: stessa firma ad archi e cuspidi, ma ripetuta più volte nella stessa finestra di scia, perché il periodo della Luna è molto più corto di quello di Giove. | Riflesso del buco nero supermassiccio verso il compagno leggero, nello scenario EMRI discusso in [§7.6.4](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro): le cuspidi si infittiscono avvicinandosi al merger, la stessa firma di chirp (frequenza orbitale crescente) già vista altrove. Ogni macro-cuspide visibile qui non è una singola orbita: aggrega migliaia delle orbite del compagno leggero, fortemente precessanti ([§7.6.4](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro)), che la risoluzione finita della scia non può risolvere una per una. |
+| <img src="docs/img/sun_wobble.png" width="70%" alt="Sun's Wobble"> | <img src="docs/img/earth_wobble.png" width="30%" alt="Earth's Wobble"> | <img src="docs/img/wobble_BH_EMRI.png" width="40%" alt="Black Hole Wobble in EMRI"> |
+| Dominated by Jupiter: the two arcs separated by the cusp described above are visible. Since the Sun is the target (fixed) body, the purple vector representing the net acceleration is also visible: although it is infinitesimal at that instant, it still points toward Jupiter, which is outside the frame. | Moon-dominated: the same pattern of arcs and cusps, but repeated multiple times within the same trail window, because the Moon’s period is much shorter than Jupiter’s. | Reflection of the supermassive black hole toward the lightweight companion, in the EMRI scenario discussed in [§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter): the cusps become denser as they approach the merger, the same chirp signature (increasing orbital frequency) already seen elsewhere. Each macro-cusp visible here is not a single orbit: it aggregates thousands of the lightly orbiting companion’s orbits, which are strongly precessing ([§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter)), and which the finite resolution of the trail cannot resolve individually. |
 
-### 10.4 La precessione spuria in campo debole (errore di troncamento in DT, non fisica)
+### 10.4 Spurious precession in the weak field (truncation error in DT, not physical)
 
-I capitoli precedenti ([§6.7](#67-le-due-validazioni-a-confronto), [§7.6.5](#765-caso-di-studio-bns-a-doppia-eccentricità-estrema)) mostrano la precessione del perielio come un effetto plausibile nei regimi relativistici: generata dal 2.5PN reale quando è attivo, o dal residuo del dead reckoning teorizzato in [§3.3](#33-lequilibrio-tra-freno-e-spinta) quando non lo è. Ma la stessa identica firma visiva, l'asse maggiore dell'orbita che ruota lentamente, compare anche in orbite del tutto ordinarie e non relativistiche, per esempio quella della Luna attorno alla Terra, dove il 2.5PN non si attiva mai (velocità ben sotto la soglia $0{,}1c$ di [§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)) e nessun termine 1PN/2PN conservativo è implementato nel motore.
+The previous chapters ([§6.7](#67-comparing-the-two-validations), [§7.6.5](#765-case-study-bns-with-extreme-double-eccentricity)) show perihelion precession as a plausible effect in relativistic regimes: generated by the real 2.5PN when active, or by the dead reckoning residual theorized in [§3.3](#33-the-balance-between-braking-and-thrust) when it is not active. But the exact same visual signature (the major axis of the orbit rotating slowly) also appears in entirely ordinary, non-relativistic orbits, such as that of the Moon around the Earth, where the 2.5PN never activates (speeds well below the $0.1c$ threshold of [§6.3](#63-how-the-25pn-is-used-in-the-simulator)) and no conservative 1PN/2PN terms are implemented in the engine.
 
-Lì l'effetto è dimostrabilmente **un errore di troncamento**, non fisica: la precessione risulta proporzionale al passo temporale $DT$ . A $DT=150$ la Luna sviluppa una lenta precessione attorno alla Terra nell'arco di molti anni simulati; raddoppiando il passo a $DT=300$ , la stessa precessione si sviluppa nella metà del tempo. Con un $DT$ sufficientemente basso la precessione scompare del tutto: è la prova definitiva che non è un residuo fisico, ma dipende unicamente dalla discretizzazione, esattamente il tipo di analisi sulla deriva orbitale in funzione del passo che [§4.2](#42-errore-di-troncamento) anticipava come sviluppo futuro. Lo stesso regime a $DT$ alto produce anche un lentissimo decadimento orbitale spurio, non reale, della stessa origine.
+There, the effect is demonstrably **a truncation error**, not a physical phenomenon: the precession is proportional to the time step $DT$. At $DT=150$, the Moon undergoes a slow precession around the Earth over the course of many simulated years; by doubling the time step to $DT=300$, the same precession occurs in half the time. With a sufficiently low $DT$, the precession disappears entirely: this is definitive proof that it is not a physical residual, but depends solely on the discretization, exactly the type of analysis of orbital drift as a function of the time step that [§4.2](#42-truncation-error) anticipated as a future development. The same regime at high $DT$ also produces a very slow, spurious (non-real) orbital decay of the same origin.
 
 ---
 
-*Per le scelte ingegneristiche dietro queste equazioni (buffer LOD, kernel JIT, dispatch, performance) si veda [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md). Per l'uso e i controlli, il [README.md](README.md).*
+*For the engineering choices behind these equations (LOD buffer, JIT kernel, dispatch, performance), see [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md). For usage and controls, see the [README.md](README.md).*
