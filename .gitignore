@@ -10,9 +10,16 @@ __pycache__/
 .vscode/
 .idea/
 
-# Ligo Output Data
-ligo_output/data_npy/
-ligo_output/plots/
+# Ligo Output Data: si ignora l'output generato dall'utente, ma si tengono i tre
+# esempi curati versionati. Serve la forma "cartella/*": con la barra finale git
+# non entra nella cartella e le negazioni non verrebbero nemmeno lette.
+ligo_output/data_npy/*
+ligo_output/plots/*
+!ligo_output/data_npy/GW*.npy
+!ligo_output/plots/GW*.png
+
+# Artefatti di Esplora risorse (nascosti+sistema, rigenerati da OneDrive)
+desktop.ini
 
 # Local settings (Optional, but usually a good idea to ignore)
 # astro_settings.ini
