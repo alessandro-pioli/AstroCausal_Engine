@@ -267,7 +267,7 @@ Per sorgenti in moto relativistico, il potenziale gravitazionale viene corretto 
 > 
 > 1. **Dead Reckoning Quadratico (Taylor di 2° ordine)**: per orbite stabili e velocità ordinarie, la posizione della sorgente viene estrapolata integrando velocità e accelerazione storica all'istante di emissione:
 > $$\vec{x}_{eff} = \vec{x}_{ret} + \vec{v}_{ret} \Delta t_{flight} + \frac{1}{2}\vec{a}_{ret} \Delta t_{flight}^2$$
-> 2. **Bypass del Dead Reckoning nel Regime GW**: in regime relativistico estremo (vicino al merger, con velocità **relativa** della coppia superiore al $10\%$ di $c$ e distanza inferiore a $1000 \cdot R_s$; per masse uguali il criterio equivale al 5% di $c$ per singolo corpo, ma resta valido anche per coppie asimmetriche dove il corpo pesante si muove lentamente), il motore disattiva l'estrapolazione lineare e utilizza la **posizione presente esatta** della sorgente sia per la direzione che per la distanza nel calcolo delle forze. Questo elimina all'origine l'accumulo di errore radiale periodico $O((v/c)^2)$ responsabile dell'instabilità orbitale.
+> 2. **Bypass del Dead Reckoning nel Regime GW**: in regime relativistico estremo (vicino al merger, con velocità **relativa** della coppia superiore al 10% di $c$ e distanza inferiore a $1000 \cdot R_s$; per masse uguali il criterio equivale al 5% di $c$ per singolo corpo, ma resta valido anche per coppie asimmetriche dove il corpo pesante si muove lentamente), il motore disattiva l'estrapolazione lineare e utilizza la **posizione presente esatta** della sorgente sia per la direzione che per la distanza nel calcolo delle forze. Questo elimina all'origine l'accumulo di errore radiale periodico $O((v/c)^2)$ responsabile dell'instabilità orbitale.
 
 ---
 

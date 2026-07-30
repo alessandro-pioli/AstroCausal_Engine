@@ -440,7 +440,7 @@ The following numbers were measured on the development reference hardware, a con
 
 **When the graphics become saturated.** The $W \times H$ factor enters the formula right from the launcher, with the choice of initial resolution: a QHD window (2560×1440) requires 3.7 million field evaluations per heatmap per frame, compared to just under a million for the default 1200×800. The main mitigation is **dynamic heatmap resolution**: the calculation grid is divided by a factor of `div` on both axes, with discarded pixels reconstructed via interpolation (`pygame.transform.smoothscale`, or `cv2.resize` for those who install OpenCV, at the user’s discretion). The effect on the cost estimate is quadratic, because `div` acts on both width and height:
 
-$$O\!\left(\frac{W}{div} \cdot \frac{H}{div} \cdot N\right) = O\!\left(\frac{W \cdot H \cdot N}{div^2}\right)$$
+$$O\left(\frac{W}{div} \cdot \frac{H}{div} \cdot N\right) = O\left(\frac{W \cdot H \cdot N}{div^2}\right)$$
 
 In QHD, the progression speaks for itself: 3.7 million evaluations at `div` = 1, then 921,600 at `div` = 2, 230,400 at `div` = 4, down to 14,400 at the full scale of `div` = 16, a 256-fold reduction. The scale can be cycled manually using the `G` key or delegated to the auto-tuner described in [§4](#4-the-performancemanager-an-auto-tuner-with-memory-and-hysteresis). For the Φ map alone, the LOD filter on the masses from [§2.3](#23-the-visualized-side-the-graphics-kernel) is applied, which affects the other factor in the term, $N$.
 

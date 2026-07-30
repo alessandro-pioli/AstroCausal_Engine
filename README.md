@@ -267,7 +267,7 @@ For sources in relativistic motion, the gravitational potential is corrected by 
 >
 > 1. **Quadratic Dead Reckoning (2nd order Taylor)**: for stable orbits and ordinary velocities, the position of the source is extrapolated by integrating historical velocity and acceleration at the instant of emission:
 > $$\vec{x}_ {eff} = \vec{x}_ {ret} + \vec{v}_ {ret} \Delta t_ {flight} + \frac{1}{2}\vec{a}_ {ret} \Delta t_ {flight}^2$$
-> 2. **Dead Reckoning bypass in the GW Regime**: in an extreme relativistic regime (close to the merger, with **relative** velocity of the pair greater than $10\%$ of $c$ and distance less than $1000 \cdot R_s$; for equal masses the criterion is equivalent to 5% of $c$ for a single body, but it also remains valid for asymmetric pairs where the heavy body moves slowly), the engine disables linear extrapolation and uses the **exact present position** of the source for both direction and distance in the calculation of forces. This fundamentally eliminates the accumulation of periodic radial error $O((v/c)^2)$ responsible for orbital instability.
+> 2. **Dead Reckoning bypass in the GW Regime**: in an extreme relativistic regime (close to the merger, with **relative** velocity of the pair greater than 10% of $c$ and distance less than $1000 \cdot R_s$; for equal masses the criterion is equivalent to 5% of $c$ for a single body, but it also remains valid for asymmetric pairs where the heavy body moves slowly), the engine disables linear extrapolation and uses the **exact present position** of the source for both direction and distance in the calculation of forces. This fundamentally eliminates the accumulation of periodic radial error $O((v/c)^2)$ responsible for orbital instability.
 
 ---
 
