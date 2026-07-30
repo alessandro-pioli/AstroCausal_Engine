@@ -815,11 +815,11 @@ stateDiagram-v2
     s4 : 4. Scelta del punto L1-L5
     [*] --> s0
     s0 --> s1 : tasto N
-    s1 --> s2 : template scelto (tasti 1-4)
-    s2 --> s0 : orbita confermata, ritorna new_params
-    s2 --> s3 : diramazione Lagrange (tasto 8)
-    s3 --> s4 : coppia scelta (TAB per ciclare)
-    s4 --> s0 : punto confermato, ritorna new_params
+    s1 --> s2 : template scelto<br/>(tasti 1-4)
+    s2 --> s0 : orbita confermata,<br/>ritorna new_params
+    s2 --> s3 : diramazione Lagrange<br/>(tasto 8)
+    s3 --> s4 : coppia scelta<br/>(TAB per ciclare)
+    s4 --> s0 : punto confermato,<br/>ritorna new_params
 ```
 
 Riassumendo il confine tra i due livelli: quando lo stato 2 o 4 completa una scelta valida, `OrbitalSpawner.handle_event()` ritorna il dizionario `new_params` invece di un booleano, un protocollo di ritorno non ortodosso ma deliberato, coerente con lo stile pragmatico di tutto il resto del motore. È `intercept_spawner`, in `input_controller.py`, a riconoscere quel caso specifico e a tradurlo in un'azione concreta sulla simulazione, mantenendo la catena degli interceptor sempre e solo su `True`/`False`.

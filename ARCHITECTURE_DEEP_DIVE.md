@@ -815,11 +815,11 @@ stateDiagram-v2
     s4 : 4. Select L1–L5 point
     [*] --> s0
     s0 --> s1 : N key
-    s1 --> s2 : template selected (keys 1–4)
-    s2 --> s0 : orbit confirmed, returns new_params
+    s1 --> s2 : template selected<br/>(keys 1–4)
+    s2 --> s0 : orbit confirmed,<br/>returns new_params
     s2 --> s3 : Lagrange branch (key 8)
-    s3 --> s4: pair selected (TAB to cycle through)
-    s4 --> s0: point confirmed, returns new_params
+    s3 --> s4 : pair selected<br/>(TAB to cycle through)
+    s4 --> s0 : point confirmed,<br/>returns new_params
 ```
 
 To summarize the boundary between the two levels: when state 2 or 4 completes a valid selection, `OrbitalSpawner.handle_event()` returns the `new_params` dictionary instead of a boolean, an unorthodox but deliberate return protocol, consistent with the pragmatic style of the rest of the engine. It is `intercept_spawner`, in `input_controller.py`, that recognizes that specific case and translates it into a concrete action on the simulation, keeping the chain of interceptors strictly at `True`/`False`.
