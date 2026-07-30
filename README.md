@@ -1,6 +1,6 @@
 # AstroCausal Engine: interactive sandbox of causal gravity and 2D orbital mechanics
 
-**🇬🇧 English**  ·  [🇮🇹 Italiano](README.it.md)
+**🇬🇧 English** · [🇮🇹 Italiano](README.it.md)
 
 > A real-time laboratory where gravity is recreated as a genuinely causal phenomenon: gravitational information always travels at a finite speed c. Around this core, you can observe scenarios ranging from the complete solar system to the merging of black holes to impacts between dwarf galaxies, with vectors and telemetry, an interactive orbital spawner for Keplerian orbits and Lagrange points, a complete suite of gravitational heatmaps, and the emerging visual manifestation of analogous gravitational waves.
 
@@ -214,7 +214,7 @@ Represents the temporal variation of the scalar gravitational potential, calcula
 ### 3. Tidal Stress (Tidal Map) — `[Newtonian]` (H key × 3)
 Map of the **deviatoric norm of the Hessian matrix** of the Newtonian gravitational potential, calculated from the instantaneous positions. The components of the Hessian $\partial^2 \Phi / \partial x_i \partial x_j$ are calculated analytically for each body:
 
-$$H_{ij} = G \cdot m \left(\frac{\delta_{ij}}{r^3} - \frac{3 \, x_i \, x_j}{r^5}\right)$$
+$$H_{ij} = G \cdot m \left(\frac{\delta_{ij}}{r^3} - \frac{3 x_i x_j}{r^5}\right)$$
 
 The stress displayed is the **difference between the two eigenvalues of the Hessian**, $\sqrt{(\Phi_{xx} - \Phi_{yy})^2 + 4\Phi_{xy}^2}$ (proportional to the deviatoric part of the tensor): it measures the maximum **shear stress**, i.e., how much a body would be stretched in one direction and compressed in the orthogonal direction. It highlights areas of extreme tidal stress (for example, the orbit of Io around Jupiter). The coloring is on fixed physical scales: from blue (safe region) to red (structural disintegration) to white (near the singularity). The `M` key shows the **legend** with the thresholds, so you can see at a glance at what stress a body would be disintegrated.
 
@@ -230,8 +230,8 @@ The map encodes **two independent pieces of information**, to be read separately
 
 - **Brightness = modulus of the net force** $|\nabla \Phi_{eff}|$, on a logarithmic scale. Where the force is almost zero, the map is **dark**: these are the **equilibrium points** and the low-force channels (the Lagrange points, primarily the L1 saddle between the two bodies). Black therefore marks *where a co-rotating particle would not feel a net force*.
 - **Color = sign of the determinant of the Hessian** $D = \Phi_{xx}\Phi_{yy} - \Phi_{xy}^2$, i.e., the local *curvature* of the potential, **independent of the brightness**:
-   - **Red ($D < 0$, saddle)**: dominates near the bodies. There, a co-rotating particle **would fall towards the attractor**: gravity prevails and stretches the potential (radial elongation, transverse compression).
-   - **Blue ($D > 0$, dome)**: dominates far from the bodies. There, the co-rotating velocity $v = \omega r$ exceeds the Keplerian velocity $\sqrt{GM/r}$: the centrifugal force prevails and a co-rotating particle **would be thrown outward**.
+ - **Red ($D < 0$, saddle)**: dominates near the bodies. There, a co-rotating particle **would fall towards the attractor**: gravity prevails and stretches the potential (radial elongation, transverse compression).
+ - **Blue ($D > 0$, dome)**: dominates far from the bodies. There, the co-rotating velocity $v = \omega r$ exceeds the Keplerian velocity $\sqrt{GM/r}$: the centrifugal force prevails and a co-rotating particle **would be thrown outward**.
 
 The **Roche lobe** does not coincide with the boundary between red and blue (that is the line where the curvature $D$ changes sign, a different geometric locus): it is the **equipotential of $\Phi_{eff}$ that passes through L1**, and it can be visually read from the **dark channels** around the bodies. The low-force "eight" figure that closes right on the L1 saddle marks the maximum volume that a body can occupy before its matter overflows (*Roche Lobe Overflow*). The more extreme the mass ratio, the more the secondary's lobe shrinks into an elongated "drop" along the tidal axis.
 * **Right fader (Sensitivity, range `[-8, 8]`):** raises or lowers the overall brightness to bring out the faintest details or darken the background.
@@ -266,7 +266,7 @@ For sources in relativistic motion, the gravitational potential is corrected by 
 > In discrete causal gravity, the aberration of force (due to the fact that gravity points towards the retarded position) introduces a fictitious torque that tends to rapidly widen the celestial orbits. To mitigate this numerical instability and preserve long-term Keplerian stability, the engine implements a **Hybrid Dead Reckoning** (the technique, borrowed from navigation, of estimating where a body *is now* based on where it was and its velocity) at the JIT kernel level:
 >
 > 1. **Quadratic Dead Reckoning (2nd order Taylor)**: for stable orbits and ordinary velocities, the position of the source is extrapolated by integrating historical velocity and acceleration at the instant of emission:
->    $$\vec{x}_ {eff} = \vec{x}_ {ret} + \vec{v}_ {ret} \Delta t_ {flight} + \frac{1}{2}\vec{a}_ {ret} \Delta t_ {flight}^2$$
+> $$\vec{x}_ {eff} = \vec{x}_ {ret} + \vec{v}_ {ret} \Delta t_ {flight} + \frac{1}{2}\vec{a}_ {ret} \Delta t_ {flight}^2$$
 > 2. **Dead Reckoning bypass in the GW Regime**: in an extreme relativistic regime (close to the merger, with **relative** velocity of the pair greater than $10\%$ of $c$ and distance less than $1000 \cdot R_s$; for equal masses the criterion is equivalent to 5% of $c$ for a single body, but it also remains valid for asymmetric pairs where the heavy body moves slowly), the engine disables linear extrapolation and uses the **exact present position** of the source for both direction and distance in the calculation of forces. This fundamentally eliminates the accumulation of periodic radial error $O((v/c)^2)$ responsible for orbital instability.
 
 ---
@@ -284,19 +284,19 @@ where $M$ is the total mass of the pair, $\mu$ is the reduced mass, $\hat{n}$ is
 To ensure the conservation of orbital energy and the long-term stability of complex gravitational systems, the engine adopts a **Velocity Verlet** integration scheme (implemented in the Numba JIT kernels in `kernel_single.py`, `kernel_double.py`, and `kernel_triple.py`; the analysis of the truncation error is in [§4 of the physics guide](PHYSICS_AND_SCENARIO_GUIDE.md#4-numerical-methods-velocity-verlet-truncation-error-and-dt)). Each physics integration step follows this precise time sequence:
 
 1. **First "Half-Kick" of the velocities** (with warm-start of the accelerations at time $t=0$ pre-calculated during the rebuild phase via NumPy broadcasting):
-   $$\vec{v}\left(t + \frac{\Delta t}{2}\right) = \vec{v}(t) + \frac{1}{2} \vec{a}(t) \Delta t$$
+ $$\vec{v}\left(t + \frac{\Delta t}{2}\right) = \vec{v}(t) + \frac{1}{2} \vec{a}(t) \Delta t$$
 2. **Position update ("Drift")**:
-   $$\vec{x}(t + \Delta t) = \vec{x}(t) + \vec{v}\left(t + \frac{\Delta t}{2}\right) \Delta t$$
+ $$\vec{x}(t + \Delta t) = \vec{x}(t) + \vec{v}\left(t + \frac{\Delta t}{2}\right) \Delta t$$
 3. **Sequential collision resolution**:
-   Any physical contact or capture at the event horizon instantly changes positions and velocities before the forces are calculated.
+ Any physical contact or capture at the event horizon instantly changes positions and velocities before the forces are calculated.
 4. **Causal calculation of forces and acceleration**:
-   The accelerations $\vec{a}(t + \Delta t)$ are calculated by evaluating the causal gravitational forces produced by all bodies, querying the history buffers at the instant of emission ($t_{ret} = t - r/c$).
+ The accelerations $\vec{a}(t + \Delta t)$ are calculated by evaluating the causal gravitational forces produced by all bodies, querying the history buffers at the instant of emission ($t_{ret} = t - r/c$).
 5. **Relativistic correction of inertia**:
-   Below the threshold of $v^2 = 0.5\,c^2$ (≈ 0.707 c), the acceleration remains unchanged. Above that threshold, it is rescaled by the inverse Lorentz factor, which suppresses it as $v \to c$:
-   $$\vec{a}_{eff}(t + \Delta t) = \vec{a}(t + \Delta t) \cdot \sqrt{1 - \frac{v^2}{c^2}}$$
-   Beyond the threshold $v^2 = 0.999\,c^2$ (about $0.9995\,c$), the acceleration is completely zeroed: under ordinary conditions, a body can no longer be pushed beyond that limit.
+ Below the threshold of $v^2 = 0.5 c^2$ (≈ 0.707 c), the acceleration remains unchanged. Above that threshold, it is rescaled by the inverse Lorentz factor, which suppresses it as $v \to c$:
+ $$\vec{a}_{eff}(t + \Delta t) = \vec{a}(t + \Delta t) \cdot \sqrt{1 - \frac{v^2}{c^2}}$$
+ Beyond the threshold $v^2 = 0.999 c^2$ (about $0.9995 c$), the acceleration is completely zeroed: under ordinary conditions, a body can no longer be pushed beyond that limit.
 6. **Second "Half-Kick" of the velocities**:
-   $$\vec{v}(t + \Delta t) = \vec{v}\left(t + \frac{\Delta t}{2}\right) + \frac{1}{2} \vec{a}_{eff}(t + \Delta t) \Delta t$$
+ $$\vec{v}(t + \Delta t) = \vec{v}\left(t + \frac{\Delta t}{2}\right) + \frac{1}{2} \vec{a}_{eff}(t + \Delta t) \Delta t$$
 
 ### The Determining Role of DT (Time Step)
 
@@ -411,7 +411,7 @@ Running an interactive physics simulation at **60 FPS** (the *frames* generated 
 
 The real load is largely **in the hands of the user**. The engine offers a balance but allows it to be adjusted in real time: you can deliberately throttle either the **graphics side** (high resolution with many bodies in the scene) or the **physics side** (many bodies with a high multiplier).
 
-The two extremes: with more than twenty bodies at multiplier `5` (10,000×: the engine aims for 10,000 physics ticks per frame), it is normal to drop below 10 FPS. It is a user choice, because it is needed when you want the maximum advancement of the simulated time (more TPS, at a potentially massive cost of FPS). On the other hand, in compact mergers at $\Delta t = 1\,\mu\text{s}$, few bodies are needed: there, the engine can handle **600,000 TPS and 60 FPS stably even with the dΦ/dt heatmap at native 2K resolution**, and the high multipliers run without bottlenecks. In fact, several presets use $\Delta t = 1\,\mu\text{s}$ with the expected event at 15 simulated seconds or more: at 600,000 TPS, the simulation runs at about **0.6 simulated seconds for each real second**, enough to quickly reach the vicinity of the event, before lowering the multiplier and slowing down by orders of magnitude until the individual microseconds can be observed in super slow-motion. In short, the engine finds the balance but it remains interactive: the strategies below are used to consciously govern it, not to survive everyday use.
+The two extremes: with more than twenty bodies at multiplier `5` (10,000×: the engine aims for 10,000 physics ticks per frame), it is normal to drop below 10 FPS. It is a user choice, because it is needed when you want the maximum advancement of the simulated time (more TPS, at a potentially massive cost of FPS). On the other hand, in compact mergers at $\Delta t = 1 \mu\text{s}$, few bodies are needed: there, the engine can handle **600,000 TPS and 60 FPS stably even with the dΦ/dt heatmap at native 2K resolution**, and the high multipliers run without bottlenecks. In fact, several presets use $\Delta t = 1 \mu\text{s}$ with the expected event at 15 simulated seconds or more: at 600,000 TPS, the simulation runs at about **0.6 simulated seconds for each real second**, enough to quickly reach the vicinity of the event, before lowering the multiplier and slowing down by orders of magnitude until the individual microseconds can be observed in super slow-motion. In short, the engine finds the balance but it remains interactive: the strategies below are used to consciously govern it, not to survive everyday use.
 
 The asymptotic analysis of the cost per frame (physics versus rendering per pixel, with the worst-case formula) is documented in [§2.3](ARCHITECTURE_DEEP_DIVE.md#23-the-visualized-side-the-graphics-kernel) and [§3](ARCHITECTURE_DEEP_DIVE.md#3-heatmap-rendering-and-fps-management) of ARCHITECTURE_DEEP_DIVE.md. For practical purposes, one relationship is sufficient: the **TPS (Ticks Per Second)**, the actual physics advance rate, are the product of the multiplier's ticks per frame (keys **1-5**: 1, 10, 100, 1000, or 10000) times the real FPS. The engine adopts a predefined target of **60 FPS** (which can be unlocked or modified in the `.ini` file): at 60 FPS with a multiplier of `5`, the theoretical ceiling is **600,000 TPS** (as in the presets of compact 2-body mergers). In very crowded scenarios (e.g., galactic clashes with ~200 bodies), the weight of the physics lowers the real FPS, proportionally dragging the TPS down as well.
 
@@ -461,8 +461,8 @@ During a simulation, the probe is placed with the `P` key on a point in space (i
 1. **Loading**: Reading of the binary file and extraction of the DT used to determine the sampling frequency $f_s$.
 2. **Pre-processing**: Detrending (removal of the mean offset). The algorithm identifies the maximum peak of the strain on the raw data *before* applying the taper window (Tukey). Previously, by performing the windowing first, the final taper dampened the merger peak (located at the far right of the file), causing the maximum peak to be erroneously detected shifted backwards (to the left, along the rising ramp) and offsetting all calculation checkpoints.
 3. **Automatic gatekeeper**: Signal classification to distinguish impulsive signals and negligible noise from actual coherent binary chirp signals.
-   - **SPECTRAL** (coherent chirp detected): proceeds with filtering, spectrogram, and chirp mass estimation.
-   - **RADIOMETRIC** (impulse/collision/noise): skips filtering and spectrogram, directly shows the unfiltered RAW strain and the cumulative radiated energy map.
+ - **SPECTRAL** (coherent chirp detected): proceeds with filtering, spectrogram, and chirp mass estimation.
+ - **RADIOMETRIC** (impulse/collision/noise): skips filtering and spectrogram, directly shows the unfiltered RAW strain and the cumulative radiated energy map.
 4. **Filtering (SPECTRAL only)**: 5 Hz Butterworth high-pass filter to isolate the orbital strain from environmental fluctuations.
 5. **Spectrogram (SPECTRAL only)**: Short-Time Fourier Transform (STFT) with Hann window, 95% overlap, and spectral zero-padding.
 6. **Chirp Tracker (Hilbert) (SPECTRAL only)**: Extraction of the instantaneous frequency $f(t)$ via Hilbert transform of the analytic signal, with Savitzky-Golay smoothing.

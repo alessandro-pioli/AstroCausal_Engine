@@ -1,6 +1,6 @@
 # Architecture and Evolution of the AstroCausal Engine
 
-**🇬🇧 English**  ·  [🇮🇹 Italiano](ARCHITECTURE_DEEP_DIVE.it.md)
+**🇬🇧 English** · [🇮🇹 Italiano](ARCHITECTURE_DEEP_DIVE.it.md)
 
 > [!WARNING]
 > This document does not explain the basic macrostructure of the repository and assumes a basic understanding of critical terms such as DT or simulation radius. For a clearer understanding, we recommend first reviewing at least the [Physical Model](README.md#physical-model) and the [Software Architecture](README.md#software-architecture) in the README.
@@ -14,24 +14,24 @@ This document traces the real problems encountered during development, the faile
 
 1. [The Choice of Python and the DOD + JIT Paradigm](#1-the-choice-of-python-and-the-dod--jit-paradigm)
 2. [The Ring Buffer and the Position History](#2-the-ring-buffer-and-the-position-history)
-   - 2.1 Buffer Structure and Sizing
-   - 2.2 How Physics Interacts with the Buffers
-   - 2.3 The Rendering Side: The Graphics Kernel
-   - 2.4 The Rebuild: How the History Survives Parameter Changes
+ - 2.1 Buffer Structure and Sizing
+ - 2.2 How Physics Interacts with the Buffers
+ - 2.3 The Rendering Side: The Graphics Kernel
+ - 2.4 The Rebuild: How the History Survives Parameter Changes
 3. [Heatmap Rendering and FPS Management](#3-heatmap-rendering-and-fps-management)
-   - 3.1 The Frame Budget: 60 FPS as the Target
-   - 3.2 The First Heatmap: The Potential Φ
-   - 3.3 The Second Map: From Φ to dΦ/dt
-   - 3.4 Derived maps: Tidal, Roche, Lagrange, and GW Strain
+ - 3.1 The Frame Budget: 60 FPS as the Target
+ - 3.2 The First Heatmap: The Potential Φ
+ - 3.3 The Second Map: From Φ to dΦ/dt
+ - 3.4 Derived maps: Tidal, Roche, Lagrange, and GW Strain
 4. [The PerformanceManager: an auto-tuner with memory and hysteresis](#4-the-performancemanager-an-auto-tuner-with-memory-and-hysteresis)
 5. [Collisions, Black Holes, and Singularities](#5-collisions-black-holes-and-singularities)
 6. [The Asynchronous Garbage Collector for Causally Dead Bodies](#6-the-asynchronous-garbage-collector-for-causally-dead-bodies)
 7. [The LIGO Probe: Sampling and Dump Architecture](#7-the-ligo-probe-sampling-and-dump-architecture)
 8. [The Trails of Bodies](#8-body-trails)
 9. [The Architecture of main_gui and the UI](#9-the-architecture-of-main_gui-and-the-ui)
-   - 9.1 From the Monolith to Modular Architecture
-   - 9.2 The Interactive Spawner and the Interceptor Adapter
-   - 9.3 The Main Process Bootstrap Sequence
+ - 9.1 From the Monolith to Modular Architecture
+ - 9.2 The Interactive Spawner and the Interceptor Adapter
+ - 9.3 The Main Process Bootstrap Sequence
 10. [The GameConsole: stdout interceptor with simulation timestamps](#10-the-gameconsole-stdout-interceptor-with-simulation-timestamps)
 11. [The loading splash screen: Tkinter before pygame with a thread-local print interceptor](#11-the-loading-splash-screen-tkinter-before-pygame-with-a-thread-local-print-interceptor)
 12. [The Tkinter launcher](#12-the-tkinter-launcher)
@@ -163,7 +163,9 @@ The history buffers constitute the dominant memory traffic for both the hot loop
 
 The initial sizing is strictly derived from the causal radius of the scenario. It is fascinating to note how, in these data structures (just as in Relativity) measurements that are seemingly only spatial (the causal *radius* in kilometers) become intrinsically measures of *temporal* depth (number of past slots) and vice versa, linked by the mathematical constant $c$:
 
-$$\text{raw\_len} = \frac{\text{SIMULATION\_RADIUS\_KM}}{c \cdot DT}$$
+```
+raw_len = SIMULATION_RADIUS_KM / (c · DT)
+```
 
 The table below outlines the logical decision matrix that `simulation_manager.py` uses to solve its core problem in fractions of a millisecond: *"How many circular buffers do I need, and with what slot limits, given the computer’s physical L3 cache budget, the number of bodies $N$ present, and the spacetime causal radius $R$ to be achieved?"*
 
@@ -213,8 +215,8 @@ flowchart TD
     C -->|"N greater than 35"| P1
     C -->|"N less than or equal to 35"| P2
 
-    KERNEL --> H["kernel_helper_inline.py<BR/>same physics formulas for every<BR/>variant, inline always active"]
-    KERNEL --> T["self.tick assigned to the specific<BR/>kernel chosen<BR/>at runtime: direct call, zero<BR/>selection if statements"]
+    KERNEL --> H["kernel_helper_inline.py<br/>same physics formulas for every<br/>variant, inline always active"]
+    KERNEL --> T["self.tick assigned to the specific<br/>kernel chosen<br/>at runtime: direct call, zero<br/>selection if statements"]
     EXEC --> T
 ```
 
@@ -251,7 +253,7 @@ The stride error is a **discretization** error. The history function samples the
 
 The transition from the position error to the force error is a derivative. With $F \propto 1/r^2$, a displacement $\Delta x$ of the source perturbs the force, in the worst-case scenario of a purely radial displacement, by:
 
-$$\left|\frac{\Delta F}{F}\right| \approx \frac{2\,\Delta x}{r} \le \frac{2\,v\,s\,DT}{r}$$
+$$\left|\frac{\Delta F}{F}\right| \approx \frac{2 \Delta x}{r} \le \frac{2 v s DT}{r}$$
 
 The explicit calculation, with a source at 30 km/s and $DT = 0.1$ s, is evaluated at the two zone boundaries (where the stride has just risen to the new value while the distance is still the minimum for that level). At the L0→L1 boundary (3.3 AU, $4.9 \cdot 10^8$ km), the slot can be stale for up to $32 \times 0.1 = 3.2$ s: the source shifts by at most $30 \cdot 3.2 = 96$ km, with a relative error of $2 \cdot 96 / (4.9 \cdot 10^8) \approx 3.9 \cdot 10^{-7}$. At the L1→L2 boundary (13.1 AU, $2.0 \cdot 10^9$ km), the maximum deviation increases to $30 \cdot 25.6 = 768$ km: error $2 \cdot 768 / (2.0 \cdot 10^9) \approx 7.8 \cdot 10^{-7}$. Less than one millionth in both cases.
 
@@ -382,8 +384,8 @@ flowchart TD
 
     R["rebuild_simulation()<br/>core/simulation_manager.py"] --> F1
 
-    F1["1. Snapshot<BR/>of body states, copy of history,<BR/>trails and probe,<BR/>death/birth timeline for each<BR/>body"] --> F2
-    F2["2. Parameters<BR/>for new DTs, radius, and precalculated<BR/>reciprocals"] --> F3
+    F1["1. Snapshot<br/>of body states, copy of history,<br/>trails and probe,<br/>death/birth timeline for each<br/>body"] --> F2
+    F2["2. Parameters<br/>for new DTs, radius, and precalculated<br/>reciprocals"] --> F3
     F3["3. Planning<br/>SINGLE/DOUBLE/TRIPLE matrix<br/>(§2.1),<br/>pool resized based on the bodies to be<br/>recreated"] --> F4
     F4["4. Wipe &amp; Alloc<br/>arrays rebuilt from scratch, new<br/>VOID_VAL,<br/>OOM guard with error dialog"] --> F5
     F5{"5. Restore<br/>DT and buffer sizes<br/>unchanged?"}
@@ -411,8 +413,8 @@ Below is a summary of the overall `graphics_kernel` pipeline (whose shared code 
 ```mermaid
 flowchart TD
     A["For each pixel (x, y), in<br/>parallel over prange(width)"] --> B["For each active body in p_idx"]
-    B --> C["Physics calculation of the physical contribution<BR/>(potential, dΦ/dt, tidal,<BR/>quadrupole... depending on the heatmap)"]
-    C --> D["Sum of the contributions of all<BR/>active bodies"]
+    B --> C["Physics calculation of the physical contribution<br/>(potential, dΦ/dt, tidal,<br/>quadrupole... depending on the heatmap)"]
+    C --> D["Sum of the contributions of all<br/>active bodies"]
     D --> E["Normalization via precalculated reciprocals<br/>, zero divisions"]
     E --> F["Conversion to color, direct writing<br/>as uint8 to the texture"]
     F --> G["Buffer returned to the<br/>graphic_renderer for on-screen<br/>rendering"]
@@ -482,7 +484,7 @@ The initial reasoning was: take two consecutive frames of $\Phi$ and compare the
 
 Here, a physicist would have arrived at the answer immediately; the author arrived at it step by step, reasoning about the mathematical neighborhood of $\Phi$ divided by the neighborhood of time, that is, the partial derivative $\partial\Phi/\partial t$ at every point in space (the physical interpretation of the resulting map is in [§7.2 of the Physics Guide](PHYSICS_AND_SCENARIO_GUIDE.md#72-time-derivative-dφdt)). From this sometimes empirical approach, the structure and method for all other [field heatmaps](PHYSICS_AND_SCENARIO_GUIDE.md#7-the-mathematics-of-heatmaps) were formulated.
 
-Specifically: $\Phi = GM/r$, and when the source moves, the distance $r$ changes over time. The derivative reduces, for each source, to $\partial\Phi/\partial t = G M \, v_{rad} / r^2$, where $v_{rad}$ is the component of velocity along the line connecting the source to the observation point. The result is the “$d\Phi$ contribution” of each body to each pixel, summed over all bodies, calculated in the helper kernels with `inline='always'` and parallelized across the entire grid.
+Specifically: $\Phi = GM/r$, and when the source moves, the distance $r$ changes over time. The derivative reduces, for each source, to $\partial\Phi/\partial t = G M v_{rad} / r^2$, where $v_{rad}$ is the component of velocity along the line connecting the source to the observation point. The result is the “$d\Phi$ contribution” of each body to each pixel, summed over all bodies, calculated in the helper kernels with `inline='always'` and parallelized across the entire grid.
 
 ```mermaid
 flowchart TD
@@ -491,7 +493,7 @@ flowchart TD
     C --> D["Calculate contribution_j = G × M_j<br/>× radial_velocity_j / r²"]
     D --> E["Sum the contributions of all<br/>bodies to obtain the total dΦ/dt"]
     E --> F["Logarithmic normalization<br/>(modulated by the fader in ±orders of<br/>magnitude)"]
-    F --> G["Color conversion (divergent scale: blue = compression, red = expansion)"]
+    F --> G["Color conversion (divergent scale:<br/>blue = compression,<br/>red = expansion)"]
 ```
 
 ### 3.4 Derived Maps: Tidal, Roche, Lagrange, and GW Strain
@@ -584,7 +586,7 @@ The collision system is not the simulator’s main focus; it is a qualitatively 
 
 `DT` is the parameter that determines the simulation's resolution. The smaller it is, the more accurate the physics, and the higher the computational cost per second of simulation. In a “strong field” (e.g., areas of immense gravity near a black hole), a body may undergo extreme acceleration in a single tick and, by the next tick, have already traversed the entire black hole’s event horizon while retaining enormous energy, only to be ejected at absurd subluminal speeds. This is the classic “numerical quantum tunneling”: the body passes through the obstacle instead of colliding with it.
 
-Setting the capture radius to a *static* multiple of the Schwarzschild radius $R_s$ (for example, $3\,R_s$, the order of magnitude of the ISCO) is not enough: with non-ideal DT, the body tunnels past even that expanded threshold. The key is to make the multiple **dynamic**, linked to the DT.
+Setting the capture radius to a *static* multiple of the Schwarzschild radius $R_s$ (for example, $3 R_s$, the order of magnitude of the ISCO) is not enough: with non-ideal DT, the body tunnels past even that expanded threshold. The key is to make the multiple **dynamic**, linked to the DT.
 
 ### The Solution: Adaptive Hitbox and CCD
 
@@ -592,7 +594,9 @@ The solution has two levels.
 
 **Level 1: Adaptive black hole hitbox.** The capture radius multiplier is not fixed: it is calculated at runtime as a function of the time step.
 
-$$\text{BH\_ACCRETION\_MULT} = \max\left(1.0,\ \min(10 \cdot DT,\ 100)\right)$$
+```
+BH_ACCRETION_MULT = max(1.0, min(10 · DT, 100))
+```
 
 When $DT$ is large, the target expands aggressively to avoid kinematic tunneling; when $DT$ is microscopic, it shrinks toward the lower bound of 1.0×. Specifically:
 
@@ -626,14 +630,14 @@ The guard is only effective at small DT; at large DT, the target is already wide
 2. Cast a **linear ray** along this trajectory: if the segment from `pos_current` to `pos_next` intersects the capture sphere, tunneling is in progress.
 3. Calculate $t_{min} \in [0, 1]$ (a number between 0 and 1: the fraction of the tick at which the closest approach occurs, where 0 is the start of the tick and 1 is the end), and the merge is handled at that interpolated position, not at the end of the tick.
 
-**The $O(N^2)$ spatial filter → nearly $O(N)$.** The collision loop is nominally $O(N^2)$ but in practice is nearly $O(N)$ thanks to a pre-filtering step. Before the double loop, a linear scan calculates `max_v` (the maximum velocity among all bodies) and derives $\text{max\_move} = \text{max\_v} \cdot dt \cdot 2$ (the maximum possible relative displacement in a tick in the worst case). In the next loop, for each pair $(i, j)$, the gap $|\Delta x| - (r_i + r_j)$ is compared to `max_move`: if the gap is larger, the pair is geometrically unable to collide in this tick and an early exit is performed before even checking `vel_arr`. In a galactic scenario with ~200 bodies (~20,000 nominal pairs per tick), the filter typically discards over 99% of the pairs before the actual CCD calculation: the nominal complexity remains $O(N^2)$, but the actual cost collapses to the small subset of geometrically plausible pairs.
+**The $O(N^2)$ spatial filter → nearly $O(N)$.** The collision loop is nominally $O(N^2)$ but in practice is nearly $O(N)$ thanks to a pre-filtering step. Before the double loop, a linear scan calculates `max_v` (the maximum velocity among all bodies) and derives `max_move` = `max_v` · dt · 2 (the maximum possible relative displacement in a tick in the worst case). In the next loop, for each pair $(i, j)$, the gap $|\Delta x| - (r_i + r_j)$ is compared to `max_move`: if the gap is larger, the pair is geometrically unable to collide in this tick and an early exit is performed before even checking `vel_arr`. In a galactic scenario with ~200 bodies (~20,000 nominal pairs per tick), the filter typically discards over 99% of the pairs before the actual CCD calculation: the nominal complexity remains $O(N^2)$, but the actual cost collapses to the small subset of geometrically plausible pairs.
 
 Complementing this is the **dynamic cooldown** (`COLLISION_COOLDOWN`), based on a single question: for how many ticks can *no* pair physically come into contact? For that number of ticks, the entire collision module is skipped entirely. The answer is the minimum of two independent estimates.
 
 1. **The adaptive kinematic estimate.** Given the minimum gap detected in the current tick and the maximum acceleration in the scene, quadratic kinematics calculates the number of ticks required until the first possible contact. This is the aggressive estimate: distant and slow pairs result in long skips.
-2. **The fixed relativistic ceiling.** This is necessary because the kinematic estimate assumes constant acceleration, whereas in a $1/r^2$ fall, the acceleration increases over time: with a coarse step size, the cooldown would risk skipping *past* the collision. This was the Achilles’ heel of head-on plunges with zero angular momentum, the only ones to tunnel precisely because they do not benefit from the expansion of the capture radius. The ceiling thus imposes a fixed assumption, independent of `max_v` and `max_a`: no pair closes faster than $0.75\,c$ relative, so the allowed jump never exceeds `min_gap / (0.75·c·DT)` ticks.
+2. **The fixed relativistic ceiling.** This is necessary because the kinematic estimate assumes constant acceleration, whereas in a $1/r^2$ fall, the acceleration increases over time: with a coarse step size, the cooldown would risk skipping *past* the collision. This was the Achilles’ heel of head-on plunges with zero angular momentum, the only ones to tunnel precisely because they do not benefit from the expansion of the capture radius. The ceiling thus imposes a fixed assumption, independent of `max_v` and `max_a`: no pair closes faster than $0.75 c$ relative, so the allowed jump never exceeds `min_gap / (0.75·c·DT)` ticks.
 
-The effective cooldown is the minimum between the kinematic estimate and the relativistic ceiling. In practice, the ceiling almost always wins out, as it remains conservative even in the most violent mergers that can be recreated (two NSs falling from rest collide at approximately $0.6c$ relative), so the kinematic estimate remains a network with negligible cost for configurations not yet verified. The upper bound thus ensures that the next check never occurs after the tick in which the pair, closing at the limiting speed of $0.75\,c$, would have closed the entire gap measured at the last check; no later than the first instant at which contact would be physically conceivable in that scenario. A final measure protects large DTs, where the distance traveled in a single tick at $0.75\,c$ would become enormous and the cap (squeezed toward zero ticks) would force checks on pairs that are still extremely far apart: that distance per tick is therefore limited by a clamp in km.
+The effective cooldown is the minimum between the kinematic estimate and the relativistic ceiling. In practice, the ceiling almost always wins out, as it remains conservative even in the most violent mergers that can be recreated (two NSs falling from rest collide at approximately $0.6c$ relative), so the kinematic estimate remains a network with negligible cost for configurations not yet verified. The upper bound thus ensures that the next check never occurs after the tick in which the pair, closing at the limiting speed of $0.75 c$, would have closed the entire gap measured at the last check; no later than the first instant at which contact would be physically conceivable in that scenario. A final measure protects large DTs, where the distance traveled in a single tick at $0.75 c$ would become enormous and the cap (squeezed toward zero ticks) would force checks on pairs that are still extremely far apart: that distance per tick is therefore limited by a clamp in km.
 
 **A silent safeguard upstream of the two levels.** It resides within the force calculation, not in the collision module: if the distance between the centers falls below the sum of the radii, the separation vector is rescaled to the contact distance. In the tick that elapses between geometric overlap and collision resolution, the denominator of the force cannot therefore approach zero, and no spurious kick is injected.
 
@@ -644,7 +648,7 @@ flowchart TD
     A["Tick: entry into the <br/>collision module"] --> B{"Cooldown active?"}
     B -->|"yes"| Z["Total skip: decrement the <br/>counter and return"]
     B -->|"no"| C["O(N) pre-step: capture radius<br/>per body<br/>(adaptive hitbox + EMRI guard)"]
-    C --> D{"Spatial filter for pairs:<BR/>gap beyond max_move?"}
+    C --> D{"Spatial filter for pairs:<br/>gap beyond max_move?"}
     D -->|"yes (over 99% of pairs)"| E["Early exit on the pair"]
     D -->|"no"| F{"CCD ray cast on the segment<br/>of the<br/>tick:<br/>intersection with the<br/>capture sphere?"}
     F -->|"yes"| G["Merging at the interpolated tick fraction<br/>t_min"]
@@ -652,7 +656,7 @@ flowchart TD
     E --> I["End of pair loop"]
     G --> I
     H --> I
-    I --> J["Dynamic cooldown calculation:<BR/>minimum between kinematic estimate and<BR/>cap at 0.75c"]
+    I --> J["Dynamic cooldown calculation:<br/>minimum between kinematic estimate and<br/>cap at 0.75c"]
 ```
 
 ---
@@ -732,7 +736,7 @@ The probe is an **optional, manual** tool: the user decides *whether* to activat
 
 **Final dump on exit.** At the end of the process (`pygame.quit()`), `main_gui.py` checks `ligo_probe.active` and forces a final `dump_session()`. A brief `time.sleep(1.0)` gives the save daemon thread time to complete writing to disk before Python terminates the main process.
 
-The raw signal is a kinematic proxy for the actual strain: for each body, we sum $m_j\,(v_{x,j}^2 - v_{y,j}^2)/R_j$, where $R_j$ is the distance between the source and the probe. The velocities are measured relative to the system’s center of mass, not in absolute terms: what matters is the relative motion of the bodies, and the signal remains unchanged if the entire scene translates at a constant velocity. The term $1/R_j$ causes the amplitude to decrease as the source moves away from the probe, just as in a real wave. The result oscillates at twice the orbital frequency, the same signature as a real gravitational wave. This is an algebraic simplification documented and discussed in the Physics Guide. This raw signal is not yet interpretable on its own: it is `ligo_analyzer.py`, an independent pipeline, that transforms it into familiar data and graphs (spectrograms, instantaneous frequency, chirp mass estimate), interpreting what the probe has recorded.
+The raw signal is a kinematic proxy for the actual strain: for each body, we sum $m_j (v_{x,j}^2 - v_{y,j}^2)/R_j$, where $R_j$ is the distance between the source and the probe. The velocities are measured relative to the system’s center of mass, not in absolute terms: what matters is the relative motion of the bodies, and the signal remains unchanged if the entire scene translates at a constant velocity. The term $1/R_j$ causes the amplitude to decrease as the source moves away from the probe, just as in a real wave. The result oscillates at twice the orbital frequency, the same signature as a real gravitational wave. This is an algebraic simplification documented and discussed in the Physics Guide. This raw signal is not yet interpretable on its own: it is `ligo_analyzer.py`, an independent pipeline, that transforms it into familiar data and graphs (spectrograms, instantaneous frequency, chirp mass estimate), interpreting what the probe has recorded.
 
 **Exporting to `.npy` and the Analyzer.**
 The saving process (the “dump” mentioned above) does not use text files, but saves the `PROBE_BUFFER` and its associated temporal metadata (such as DT) directly in NumPy’s native binary format (`.npy`). This ensures nearly instantaneous reads and writes with no loss of precision for arrays containing millions of elements. The files are saved in the `ligo_output/data_npy/` folder and are ready to be processed by `ligo_analyzer.py`. The latter is a full-fledged parallel analysis program that can be conveniently launched from the simulation launcher. It reads the `.npy` file and uses the `scipy.signal` library to process the raw signal through a rigorous filtering pipeline (detrending, Tukey window, Butterworth high-pass filters) until the instantaneous frequency is extracted via the Hilbert transform and the spectrograms are plotted. The entire sequence of technical processing steps applied by the analyzer is detailed in [§8.8 of the Physics Guide](PHYSICS_AND_SCENARIO_GUIDE.md#88-the-analyzers-analysis-pipeline-ligo_analyzerpy).
@@ -770,8 +774,8 @@ The solution has three components:
 ```mermaid
 flowchart TD
     A["Capture operating system events<br/> (keyboard, mouse,<br/>window)"] --> B["event_handler (Interceptor Chain)<br/>Tutorial → Spawner → Faders →<br/>Console → Camera → Callbacks"]
-    B --> C["engine.tick(steps): <BR/>physics update and causal integration"]
-    C --> D["master_renderer: <BR/>sequential composition of graphics layers<BR/>[background] → [heatmap] → [trails] →<BR/>[bodies] → [UI/debug]"]
+    B --> C["engine.tick(steps): <br/>physics update and causal integration"]
+    C --> D["master_renderer: <br/>sequential composition of graphics layers<br/>[background] → [heatmap] → [trails] →<br/>[bodies] → [UI/debug]"]
     D --> E["pygame.display.flip():<br/>screen update (executed<br/>once per frame)"]
 ```
 

@@ -1,6 +1,6 @@
 # Architettura ed Evoluzione di AstroCausal Engine
 
-**🇮🇹 Italiano**  ·  [🇬🇧 English](ARCHITECTURE_DEEP_DIVE.md)
+**🇮🇹 Italiano** · [🇬🇧 English](ARCHITECTURE_DEEP_DIVE.md)
 
 > [!WARNING]
 > Questo documento non spiega la macrostruttura di base del repository e dà per scontati termini di importanza vitale come il DT o il raggio di simulazione. Per una lettura più chiara si consiglia di recuperare prima almeno il [Modello Fisico](README.it.md#modello-fisico) e l'[Architettura Software](README.it.md#architettura-software) dal README.
@@ -14,24 +14,24 @@ Questo documento ripercorre i problemi reali incontrati durante lo sviluppo, i t
 
 1. [La scelta di Python e il paradigma DOD + JIT](#1-la-scelta-di-python-e-il-paradigma-dod--jit)
 2. [Il Ring Buffer e lo storico delle posizioni](#2-il-ring-buffer-e-lo-storico-delle-posizioni)
-   - 2.1 Struttura e dimensionamento dei buffer
-   - 2.2 Come la fisica interagisce con i buffer
-   - 2.3 Il lato visualizzato: il graphics kernel
-   - 2.4 Il rebuild: come lo storico sopravvive ai cambi di parametri
+ - 2.1 Struttura e dimensionamento dei buffer
+ - 2.2 Come la fisica interagisce con i buffer
+ - 2.3 Il lato visualizzato: il graphics kernel
+ - 2.4 Il rebuild: come lo storico sopravvive ai cambi di parametri
 3. [Il rendering delle heatmap e la gestione degli FPS](#3-il-rendering-delle-heatmap-e-la-gestione-degli-fps)
-   - 3.1 Il budget di frame: i 60 FPS come target
-   - 3.2 La prima heatmap: il potenziale Φ
-   - 3.3 La seconda mappa: da Φ a dΦ/dt
-   - 3.4 Le mappe derivate: Tidal, Roche, Lagrange e GW Strain
+ - 3.1 Il budget di frame: i 60 FPS come target
+ - 3.2 La prima heatmap: il potenziale Φ
+ - 3.3 La seconda mappa: da Φ a dΦ/dt
+ - 3.4 Le mappe derivate: Tidal, Roche, Lagrange e GW Strain
 4. [Il PerformanceManager: auto-tuner con memoria e isteresi](#4-il-performancemanager-auto-tuner-con-memoria-e-isteresi)
 5. [Collisioni, buchi neri e singolarità](#5-collisioni-buchi-neri-e-singolarità)
 6. [Il garbage collector asincrono dei corpi causalmente morti](#6-il-garbage-collector-asincrono-dei-corpi-causalmente-morti)
 7. [La sonda LIGO: architettura di campionamento e dump](#7-la-sonda-ligo-architettura-di-campionamento-e-dump)
 8. [Le scie dei corpi](#8-le-scie-dei-corpi)
 9. [L'architettura di main_gui e dell'UI](#9-larchitettura-di-main_gui-e-dellui)
-   - 9.1 Dal monolite all'architettura a moduli
-   - 9.2 Lo spawner interattivo e l'interceptor adapter
-   - 9.3 La sequenza di bootstrap del processo principale
+ - 9.1 Dal monolite all'architettura a moduli
+ - 9.2 Lo spawner interattivo e l'interceptor adapter
+ - 9.3 La sequenza di bootstrap del processo principale
 10. [La GameConsole: intercettore di stdout con timestamp di simulazione](#10-la-gameconsole-intercettore-di-stdout-con-timestamp-di-simulazione)
 11. [La splash di caricamento: Tkinter prima di pygame con print interceptor thread-local](#11-la-splash-di-caricamento-tkinter-prima-di-pygame-con-print-interceptor-thread-local)
 12. [Il launcher Tkinter](#12-il-launcher-tkinter)
@@ -163,7 +163,9 @@ I buffer storici sono il traffico di memoria dominante sia del loop caldo della 
 
 Il dimensionamento di partenza deriva strettamente dal raggio causale dello scenario. È affascinante notare come in queste strutture dati, esattamente come nella Relatività, misure apparentemente solo spaziali (il *raggio* causale in chilometri) diventino intrinsecamente misure di profondità *temporale* (numero di slot del passato) e viceversa, unite dalla costante matematica $c$:
 
-$$\text{raw\_len} = \frac{\text{SIMULATION\_RADIUS\_KM}}{c \cdot DT}$$
+```
+raw_len = SIMULATION_RADIUS_KM / (c · DT)
+```
 
 La tabella sottostante schematizza la matrice logico-decisionale con cui `simulation_manager.py` risolve in frazioni di millisecondo il suo problema cardine: *"Quanti buffer circolari mi servono, e con quali limiti di slot, dato il budget della Cache L3 fisica del computer, il numero di corpi $N$ presenti e il raggio causale spaziotemporale $R$ da raggiungere?"*
 
@@ -251,7 +253,7 @@ Quello dello stride è un errore di **discretizzazione**. Lo storico campiona la
 
 Dall'errore di posizione a quello sulla forza il passaggio è una derivata. Con $F \propto 1/r^2$ , uno spostamento $\Delta x$ della sorgente perturba la forza, nel caso peggiore di spostamento tutto radiale, di:
 
-$$\left|\frac{\Delta F}{F}\right| \approx \frac{2\,\Delta x}{r} \le \frac{2\,v\,s\,DT}{r}$$
+$$\left|\frac{\Delta F}{F}\right| \approx \frac{2 \Delta x}{r} \le \frac{2 v s DT}{r}$$
 
 Il conto esplicito, con una sorgente a 30 km/s e DT = 0,1 s, si valuta ai due confini di zona (dove lo stride è appena salito al valore nuovo mentre la distanza è ancora quella minima del livello). Al confine L0→L1 (3,3 AU, $4{,}9 \cdot 10^8$ km) lo slot può essere stantio fino a $32 \times 0{,}1 = 3{,}2$ s: la sorgente si sposta al massimo di $30 \cdot 3{,}2 = 96$ km, errore relativo $2 \cdot 96 / (4{,}9 \cdot 10^8) \approx 3{,}9 \cdot 10^{-7}$. Al confine L1→L2 (13,1 AU, $2{,}0 \cdot 10^9$ km) lo scarto massimo sale a $30 \cdot 25{,}6 = 768$ km: errore $2 \cdot 768 / (2{,}0 \cdot 10^9) \approx 7{,}8 \cdot 10^{-7}$. Meno di un milionesimo in entrambi i casi.
 
@@ -482,7 +484,7 @@ Il ragionamento iniziale era: prendere due frame di Φ consecutivi e confrontarl
 
 Qui un fisico sarebbe arrivato subito alla risposta; l'autore ci è arrivato passo passo, ragionando sull'intorno matematico di $\Phi$ diviso l'intorno del tempo, cioè la derivata parziale $\partial\Phi/\partial t$ in ogni punto dello spazio (la lettura fisica della mappa risultante è nel [§7.2 della Guida Fisica](PHYSICS_AND_SCENARIO_GUIDE.it.md#72-variazione-temporale-dφdt)). Da questo percorso a tratti empirico sono stati formulati la struttura e il metodo per tutte le altre [heatmap del campo](PHYSICS_AND_SCENARIO_GUIDE.it.md#7-la-matematica-delle-heatmap).
 
-Concretamente: $\Phi = GM/r$  e quando la sorgente si muove la distanza $r$ cambia nel tempo. La derivata si riduce, per ogni sorgente, a $\partial\Phi/\partial t = G M \, v_{rad} / r^2$ , dove $v_{rad}$ è la componente della velocità lungo la linea che congiunge la sorgente al punto osservato. Il risultato è il "contributo $d\Phi$" di ciascun corpo a ciascun pixel, sommato su tutti i corpi, calcolato nei kernel helper con `inline='always'` e parallelizzato su tutta la griglia.
+Concretamente: $\Phi = GM/r$ e quando la sorgente si muove la distanza $r$ cambia nel tempo. La derivata si riduce, per ogni sorgente, a $\partial\Phi/\partial t = G M v_{rad} / r^2$ , dove $v_{rad}$ è la componente della velocità lungo la linea che congiunge la sorgente al punto osservato. Il risultato è il "contributo $d\Phi$" di ciascun corpo a ciascun pixel, sommato su tutti i corpi, calcolato nei kernel helper con `inline='always'` e parallelizzato su tutta la griglia.
 
 ```mermaid
 flowchart TD
@@ -584,7 +586,7 @@ Il sistema di collisioni non è il focus del simulatore, è un sottosistema qual
 
 `DT` è l'elemento che rende discreta la simulazione. Più è piccolo, più precisa è la fisica, più pesante è il costo computazionale per secondo di simulazione. In "campo forte" (es. zone con gravità immensa vicino a un buco nero) può accadere che un corpo subisca un'accelerazione estrema in un singolo tick e che al tick successivo abbia già attraversato l'intera sfera del buco nero conservando una energia enorme, venendo poi espulso a velocità subluminali insensate. È il classico "quantum tunneling numerico": il corpo passa attraverso l'ostacolo invece di scontrarsi con esso.
 
-Fissare il raggio di cattura a un multiplo *statico* del raggio di Schwarzschild $R_s$ (per esempio $3\,R_s$ , l'ordine di grandezza dell'ISCO) non basta: con DT non ideale il corpo tunnelizza oltre anche quella soglia ampliata. La chiave è rendere il multiplo **dinamico**, legato al DT.
+Fissare il raggio di cattura a un multiplo *statico* del raggio di Schwarzschild $R_s$ (per esempio $3 R_s$ , l'ordine di grandezza dell'ISCO) non basta: con DT non ideale il corpo tunnelizza oltre anche quella soglia ampliata. La chiave è rendere il multiplo **dinamico**, legato al DT.
 
 ### La soluzione: hitbox adattivo e CCD
 
@@ -592,7 +594,9 @@ La soluzione ha due livelli.
 
 **Livello 1: hitbox adattivo del buco nero.** Il moltiplicatore del raggio di cattura non è fisso: viene calcolato a runtime in funzione del passo temporale.
 
-$$\text{BH\_ACCRETION\_MULT} = \max\left(1.0,\ \min(10 \cdot DT,\ 100)\right)$$
+```
+BH_ACCRETION_MULT = max(1.0, min(10 · DT, 100))
+```
 
 A DT grande il bersaglio si espande aggressivamente per evitare il tunneling cinematico; a DT microscopico si stringe verso il limite inferiore di 1.0×. Concretamente:
 
@@ -626,14 +630,14 @@ La guardia vive solo a DT piccolo; a DT grande il bersaglio è già abbastanza l
 2. Si lancia un **ray cast lineare** lungo questa traiettoria: se il segmento da `pos_current` a `pos_next` interseca la sfera di cattura, il tunneling è in corso.
 3. Si calcola $t_{min} \in [0, 1]$ (un numero tra 0 e 1: la frazione del tick in cui avviene il minimo approccio, dove 0 è l'inizio del tick e 1 la fine) e la fusione viene gestita a quella posizione interpolata, non alla fine del tick.
 
-**Il filtro spaziale $O(N^2)$ → quasi-$O(N)$ .** Il ciclo collisioni è nominalmente $O(N^2)$ ma nella pratica è quasi $O(N)$ grazie a un pre-passo di filtraggio. Prima del doppio loop, una scansione lineare calcola `max_v` (la velocità massima tra tutti i corpi) e ne deriva $\text{max\_move} = \text{max\_v} \cdot dt \cdot 2$ (il massimo spostamento relativo possibile in un tick nel caso peggiore). Nel ciclo successivo, per ogni coppia $(i, j)$ viene confrontato il gap $|\Delta x| - (r_i + r_j)$ con `max_move`: se il gap è maggiore, la coppia è geometricamente impossibilitata a collidere in questo tick e si fa early-exit prima ancora di toccare `vel_arr`. In uno scenario galattico a ~200 corpi (~20.000 coppie nominali per tick), il filtro scarta tipicamente oltre il 99% delle coppie prima del calcolo CCD vero: la complessità nominale resta $O(N^2)$ ma il costo effettivo collassa al piccolo sottoinsieme di coppie geometricamente plausibili.
+**Il filtro spaziale $O(N^2)$ → quasi-$O(N)$ .** Il ciclo collisioni è nominalmente $O(N^2)$ ma nella pratica è quasi $O(N)$ grazie a un pre-passo di filtraggio. Prima del doppio loop, una scansione lineare calcola `max_v` (la velocità massima tra tutti i corpi) e ne deriva `max_move` = `max_v` · dt · 2 (il massimo spostamento relativo possibile in un tick nel caso peggiore). Nel ciclo successivo, per ogni coppia $(i, j)$ viene confrontato il gap $|\Delta x| - (r_i + r_j)$ con `max_move`: se il gap è maggiore, la coppia è geometricamente impossibilitata a collidere in questo tick e si fa early-exit prima ancora di toccare `vel_arr`. In uno scenario galattico a ~200 corpi (~20.000 coppie nominali per tick), il filtro scarta tipicamente oltre il 99% delle coppie prima del calcolo CCD vero: la complessità nominale resta $O(N^2)$ ma il costo effettivo collassa al piccolo sottoinsieme di coppie geometricamente plausibili.
 
 A complemento lavora il **cooldown dinamico** (`COLLISION_COOLDOWN`), costruito su una domanda sola: per quanti tick *nessuna* coppia può fisicamente entrare in contatto? Per quel numero di tick l'intero modulo collisioni viene saltato in toto. La risposta è il minimo tra due stime indipendenti.
 
 1. **La stima cinematica, adattiva.** Dati il minimo gap rilevato nel tick corrente e l'accelerazione massima in scena, la cinematica quadratica calcola i tick necessari al primo contatto possibile. È la stima aggressiva: coppie lontane e lente comprano salti lunghi.
-2. **Il tetto relativistico, fisso.** Serve perché la stima cinematica assume accelerazione costante, mentre in una caduta $1/r^2$ l'accelerazione cresce strada facendo: a passo grosso il cooldown rischierebbe di saltare *oltre* l'urto. Era il tallone d'Achille dei plunge frontali a momento angolare nullo, gli unici a fare tunneling proprio perché non beneficiano dell'espansione del raggio di cattura. Il tetto impone allora un'assunzione fissa, indipendente da `max_v` e `max_a`: nessuna coppia si chiude più veloce di $0{,}75\,c$ relativi, quindi il salto concesso non supera mai `min_gap / (0.75·c·DT)` tick.
+2. **Il tetto relativistico, fisso.** Serve perché la stima cinematica assume accelerazione costante, mentre in una caduta $1/r^2$ l'accelerazione cresce strada facendo: a passo grosso il cooldown rischierebbe di saltare *oltre* l'urto. Era il tallone d'Achille dei plunge frontali a momento angolare nullo, gli unici a fare tunneling proprio perché non beneficiano dell'espansione del raggio di cattura. Il tetto impone allora un'assunzione fissa, indipendente da `max_v` e `max_a`: nessuna coppia si chiude più veloce di $0{,}75 c$ relativi, quindi il salto concesso non supera mai `min_gap / (0.75·c·DT)` tick.
 
-Il cooldown effettivo è il minimo tra stima cinematica e tetto relativistico. Nella pratica, il minimo lo vince quasi sempre il tetto che resta conservativo perfino nelle fusioni più violente ricreabili (due NS in caduta da ferme si toccano a circa $0{,}6c$ relativi), quindi la stima cinematica resta come rete a costo trascurabile per le configurazioni non ancora verificate. Il tetto garantisce così che il prossimo controllo non arrivi mai dopo il tick in cui la coppia, chiudendo alla velocità limite di $0{,}75\,c$, avrebbe esaurito l'intero gap misurato all'ultimo controllo; non oltre il primo istante in cui il contatto sarebbe fisicamente concepibile in quello scenario. Un ultimo accorgimento protegge i DT grandi, dove la distanza percorribile in un tick a $0{,}75\,c$ diventerebbe enorme e il tetto, schiacciato verso zero tick, forzerebbe controlli su coppie ancora lontanissime: quella distanza per tick è perciò bloccata da un clamp in km.
+Il cooldown effettivo è il minimo tra stima cinematica e tetto relativistico. Nella pratica, il minimo lo vince quasi sempre il tetto che resta conservativo perfino nelle fusioni più violente ricreabili (due NS in caduta da ferme si toccano a circa $0{,}6c$ relativi), quindi la stima cinematica resta come rete a costo trascurabile per le configurazioni non ancora verificate. Il tetto garantisce così che il prossimo controllo non arrivi mai dopo il tick in cui la coppia, chiudendo alla velocità limite di $0{,}75 c$, avrebbe esaurito l'intero gap misurato all'ultimo controllo; non oltre il primo istante in cui il contatto sarebbe fisicamente concepibile in quello scenario. Un ultimo accorgimento protegge i DT grandi, dove la distanza percorribile in un tick a $0{,}75 c$ diventerebbe enorme e il tetto, schiacciato verso zero tick, forzerebbe controlli su coppie ancora lontanissime: quella distanza per tick è perciò bloccata da un clamp in km.
 
 **Una guardia silenziosa a monte dei due livelli.** Vive dentro il calcolo della forza, non nel modulo collisioni: se la distanza tra i centri scende sotto la somma dei raggi, il vettore di separazione viene riscalato alla distanza di contatto. Nel tick che intercorre tra la sovrapposizione geometrica e la risoluzione della collisione, il denominatore della forza non può quindi avvicinarsi a zero e nessun kick spurio viene iniettato.
 
@@ -732,7 +736,7 @@ La sonda è uno strumento **opzionale e manuale**: è l'utente a decidere *se* a
 
 **Dump finale all'uscita.** Al termine del processo (`pygame.quit()`), `main_gui.py` controlla `ligo_probe.active` e forza un ultimo `dump_session()`. Un breve `time.sleep(1.0)` dà al thread daemon di salvataggio il tempo di completare la scrittura su disco prima che Python termini il processo principale.
 
-Il segnale grezzo è un proxy cinematico dello strain reale: per ogni corpo si somma $m_j\,(v_{x,j}^2 - v_{y,j}^2)/R_j$ , con $R_j$ la distanza tra sorgente e sonda. Le velocità sono misurate rispetto al centro di massa del sistema, non in assoluto: conta il moto relativo dei corpi e il segnale non cambia se l'intera scena trasla a velocità costante. Il termine $1/R_j$ fa calare l'ampiezza quando la sorgente si allontana dalla sonda, come nell'onda vera. Il risultato oscilla al doppio della frequenza orbitale, la stessa firma dell'onda gravitazionale reale. È una semplificazione algebrica documentata e discussa nella Guida alla Fisica. Questo segnale grezzo non è ancora leggibile di per sé: è `ligo_analyzer.py`, una pipeline indipendente, a trasformarlo in dati e grafici noti (spettrogrammi, frequenza istantanea, stima della massa chirp), interpretando ciò che la sonda ha registrato.
+Il segnale grezzo è un proxy cinematico dello strain reale: per ogni corpo si somma $m_j (v_{x,j}^2 - v_{y,j}^2)/R_j$ , con $R_j$ la distanza tra sorgente e sonda. Le velocità sono misurate rispetto al centro di massa del sistema, non in assoluto: conta il moto relativo dei corpi e il segnale non cambia se l'intera scena trasla a velocità costante. Il termine $1/R_j$ fa calare l'ampiezza quando la sorgente si allontana dalla sonda, come nell'onda vera. Il risultato oscilla al doppio della frequenza orbitale, la stessa firma dell'onda gravitazionale reale. È una semplificazione algebrica documentata e discussa nella Guida alla Fisica. Questo segnale grezzo non è ancora leggibile di per sé: è `ligo_analyzer.py`, una pipeline indipendente, a trasformarlo in dati e grafici noti (spettrogrammi, frequenza istantanea, stima della massa chirp), interpretando ciò che la sonda ha registrato.
 
 **L'esportazione in `.npy` e l'Analizzatore.**
 Il processo di salvataggio (il "dump" citato sopra) non usa file di testo, ma salva il `PROBE_BUFFER` e i relativi metadati temporali (come il DT) direttamente nel formato nativo binario di NumPy (`.npy`). Questo garantisce letture e scritture quasi istantanee e senza perdita di precisione per array da milioni di elementi. I file vengono salvati nella cartella `ligo_output/data_npy/` e sono pronti per essere consumati da `ligo_analyzer.py`. Quest'ultimo è un vero e proprio programma di analisi parallelo, avviabile comodamente dal launcher della simulazione. Legge il file `.npy` e utilizza la libreria `scipy.signal` per far passare il segnale grezzo attraverso una rigorosa pipeline di filtraggio (detrending, finestra di Tukey, filtri passa-alto Butterworth) fino all'estrazione della frequenza istantanea via Trasformata di Hilbert e alla stampa degli spettrogrammi. L'intera sequenza di estrapolazioni tecniche applicata dall'analizzatore è dettagliata nel [§8.8 della Guida Fisica](PHYSICS_AND_SCENARIO_GUIDE.it.md#88-la-pipeline-di-analisi-dellanalizzatore-ligo_analyzerpy).
