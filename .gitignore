@@ -18,8 +18,5 @@ ligo_output/plots/*
 !ligo_output/data_npy/GW*.npy
 !ligo_output/plots/GW*.png
 
-# Artefatti di Esplora risorse (nascosti+sistema, rigenerati da OneDrive)
-desktop.ini
-
 # Local settings (Optional, but usually a good idea to ignore)
 # astro_settings.ini

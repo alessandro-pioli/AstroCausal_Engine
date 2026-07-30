@@ -97,13 +97,13 @@ Lo schema approfondisce, fase per fase, la scelta appena descritta tra `prange` 
 
 ```mermaid
 flowchart TD
-    N["engine.py valuta N: numero di<br/>corpi dello scenario<br/>(una volta sola, all'init e a ogni<br/>rebuild)"]
-    N -->|"N maggiore di 35"| T1["self.tick punta alla variante<br/>parallela"]
-    N -->|"N minore o uguale a 35"| T2["self.tick punta alla variante<br/>sequenziale"]
+    N["engine.py valuta N: numero<br/>di corpi dello scenario (una<br/>volta sola, all'init e a<br/>ogni rebuild)"]
+    N -->|"N maggiore di 35"| T1["self.tick punta alla<br/>variante parallela"]
+    N -->|"N minore o uguale a 35"| T2["self.tick punta alla<br/>variante sequenziale"]
 
-    T1 --> P1["Fase 1: O(N)<br/>range, barriera read-after-write"] --> P2["Fase 2: O(N²)<br/>prange, il collo di bottiglia<br/>parallelizzato"] --> P3["Fase 2.5: O(N)<br/>accodata nello stesso prange di<br/>Fase 2"]
+    T1 --> P1["Fase 1: O(N) range, barriera<br/>read-after-write"] --> P2["Fase 2: O(N²) prange, il<br/>collo di bottiglia<br/>parallelizzato"] --> P3["Fase 2.5: O(N) accodata<br/>nello stesso prange di Fase<br/>2"]
 
-    T2 --> S1["Fase 1: O(N)<br/>range, barriera read-after-write"] --> S2["Fase 2: O(N²)<br/>range, con N piccolo l'overhead<br/>dei thread supererebbe il guadagno"] --> S3["Fase 2.5: O(N)<br/>range"]
+    T2 --> S1["Fase 1: O(N) range, barriera<br/>read-after-write"] --> S2["Fase 2: O(N²) range, con N<br/>piccolo l'overhead dei<br/>thread supererebbe il<br/>guadagno"] --> S3["Fase 2.5: O(N)<br/>range"]
 ```
 
 ---
@@ -193,8 +193,8 @@ Scelta la modalità dei buffer, resta da decidere chi li attraversa. È `engine.
 
 ```mermaid
 flowchart TD
-    A["engine.py: refresh_kernel()<br/>eseguito una volta, all'init e a<br/>ogni rebuild"] --> B["Criterio 1: footprint del buffer<br/>causale vs Cache L3 (appena<br/>descritto)"]
-    A --> C["Criterio 2: numero di corpi N (§1)"]
+    A["engine.py: refresh_kernel()<br/>eseguito una volta, all'init<br/>e a ogni rebuild"] --> B["Criterio 1: footprint del<br/>buffer causale vs Cache L3<br/>(appena descritto)"]
+    A --> C["Criterio 2: numero di corpi<br/>N (§1)"]
 
     subgraph KERNEL["Kernel fisici principali"]
         direction LR
@@ -215,8 +215,8 @@ flowchart TD
     C -->|"N maggiore di 35"| P1
     C -->|"N minore o uguale a 35"| P2
 
-    KERNEL --> H["kernel_helper_inline.py<br/>stesse formule fisiche per ogni<br/>variante, inline sempre attivo"]
-    KERNEL --> T["self.tick assegnato al kernel<br/>concreto scelto<br/>a runtime: chiamata diretta, zero<br/>if di selezione"]
+    KERNEL --> H["kernel_helper_inline.py<br/>stesse formule fisiche per<br/>ogni variante, inline sempre<br/>attivo"]
+    KERNEL --> T["self.tick assegnato al<br/>kernel concreto scelto a<br/>runtime: chiamata diretta,<br/>zero if di selezione"]
     ESEC --> T
 ```
 
@@ -380,20 +380,20 @@ flowchart TD
     T1["preset all'avvio (§9.3)"] --> R
     T2["cambio DT coi tasti T/Y"] --> R
     T3["spawn di un corpo (§9.1)"] --> R
-    T4["rimozione certificata dal GC (§6)"] --> R
+    T4["rimozione certificata dal GC<br/>(§6)"] --> R
 
     R["rebuild_simulation()<br/>core/simulation_manager.py"] --> F1
 
-    F1["1. Snapshot<br/>stato dei corpi, copia di storici,<br/>scie e sonda,<br/>timeline di morte/nascita per ogni<br/>corpo"] --> F2
+    F1["1. Snapshot stato dei corpi,<br/>copia di storici, scie e<br/>sonda, timeline di<br/>morte/nascita per ogni corpo"] --> F2
     F2["2. Params<br/>nuovi DT, raggio e reciproci<br/>precalcolati"] --> F3
-    F3["3. Planning<br/>matrice SINGLE/DOUBLE/TRIPLE<br/>(§2.1),<br/>pool ridimensionato sui corpi da<br/>ricreare"] --> F4
-    F4["4. Wipe &amp; Alloc<br/>array rifatti da zero, nuovo<br/>VOID_VAL,<br/>guardia OOM con dialogo di errore"] --> F5
+    F3["3. Planning matrice<br/>SINGLE/DOUBLE/TRIPLE (§2.1),<br/>pool ridimensionato sui<br/>corpi da ricreare"] --> F4
+    F4["4. Wipe &amp; Alloc array<br/>rifatti da zero, nuovo<br/>VOID_VAL, guardia OOM con<br/>dialogo di errore"] --> F5
     F5{"5. Restore<br/>DT e taglie dei buffer<br/>invariati?"}
-    F5 -->|"sì: SMART COPY"| C1["storia ricopiata identica,<br/>reindicizzata sul pool compattato"]
-    F5 -->|"no: RICOSTRUZIONE"| C2["storico riscritto a ritroso a<br/>velocità costante,<br/>VOID_VAL prima della nascita e<br/>dopo la morte"]
+    F5 -->|"sì: SMART COPY"| C1["storia ricopiata identica,<br/>reindicizzata sul pool<br/>compattato"]
+    F5 -->|"no: RICOSTRUZIONE"| C2["storico riscritto a ritroso<br/>a velocità costante,<br/>VOID_VAL prima della nascita<br/>e dopo la morte"]
     C1 --> F6
     C2 --> F6
-    F6["6-9. Fasi ancillari<br/>indici attivi e LOD, radar<br/>relativistico,<br/>TOP_ATTRACTOR (§3.4), priming del<br/>Verlet"]
+    F6["6-9. Fasi ancillari indici<br/>attivi e LOD, radar<br/>relativistico, TOP_ATTRACTOR<br/>(§3.4), priming del Verlet"]
 ```
 
 Il bivio della Fase 5 decide il destino della memoria causale. Se DT e dimensioni dei buffer non sono cambiati (il caso tipico del rebuild post-GC), la **smart copy** trasferisce ogni storico identico com'era, testa di scrittura compresa: le orbite passate sopravvivono al byte. In tutti gli altri casi la vecchia griglia temporale non esiste più (con un DT raddoppiato ogni slot vale il doppio dei secondi) e lo storico viene **ricostruito a ritroso a velocità costante** dallo stato presente di ogni corpo, `pos - vel·t` slot per slot, in NumPy vettorizzato. È la stessa routine che riempie i buffer alla primissima costruzione dell'universo, con una delicatezza da dichiarare: all'avvio ogni corpo parte con un passato rettilineo fittizio, scritto a ritroso come se avesse sempre viaggiato alla propria velocità iniziale. Per i corpi distanti decine di tick-luce le prime letture causali pescano quindi da una storia mai avvenuta. L'errore però non raggiunge le forze: su una traiettoria rettilinea l'estrapolazione del dead reckoning ([la terza lettura di §2.2](#la-terza-lettura-laccelerazione-ricostruita-per-il-dead-reckoning)) è esatta per costruzione (uno sviluppo di Taylor riproduce una retta senza residuo) e la forza punta comunque alla posizione presente corretta. La compensazione è totale e la storia vera rimpiazza quella fittizia tick dopo tick.
@@ -412,12 +412,12 @@ Di seguito un riassunto della pipeline globale di `graphics_kernel` (il cui codi
 
 ```mermaid
 flowchart TD
-    A["Per ogni pixel (x, y), in<br/>parallelo su prange(width)"] --> B["Per ogni corpo attivo in p_idx"]
-    B --> C["Calcolo del contributo fisico<br/>(potenziale, dΦ/dt, tidal,<br/>quadrupolo... secondo la heatmap)"]
-    C --> D["Somma dei contributi di tutti i<br/>corpi attivi"]
-    D --> E["Normalizzazione via reciproci<br/>precalcolati, zero divisioni"]
-    E --> F["Conversione in colore, scrittura<br/>diretta come uint8 nella texture"]
-    F --> G["Buffer restituito al<br/>graphic_renderer per la stampa a<br/>schermo"]
+    A["Per ogni pixel (x, y), in<br/>parallelo su prange(width)"] --> B["Per ogni corpo attivo in<br/>p_idx"]
+    B --> C["Calcolo del contributo<br/>fisico (potenziale, dΦ/dt,<br/>tidal, quadrupolo... secondo<br/>la heatmap)"]
+    C --> D["Somma dei contributi di<br/>tutti i corpi attivi"]
+    D --> E["Normalizzazione via<br/>reciproci precalcolati, zero<br/>divisioni"]
+    E --> F["Conversione in colore,<br/>scrittura diretta come uint8<br/>nella texture"]
+    F --> G["Buffer restituito al<br/>graphic_renderer per la<br/>stampa a schermo"]
 ```
 
 > [!IMPORTANT]
@@ -461,11 +461,11 @@ La heatmap del potenziale $\Phi$ è stata la prima visualizzazione implementata,
 
 ```mermaid
 flowchart TD
-    A["Stima range [min, max] di<br/>potenziale/energia nella vista<br/>corrente"] --> B["Per ogni pixel nella griglia<br/>campionata:<br/>Calcola il contributo<br/>gravitazionale di tutti gli N<br/>corpi"]
-    B --> C["Normalizzazione del valore (0 → 1)<br/>rispetto al range"]
-    C --> D["Conversione del potenziale in<br/>colore (RGB lookup)"]
+    A["Stima range [min, max] di<br/>potenziale/energia nella<br/>vista corrente"] --> B["Per ogni pixel nella griglia<br/>campionata: Calcola il<br/>contributo gravitazionale di<br/>tutti gli N corpi"]
+    B --> C["Normalizzazione del valore<br/>(0 → 1) rispetto al range"]
+    C --> D["Conversione del potenziale<br/>in colore (RGB lookup)"]
     D --> E["Salvataggio del colore nella<br/>matrice texture"]
-    E --> F["Restituzione del buffer al<br/>graphic_renderer per la stampa a<br/>schermo"]
+    E --> F["Restituzione del buffer al<br/>graphic_renderer per la<br/>stampa a schermo"]
 ```
 
 Viene renderizzato solo ciò che rientra nell'inquadratura della camera, mai a un dettaglio più fine del singolo pixel: regola valida per ogni elemento grafico del motore.
@@ -488,12 +488,12 @@ Concretamente: $\Phi = GM/r$ e quando la sorgente si muove la distanza $r$ cambi
 
 ```mermaid
 flowchart TD
-    A["Per ogni pixel (x, y) nella<br/>griglia campionata:<br/>Per ogni corpo j attivo:"] --> B["Calcola la posizione passata di j<br/>rispetto a (x, y) [buffer causale]"]
-    B --> C["Calcola la velocità radiale di j<br/>verso il pixel (x, y)"]
-    C --> D["Calcola il contributo_j = G × M_j<br/>× v_radiale_j / r²"]
-    D --> E["Somma i contributi di tutti i<br/>corpi per ottenere dΦ/dt totale"]
-    E --> F["Normalizzazione logaritmica<br/>(modulata dal fader in ±ordini di<br/>grandezza)"]
-    F --> G["Conversione in colore (scala<br/>divergente: blu = compressione,<br/>rosso = espansione)"]
+    A["Per ogni pixel (x, y) nella<br/>griglia campionata:<br/>Per ogni corpo j attivo:"] --> B["Calcola la posizione passata<br/>di j rispetto a (x, y)<br/>[buffer causale]"]
+    B --> C["Calcola la velocità radiale<br/>di j verso il pixel (x, y)"]
+    C --> D["Calcola il contributo_j = G<br/>× M_j × v_radiale_j / r²"]
+    D --> E["Somma i contributi di tutti<br/>i corpi per ottenere dΦ/dt<br/>totale"]
+    E --> F["Normalizzazione logaritmica<br/>(modulata dal fader in<br/>±ordini di grandezza)"]
+    F --> G["Conversione in colore (scala<br/>divergente: blu =<br/>compressione, rosso =<br/>espansione)"]
 ```
 
 ### 3.4 Le mappe derivate: Tidal, Roche, Lagrange e GW Strain
@@ -559,14 +559,14 @@ Il flusso decisionale che combina i tre meccanismi:
 
 ```mermaid
 flowchart TD
-    A["Campione FPS del ciclo corrente"] --> B{"FPS sotto 30?"}
-    B -->|"sì"| C["Downgrade immediato: stride<br/>raddoppiato<br/>gli FPS osservati finiscono in<br/>perf_memory"]
+    A["Campione FPS del ciclo<br/>corrente"] --> B{"FPS sotto 30?"}
+    B -->|"sì"| C["Downgrade immediato: stride<br/>raddoppiato gli FPS<br/>osservati finiscono in<br/>perf_memory"]
     B -->|"no"| D{"FPS sopra 58?"}
-    D -->|"no"| E["Zona morta 30-58: nessuna azione"]
+    D -->|"no"| E["Zona morta 30-58: nessuna<br/>azione"]
     D -->|"sì"| F{"3 cicli consecutivi sopra<br/>soglia<br/>e 5 secondi dall'ultimo<br/>downgrade?"}
-    F -->|"no"| G["Attesa: streak non ancora maturata"]
+    F -->|"no"| G["Attesa: streak non ancora<br/>maturata"]
     F -->|"sì"| H{"perf_memory: la risoluzione<br/>superiore<br/>era già stata provata sotto<br/>soglia?"}
-    H -->|"sì"| I["Upgrade cancellato:<br/>si resta sulla configurazione<br/>corrente"]
+    H -->|"sì"| I["Upgrade cancellato: si resta<br/>sulla configurazione<br/>corrente"]
     H -->|"no"| J["Upgrade: stride dimezzato"]
 ```
 
@@ -647,16 +647,16 @@ Il percorso completo di un tick del modulo collisioni, in sintesi:
 flowchart TD
     A["Tick: ingresso nel modulo<br/>collisioni"] --> B{"Cooldown attivo?"}
     B -->|"sì"| Z["Skip totale: decrementa il<br/>contatore e ritorna"]
-    B -->|"no"| C["Pre-passo O(N): raggio di cattura<br/>per corpo<br/>(hitbox adattivo + guardia EMRI)"]
+    B -->|"no"| C["Pre-passo O(N): raggio di<br/>cattura per corpo (hitbox<br/>adattivo + guardia EMRI)"]
     C --> D{"Filtro spaziale per coppia:<br/>gap oltre max_move?"}
-    D -->|"sì (oltre il 99% delle coppie)"| E["Early-exit sulla coppia"]
+    D -->|"sì (oltre il 99% delle<br/>coppie)"| E["Early-exit sulla coppia"]
     D -->|"no"| F{"Ray cast CCD sul segmento<br/>del<br/>tick:<br/>intersezione con la sfera di<br/>cattura?"}
-    F -->|"sì"| G["Fusione alla frazione di tick<br/>t_min interpolata"]
+    F -->|"sì"| G["Fusione alla frazione di<br/>tick t_min interpolata"]
     F -->|"no"| H["Coppia salva per questo tick"]
     E --> I["Fine loop coppie"]
     G --> I
     H --> I
-    I --> J["Calcolo del cooldown dinamico:<br/>minimo tra stima cinematica e<br/>tetto a 0,75c"]
+    I --> J["Calcolo del cooldown<br/>dinamico: minimo tra stima<br/>cinematica e tetto a 0,75c"]
 ```
 
 ---
@@ -773,10 +773,10 @@ La soluzione ha tre componenti:
 
 ```mermaid
 flowchart TD
-    A["Cattura eventi del sistema<br/>operativo (tastiera, mouse,<br/>finestra)"] --> B["event_handler (Interceptor Chain)<br/>Tutorial → Spawner → Faders →<br/>Console → Camera → Callbacks"]
-    B --> C["engine.tick(steps): aggiornamento<br/>fisico ed integrazione causale"]
-    C --> D["master_renderer: composizione<br/>sequenziale dei layer grafici<br/>[sfondo] → [heatmap] → [scie] →<br/>[corpi] → [UI/debug]"]
-    D --> E["pygame.display.flip():<br/>aggiornamento schermo (eseguito<br/>una volta per frame)"]
+    A["Cattura eventi del sistema<br/>operativo (tastiera, mouse,<br/>finestra)"] --> B["event_handler (Interceptor<br/>Chain) Tutorial → Spawner →<br/>Faders → Console → Camera →<br/>Callbacks"]
+    B --> C["engine.tick(steps):<br/>aggiornamento fisico ed<br/>integrazione causale"]
+    C --> D["master_renderer:<br/>composizione sequenziale dei<br/>layer grafici [sfondo] →<br/>[heatmap] → [scie] → [corpi]<br/>→ [UI/debug]"]
+    D --> E["pygame.display.flip():<br/>aggiornamento schermo<br/>(eseguito una volta per<br/>frame)"]
 ```
 
 **L'Interceptor Chain degli input.** Ogni elemento della catena può consumare un evento (ritornando `True`) bloccando la propagazione ai moduli successivi. Questo impedisce comportamenti incoerenti (ad esempio muovere la camera mentre si digita un comando nella console). La struttura è copiata dall'architettura degli event handler nei videogiochi: ogni interceptor è responsabile di un dominio preciso e non sa nulla degli altri.
