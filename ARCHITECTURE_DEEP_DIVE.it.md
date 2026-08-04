@@ -143,7 +143,7 @@ I 5 parametri memorizzati per ogni slot:
 
 **LOD (Level of Detail) temporale gerarchico.** Per risolvere il problema della RAM, lo storico monolitico è stato frammentato in tre buffer circolari sovrapposti con frequenze di campionamento diverse:
 
-<div align="center"><img src="docs/img/lod_hierarchy_schema.png" width="700" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/lod_hierarchy_schema.png" width="700" alt="Schema della struttura gerarchica a tre livelli dei ring buffer LOD"></div>
 
 - **L0**: campiona ogni tick. Massima risoluzione per interazioni ravvicinate.
 - **L1**: campiona ogni 32 tick (scrittura solo quando `(head_0 & 31) == 0`). Copre le distanze intermedie.
@@ -257,7 +257,7 @@ Il conto esplicito, con una sorgente a 30 km/s e DT = 0,1 s, si valuta ai due co
 
 Il grafico estende il conto a tutte le distanze, sul raggio causale standard di 64 AU (DT = 0,1 s scelto perché tutti e tre i livelli convivano dentro il raggio). La curva è un limite superiore conservativo perché assume la geometria peggiore, con lo spostamento del campione tutto lungo la linea di vista.
 
-<div align="center"><img src="docs/img/lod_error_compensation.png" width="760" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/lod_error_compensation.png" width="760" alt="Quantificazione dell'errore di campionamento dei livelli LOD"></div>
 
 ### 2.2 Come la fisica interagisce con i buffer
 
@@ -270,7 +270,7 @@ Il primo ritrovamento dei parametri causali trattato nel capitolo precedente nas
 
 Il metodo del primo ritrovamento è già stato mostrato coi numeri nell'[esempio Terra-Sole di §2.1](#esempio-pratico-ricerca-a-cascata-nello-scenario-terra-sole-modalità-triple). Lì però la coppia è così lenta che il secondo passo si limita a confermare lo slot. Per vedere il doppio ritrovamento lavorare davvero serve una sorgente veloce: un pixel della heatmap dΦ/dt che osserva una delle due stelle del preset *NS Binarie: Orbita Stabile* (due NS da 1,5 $M_\odot$ separate da 40.000 km) da 1 AU di distanza, con DT portato a 1 µs.
 
-<div align="center"><img src="docs/img/double_retrieval_stack.png" width="760" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/double_retrieval_stack.png" width="760" alt="Schema delle due letture in cascata del doppio ritrovamento causale"></div>
 
 Partendo dall'indice del primo ritrovamento:
 
@@ -303,7 +303,7 @@ Chiusa la parentesi sul dead reckoning, resta da mostrare il valore del doppio r
 
 | Con la sola prima lettura | Col doppio ritrovamento |
 |:---:|:---:|
-| <img src="docs/img/old_dphi_dt.png" width="50%" alt="Media non trovato"> | <img src="docs/img/new_dphi_dt.png" width="60%" alt="Media non trovato"> |
+| <img src="docs/img/old_dphi_dt.png" width="50%" alt="Campo dPhi/dt prima del doppio ritrovamento causale: fronti d'onda deformati"> | <img src="docs/img/new_dphi_dt.png" width="60%" alt="Campo dPhi/dt dopo il doppio ritrovamento causale: fronti d'onda concentrici corretti"> |
 
 A sinistra l'errore di stima si organizza in un **asse nodale di discontinuità** ovvero un settore in cui i fronti si sfrangiano e saltano di fase, che a simulazione in corso ruotava rigidamente insieme all'orbita. A destra, col ricalcolo, l'asse scompare e resta la spirale di emissione pulita. Fu proprio quell'asse a rivelare il difetto. Una struttura rigida in rotazione trasporta la propria fase a velocità crescente col raggio: agli estremi supera $c$ , un'impossibilità causale intuibile a occhio nudo. È stata quella diagnosi a portare alla soluzione corrente del doppio ritrovamento. 
 

@@ -143,7 +143,7 @@ The 5 parameters stored for each slot:
 
 **Hierarchical temporal LOD (Level of Detail).** To solve the RAM problem, the monolithic history has been fragmented into three overlapping circular buffers with different sampling frequencies:
 
-<div align="center"><img src="docs/img/lod_hierarchy_schema.png" width="700" alt="Media not found"></div>
+<div align="center"><img src="docs/img/lod_hierarchy_schema.png" width="700" alt="Diagram of the three-level hierarchical LOD ring buffer structure"></div>
 
 - **L0**: Samples every tick. Maximum resolution for close-range interactions.
 - **L1**: Samples every 32 ticks (writes only when `(head_0 & 31) == 0`). Covers intermediate distances.
@@ -303,7 +303,7 @@ Having concluded the digression on dead reckoning, it remains to demonstrate the
 
 | With the first pass only | With the double retrieval |
 |:---:|:---:|
-| <IMG src="docs/img/old_dphi_dt.png" width="50%" alt="Media not found"> | <IMG src="docs/img/new_dphi_dt.png" width="60%" alt="Media not found"> |
+| <img src="docs/img/old_dphi_dt.png" width="50%" alt="dPhi/dt field before the double causal retrieval: deformed wavefronts"> | <img src="docs/img/new_dphi_dt.png" width="60%" alt="dPhi/dt field after the double causal retrieval: correct concentric wavefronts"> |
 
 On the left, the estimation error forms a **nodal axis of discontinuity** (that is, a sector where the fronts fray and jump in phase) which, during the simulation, rotated rigidly along with the orbit. On the right, after recalculation, the axis disappears and the clean emission spiral remains. It was precisely that axis that revealed the flaw. A rigid rotating structure carries its own phase at a speed that increases with the radius: at the extremes, it exceeds $c$, a causal impossibility that is evident to the naked eye. It was that diagnosis that led to the current solution of the double retrieval. 
 

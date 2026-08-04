@@ -24,8 +24,8 @@ In short, many of the effects you see are not calculated, but are consequences o
 ### Conventions and Units
 
 The simulator operates entirely in **km, kg, and seconds**:
-- $G = 6{,}674 \times 10^{-20}\ \text{km}^3 \text{kg}^{-1} \text{s}^{-2}$ (the constant in SI units scaled to km);
-- $c = 299 792{,}458\ \text{km/s}$ ;
+- $G = 6.674 \times 10^{-20}\ \text{km}^3 \text{kg}^{-1} \text{s}^{-2}$ (the constant in SI units scaled to km);
+- $c = 299 792.458\ \text{km/s}$ ;
 - $1\ \text{AU} = 149 597 870.7\ \text{km}$ .
 
 All physical quantities are in double precision (`float64`). Vectors are 2D in the simulation plane.
@@ -176,7 +176,7 @@ The most direct way to see this emerge **in the simulator itself** is to observe
 
 | Sudden causal death of a star | Sudden causal birth of a star |
 |:---:|:---:|
-| <IMG src="docs/gif/Minkowski_causal_death.gif" width="100%" alt="Minkowski diagram: causal death"><BR><BR><img src="docs/gif/Sun_causal_death.gif" width="100%" alt="Expansion of the causal cone upon the sudden disappearance of a star"> | <IMG src="docs/gif/Minkowski_causal_birth.gif" width="100%" alt="Minkowski diagram: causal birth"><BR><BR><IMG src="docs/gif/Sun_causal_birth.gif" width="100%" alt="Expansion of the causal cone upon the sudden appearance of a star"> |
+| <img src="docs/gif/Minkowski_causal_death.gif" width="100%" alt="Minkowski diagram: causal death"><BR><BR><img src="docs/gif/Sun_causal_death.gif" width="100%" alt="Expansion of the causal cone upon the sudden disappearance of a star"> | <img src="docs/gif/Minkowski_causal_birth.gif" width="100%" alt="Minkowski diagram: causal birth"><BR><BR><img src="docs/gif/Sun_causal_birth.gif" width="100%" alt="Expansion of the causal cone upon the sudden appearance of a star"> |
 | **Above (Minkowski diagram)**: Time flows upward; when the star disappears, the future light cone is cut off at the event’s vertex.<br>**Below (2D Simulator)**: The field of the vanished star persists outside the causal front and collapses to zero only when the expansion circle of the “news” (traveling at speed $c$) reaches points in space. | **Above (Minkowski Diagram)**: The birth of a star opens the light cone toward the future starting from the event horizon.<BR>**Below (2D Simulator)**: The field of the new star is completely absent outside the causal front and turns on, propagating outward, only when the expanding circle of the birth event reaches it. |
 
 *The scale of the two demonstrations is slightly different and is approximately 1 × 1 AU.*
@@ -201,7 +201,7 @@ Before delving into the details of aberration and dead reckoning, it is worth cl
 
 Mathematically, this two-step process is equivalent to a single Picard iteration on the light-cone equation and, for ordinary orbits ($v \ll c$), converges immediately. For extreme regimes ( $v \to c$ ), [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula) provides the **analytic closed-form solution**, derived from a quadratic in time of flight, which the engine uses in place of the double reading in very specific cases.
 
-**What’s covered here and what’s in the deep dive.** The above describes only the *what* and the *why*. All engineering details (internal structure of the three levels of detail, access optimizations, criteria for selecting the level based on the required temporal depth, memory sizing for extreme scenarios such as $0{,}999c$) are documented in **[ARCHITECTURE_DEEP_DIVE.md §2](ARCHITECTURE_DEEP_DIVE.md#2-the-ring-buffer-and-the-position-history)**.
+**What’s covered here and what’s in the deep dive.** The above describes only the *what* and the *why*. All engineering details (internal structure of the three levels of detail, access optimizations, criteria for selecting the level based on the required temporal depth, memory sizing for extreme scenarios such as $0.999c$) are documented in **[ARCHITECTURE_DEEP_DIVE.md §2](ARCHITECTURE_DEEP_DIVE.md#2-the-ring-buffer-and-the-position-history)**.
 
 **To summarize.** The retrieval returns the *retarded* position of the source. This is where the central problem arises: using that “back-in-time” position as a reference for the force introduces a **spurious aberration** that destabilizes the orbits, requiring a forward extrapolation (**dead reckoning**) to cancel it out.
 
@@ -225,7 +225,7 @@ If gravity points toward the **retarded** position of the source, in an orbit it
  <p>The historical acceleration $\vec{a}_{ret}$ is not stored: it is reconstructed on the fly using <strong>finite differences</strong> between consecutive velocities.</p>
  </td>
  <td valign="top" align="center" width="40%">
- <img src="docs/gif/sagA_orbit.gif" width="320" alt="Media not found">
+ <img src="docs/gif/sagA_orbit.gif" width="320" alt="Solar System orbiting Sagittarius A* with hybrid dead reckoning active">
  </td>
  </tr>
 </table>
@@ -249,14 +249,14 @@ It should be noted where the analogy becomes fragile. Numerically speaking, that
 
 | Rosetta: inspiral | Rosetta: late inspiral |
 |:---:|:---:|
-| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Media not found"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Media not found"> |
+| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Rosette-shaped apsidal precession of an EMRI orbit"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Late stage of the EMRI rosette, the orbit tightening toward the plunge"> |
 | Scale ≈ 7M × 4M km · 5 min/s · the purple BH is 100× the size of the green one · ~6 days from the first orbit, ~7 days until merge | Scale 1.2M × 825,000 km · late inspiral · 13 days and 7 hours, ~4 hours until merge |
 
 **Showcase: EMRI / rosette orbit**: the example just described, captured in real time. The trail of the lighter body draws a **rosette**: the orbit precesses (it does not close) due to the Paczyński-Wiita apsidal precession seen above, and at the same time it tightens (slowly in the first few days (GIF on the left), then increasingly rapidly toward the merger (on the right)) as the 2.5PN flashes at the pericenter become denser and the dead reckoning residual works on an increasingly shorter orbit.
 
 ### 3.4 Relativistic Compression of Acceleration
 
-To prevent superluminal escape, the net acceleration of a body is damped as its velocity increases. Below the threshold $v^2 = 0.5c^2$ (≈ 0.707 c), nothing changes. Above this threshold, the acceleration is multiplied by the inverse Lorentz factor $\sqrt{1 - v^2/c^2}$, which suppresses it more and more as $v \to c$: reaching $c$ becomes **gradually impossible**, exactly as with the relativistic increase in inertia (it would require an increasingly divergent amount of energy). Beyond the threshold $v^2 = 0{,}999 c^2$ (approximately $0{,}9995c$), the acceleration is completely zero. This is a phenomenological limit, not a derivation from General Relativity, but it reproduces the correct behavior: $c$ remains an unreachable asymptote.
+To prevent superluminal escape, the net acceleration of a body is damped as its velocity increases. Below the threshold $v^2 = 0.5c^2$ (≈ 0.707 c), nothing changes. Above this threshold, the acceleration is multiplied by the inverse Lorentz factor $\sqrt{1 - v^2/c^2}$, which suppresses it more and more as $v \to c$: reaching $c$ becomes **gradually impossible**, exactly as with the relativistic increase in inertia (it would require an increasingly divergent amount of energy). Beyond the threshold $v^2 = 0.999 c^2$ (approximately $0.9995c$), the acceleration is completely zero. This is a phenomenological limit, not a derivation from General Relativity, but it reproduces the correct behavior: $c$ remains an unreachable asymptote.
 
 **Why a threshold and not a constantly active factor?** It is an emergency brake, not a general relativistic correction (which, incidentally, would require distinguishing between longitudinal and transverse mass, both of which are ignored here): it remains inactive until the risk of exceeding $c$ is real, without the need for exceptions or hardcoded limits elsewhere. ART scenarios, for example, bypass it only because their artificial thrust is added *after* this block.
 
@@ -334,7 +334,7 @@ $$T = \frac{(\vec{d}\cdot\vec{v}) + \sqrt{\Delta}}{c^2 - v^2}$$
 This is the **explicit formula**, valid only for rectilinear motion with known acceleration (the ART case): this is why it can be solved analytically, rather than resorting to the historical method. In the general case, where no analytical solution exists (curvilinear motion, N bodies, variable accelerations), the engine instead resorts to the **implicit architectural solution**, the double causal retrieval from history buffers described at the beginning of [§3](#3-causal-aberration-dead-reckoning-and-relativistic-dynamics).
 
 > [!NOTE]
-> **The causal cone.** If $\Delta < 0$, no real solution exists: the source is “escaping” from its own field faster than the field can reach the target. The target is outside the reachable past light cone, and the engine yields a zero contribution. Geometrically, this is what happens when the source **“pierces” its own light cone**: it overtakes the wavefront it is itself emitting, just as a supersonic aircraft overtakes the sound wavefront it generates. It is the gravitational analogue of the supersonic Mach cone. This is a **mathematically absurd** situation from a physical standpoint (it requires a source faster than light, which is impossible) and, in fact, is **deliberately enforced** only in the “Approaching the Speed of Light” scenarios: the full version (~20 GB of RAM) at $0{,}999c$ and the two reduced versions at $0.9c$ and $0.7c$, where a constant artificial acceleration pushes the Sun beyond the causal limit to make the effect visible (the “void” that opens up behind the body).
+> **The causal cone.** If $\Delta < 0$, no real solution exists: the source is “escaping” from its own field faster than the field can reach the target. The target is outside the reachable past light cone, and the engine yields a zero contribution. Geometrically, this is what happens when the source **“pierces” its own light cone**: it overtakes the wavefront it is itself emitting, just as a supersonic aircraft overtakes the sound wavefront it generates. It is the gravitational analogue of the supersonic Mach cone. This is a **mathematically absurd** situation from a physical standpoint (it requires a source faster than light, which is impossible) and, in fact, is **deliberately enforced** only in the “Approaching the Speed of Light” scenarios: the full version (~20 GB of RAM) at $0.999c$ and the two reduced versions at $0.9c$ and $0.7c$, where a constant artificial acceleration pushes the Sun beyond the causal limit to make the effect visible (the “void” that opens up behind the body).
 
 *(The field distortion produced by these extreme regimes is the subject of the rest of this chapter.)*
 
@@ -359,7 +359,7 @@ The isolines of the Sun’s potential well compress along the direction of motio
 
 **How to read the heatmap of the gravitational potential Φ (“phi”).** The color maps the depth of the gravitational well point by point: deep blue/black means “minimum or absent potential,” while bright yellow means “deep well.” The scale is always calibrated to the minimum effective radius of the most massive body in the scenario, adjusted by the fictitious cinematic floor `eff_rad` to prevent the dynamics from becoming unmanageable in compact bodies. *Pure white* therefore appears just beyond this geometric saturation distance, a value of $\Phi$ close to the theoretical maximum:
 
-$$\Phi_{\text{limit}} = -\tfrac{1}{2}c^2 \approx -4{,}49377 \times 10^{10}\ \text{km}^2/\text{s}^2$$
+$$\Phi_{\text{limit}} = -\tfrac{1}{2}c^2 \approx -4.49377 \times 10^{10}\ \text{km}^2/\text{s}^2$$
 
 (the condition $v_{\text{escape}} = c$, i.e., $\sqrt{-2\Phi} = c$).
 
@@ -370,7 +370,7 @@ The Sun is propelled by a constant artificial acceleration (ART) from $0.7c$ unt
 
 Direction of motion in the following demonstration: +x, i.e., from left to right.
 
-<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media not found"></div>
+<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Lienard-Wiechert contraction of the potential isolines as the source accelerates from 0.7c toward c"></div>
 
 The frame of reference is approximately **180 × 120 AU** (tens of billions of km per side). At $0.7c$ (≈ 209,855 km/s), the **Liénard-Wiechert** effect is already visible: the gravitational well begins to deform relative to spherical symmetry. As the speed approaches $c$ (299,792.458 km/s), the flattening increases nonlinearly, until (hypothetically, beyond $c$) the **causal Mach cone** described in [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula) begins to form.
 
@@ -384,14 +384,14 @@ A detail that will come up again shortly: to the right of the Sun (in the direct
 
 ---
 
-**Example 2: Approach to c (SRT), $0{,}999c \to c$.**
+**Example 2: Approach to c (SRT), $0.999c \to c$.**
 The same scenario, but zoomed in and much slower, to capture the asymptotic moments before the causal limit.
 
 <div align="center">
  <video src="https://github.com/user-attachments/assets/3108742d-2672-485b-b4bb-3fc399b40511" controls="controls" width="100%"></video>
 </div>
 
-The field of view here is **~0.8 × 0.3 AU**. At $0{,}999c$ (≈ 299,493 km/s), the Sun is literally **riding the front of the information it has itself emitted**: its position and its gravitational wavefronts travel at virtually identical speeds.
+The field of view here is **~0.8 × 0.3 AU**. At $0.999c$ (≈ 299,493 km/s), the Sun is literally **riding the front of the information it has itself emitted**: its position and its gravitational wavefronts travel at virtually identical speeds.
 
 #### The phenomenon: the emission gap between “where it is” and “where it was”
 
@@ -399,17 +399,17 @@ This is the point where the boundary of the **light cone from [§2.1](#21-the-li
 
 The yellow dot is the Sun *now*, at its actual position. The sharp vertical cut in the center (that is, the compressed white line separating the orange well on the left from the purple void on the right) is the **Liénard-Wiechert + Lorentz disk at its maximum**: the Sun’s field is compressed into a disk *perpendicular* to its motion, exactly like a relativistic charge ([§5](#5-liénard-wiechert-deformation)).
 
-**Because it’s “dark” on the right.** Each pixel in the heatmap does not see the Sun *where it is now*, but *where it was when it emitted the signal that is arriving right now*, the causal principle described in [§2.1](#21-the-light-cone-and-the-minkowski-diagram). For a pixel in front of the Sun (on the right), the Sun is rushing toward it at $0{,}999c$. To “reach” that pixel now, the signal must have departed from much, much farther back:
+**Because it’s “dark” on the right.** Each pixel in the heatmap does not see the Sun *where it is now*, but *where it was when it emitted the signal that is arriving right now*, the causal principle described in [§2.1](#21-the-light-cone-and-the-minkowski-diagram). For a pixel in front of the Sun (on the right), the Sun is rushing toward it at $0.999c$. To “reach” that pixel now, the signal must have departed from much, much farther back:
 
-$$r_{ret} \approx \frac{d}{1 - v/c}, \qquad \text{at } v = 0{,}999c  \Rightarrow r_{ret} \approx 1000 d$$
+$$r_{ret} \approx \frac{d}{1 - v/c}, \qquad \text{at } v = 0.999c  \Rightarrow r_{ret} \approx 1000 d$$
 
 In other words: for a pixel a few million km to the right, the emission arriving *now* was emitted when the Sun was **billions of km further to the left**, as far back as *320 light-years in the past* in this scenario. At that distance, the Sun’s gravitational well is already negligible ( $\Phi \propto 1/r$ ). The pixel appears **dark, almost black**: not because there is no gravity there, but because it is showing a Sun that, from *where it was back then*, had no gravitational effect here.
 
-The **gap between the current position and the emission position** is the key. At $0.7c$, the gap is ~3.3 times the current distance, and the asymmetry is barely visible. At $0{,}999c$, it is 1,000 times the current distance, and the “darkness” in front is almost perfect. At $v = c$, the ratio diverges, and the simulator returns a zero contribution on the right. Then, when $v > c$, the discriminant of the time of flight equation changes sign, and we enter the fictitious regime of the **causal Mach cone** described in [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula).
+The **gap between the current position and the emission position** is the key. At $0.7c$, the gap is ~3.3 times the current distance, and the asymmetry is barely visible. At $0.999c$, it is 1,000 times the current distance, and the “darkness” in front is almost perfect. At $v = c$, the ratio diverges, and the simulator returns a zero contribution on the right. Then, when $v > c$, the discriminant of the time of flight equation changes sign, and we enter the fictitious regime of the **causal Mach cone** described in [§5.1](#51-time-of-flight-for-sources-in-rectilinear-motion-closed-form-formula).
 
 In other words, what we see is not a “lack of gravity” in front of the Sun; it is *its past* on a scaled-up scale: the closer $v$ gets to $c$, the farther away the visible past is. The vertical cut is the Liénard-Wiechert and Lorentz signature at its peak, and the darkness on the right is the causal principle from [§2.1](#21-the-light-cone-and-the-minkowski-diagram) made literally visible.
 
-The engineering details (including how it was possible to render emission buffers over 300 light-years long in real time and why the “full” scenario at $0{,}999c$ requires ~20 GB of RAM) are in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
+The engineering details (including how it was possible to render emission buffers over 300 light-years long in real time and why the “full” scenario at $0.999c$ requires ~20 GB of RAM) are in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
 
 > [!NOTE]
 > **On the physical plausibility of the scenario and its engineering value.**
@@ -417,7 +417,7 @@ The engineering details (including how it was possible to render emission buffer
 >
 > The author remains open to any counterarguments, contradictions, corrections, and suggestions from those with specific expertise in general relativity or gravitoelectromagnetism.
 >
-> Regardless of its physical validity, the scenario has concrete engineering value: forcing causal propagation to $0{,}999c$ represents the **extreme limit case** for the architecture of history buffers with $O(1)$ lookup and a three-level LOD system, described in [§2 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
+> Regardless of its physical validity, the scenario has concrete engineering value: forcing causal propagation to $0.999c$ represents the **extreme limit case** for the architecture of history buffers with $O(1)$ lookup and a three-level LOD system, described in [§2 of ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md).
 >
 > One final observation: in the specific case of constant ART acceleration and rectilinear motion, the retarded time admits a closed-form analytical solution (the retarded time equation reduces to a quadratic in $t_{ret}$), so history buffers would not be strictly necessary for *this* scenario. The engine uses them anyway because the goal is to push the general causal pipeline to its limits: depths of hundreds of light-years, LOD cascading across all three levels, ~20 GB of RAM (extreme scenario), and numerical stability as $(1 - \vec{v}\cdot\hat{n}/c) \to 0$. No other scenario in the simulator pushes these conditions to such extremes. In addition, the general buffer-based pipeline works **without modification even if a complex motion were forced in the future** (curvilinear, with variable acceleration, with N-body interaction): the analytical shortcut would cease to exist, but the buffer architecture would continue to function unchanged.
 
@@ -512,7 +512,7 @@ This long list of discrete frequencies is plotted as red points superimposed on 
 
 **Step 1, the old logic.** Initially, the full 2.5PN was not implemented; instead, a *fragment* of the formula was used: a viscous drag $\vec{F} \propto -m_{src}^2 \vec{v}_{rel}/(r^3 c^5)$, multiplied by a heuristic factor, `m_chirp_mult`, which was tuned by hand so that the pair would coalesce within the expected time frame. The times were plausible, but the dynamics had three flaws. The square of the mass, instead of the actual product of the two masses, unbalanced the force distribution and caused **the center of mass to oscillate**. Linear dead reckoning, under extreme conditions, left a residual aberration. The corrective factor, acting as an additional thrust, increased the eccentricity. The result is shown in the first figure, with the points oscillating markedly around the Peters curve.
 
-<img src="docs/img/chirp_fase1_old_logic.png" alt="Media not found">
+<img src="docs/img/chirp_fase1_old_logic.png" alt="Phase 1: chirp trace under the old m_chirp_mult logic, diverging from the Peters curve">
 
 **Figure: Phase 1 (old logic)**: 2.5PN fragment + `m_chirp_mult` factor + linear dead reckoning. The plotted points oscillate erratically, and the shape of the curve does not match perfectly.
 
@@ -540,11 +540,11 @@ This long list of discrete frequencies is plotted as red points superimposed on 
 
  The reference is the public strain data for GW170817 from the Gravitational Wave Open Science Center (**H1** detector, 4096 s sampled at 16 kHz, from [gwosc.org](https://gwosc.org/eventapi/html/GWTC-1-confident/GW170817/v3/)). The comparison script loads the actual strain, extracts the chirp frequency trace (Q-transform) around the merger, superimposes the points from the **simulation** (instantaneous frequency via Hilbert transform) and the **Peters theoretical curve**, and finally calculates the error point by point.
 
-**A note on the chirp mass in the graph.** GW170817 has a small redshift ( $z \approx 0.01$ ), so the chirp mass *observed in the detector* (detector frame, $\approx 1{,}1975\ M_\odot$ ) is slightly higher than that *inherent to the source* (source frame, $\approx 1{,}186\ M_\odot$ ).
+**A note on the chirp mass in the graph.** GW170817 has a small redshift ( $z \approx 0.01$ ), so the chirp mass *observed in the detector* (detector frame, $\approx 1.1975\ M_\odot$ ) is slightly higher than that *inherent to the source* (source frame, $\approx 1.186\ M_\odot$ ).
 
 **The final result.** With the correct parameter-free model, the chirp mass estimated from the simulation is within **0.97%** of Peters’ analytical result, an almost perfect fit achieved through the corrections described above. In contrast, the deviation from the actual observed strain (H1) is **8.45%**.
 
-<img src="docs/img/chirp_fase3_finale.png" alt="Media not found">
+<img src="docs/img/chirp_fase3_finale.png" alt="Phase 3: final parameter-free model, simulated points following the Peters analytical curve">
 
 **Figure: Phase 3 (final result)**: the final model (parameter-free, correction factor removed, first acceleration bug fixed, linear dead reckoning replaced by bypass to current positions, chirp mass estimate corrected). The plotted points follow Peters’ curve: the oscillation (and with it the residual eccentricity) has virtually disappeared.
 
@@ -557,9 +557,9 @@ For the BBH scenario, the comparison with SXS numerical relativity is documented
 > [!NOTE]
 > **What is SXS?** The *Simulating eXtreme Spacetimes* project ([black-holes.org](https://www.black-holes.org/)) is a multi-university collaboration (Caltech, Cornell, CITA, and others) that produces **numerical relativity** (NR) solutions to Einstein’s equations for black hole and neutron star mergers. The public catalog ([data.black-holes.org/waveforms/catalog](https://data.black-holes.org/waveforms/catalog.html)) contains hundreds of reference simulations, each identified by a code (`SXS:BBH:NNNN` for black holes, `SXS:NSNS:NNNN` for neutron stars). The following two subsections compare the model with an NR waveform for each regime.
 
-One fact must be made clear here: **there is no simulation in the SXS catalog specifically targeting GW170817**. The public catalog contains only two NS waveforms, both of which are generic configurations. We therefore selected the closest available one, **SXS:NSNS:0001**: a BNS system with equal, non-rotating masses ($m_1 = m_2 = 1.4\ M_\odot$ in the source frame), with a chirp mass of $1{,}2188\ M_\odot$, approximately 1.8% of that in the detector frame of GW170817 ($1{,}1975\ M_\odot$). The comparison is constructed as follows: the Peters curve is calculated based on the chirp mass of **this** configuration (not the official event value) and is plotted against **its** numerical relativity. In other words, we measure how much the dominant order deviates from NR in a BNS system nearly identical to ours. The stated working hypothesis is that the result is transferable: since the chirp mass misalignment amounts to a systematic error of just 1.1% on the frequency ($f \propto \mathcal{M}^{-5/8}$), if the SXS waveform for GW170817 existed, the actual comparison would in all likelihood show a deviation very similar to the one shown below.
+One fact must be made clear here: **there is no simulation in the SXS catalog specifically targeting GW170817**. The public catalog contains only two NS waveforms, both of which are generic configurations. We therefore selected the closest available one, **SXS:NSNS:0001**: a BNS system with equal, non-rotating masses ($m_1 = m_2 = 1.4\ M_\odot$ in the source frame), with a chirp mass of $1.2188\ M_\odot$, approximately 1.8% away from that in the detector frame of GW170817 ($1.1975\ M_\odot$). The comparison is constructed as follows: the Peters curve is calculated based on the chirp mass of **this** configuration (not the official event value) and is plotted against **its** numerical relativity. In other words, we measure how much the dominant order deviates from NR in a BNS system nearly identical to ours. The stated working hypothesis is that the result is transferable: since the chirp mass misalignment amounts to a systematic error of just 1.1% on the frequency ($f \propto \mathcal{M}^{-5/8}$), if the SXS waveform for GW170817 existed, the actual comparison would in all likelihood show a deviation very similar to the one shown below.
 
-<IMG src="docs/img/confronto_sxs_gw170817_bns.png">
+<img src="docs/img/confronto_sxs_gw170817_bns.png" alt="BNS comparison: simulation, Peters curve and SXS:NSNS:0001 numerical relativity">
 
 The result is physically significant: Peters’ formula **systematically overestimates** the chirp frequency compared to the numerical relativity solution, with a discrepancy that increases from 9.5% at $\tau = -40$ ms to over 100% in the last millisecond (NR at ~994 Hz versus Peters’ ~1,769 Hz), for an average of **18.80%** over the last 40 ms before the merger. The NR grows more slowly because it includes physical contributions that Peters, who focuses only on the dominant term, ignores: primarily **tidal effects** (the deformability of neutron star matter slows the inspiral compared to point-mass dynamics), higher-order conservative PN terms, and the non-perturbative regime near contact.
 
@@ -571,11 +571,11 @@ The waveform used here is **SXS:BBH:0305**, the NR template that best reproduces
 
 **The result.** The chirp trace from the simulator (kinematic radar, $f_{GW} = v_{rel}/(\pi D)$ read directly from the orbital dynamics, without any DSP processing) agrees with the NR curve with an **average error of 1.27%** throughout the entire inspiral (from $\tau \approx -1.14$ s to $\tau \approx -10$ ms), compared to an average error of **7.47%** for Peters vs. NR: the simulator is therefore *approximately six times closer to NR* than Peters’ analytical formula is at the dominant order. The simulated coalescence occurs in **52.034 s**, compared to the $\approx 55$ s expected by both Peters and NR SXS:BBH:0305 given the scenario’s initial parameters (initial separation $D_0 = 4 000$ km, initial orbital frequency $\sim 1.93$ Hz corresponding to an initial $f_{GW}$ of $\sim 3.9$ Hz for the system with $M_{tot} = 70.85\ M_\odot$ in the detector frame). The $\sim 3$ s lead of the simulator over the reference is entirely concentrated in the final cycles, where non-perturbative contributions accelerate coalescence and where the NR itself also departs from the pure PN regime.
 
-<IMG src="docs/img/confronto_sxs_gw150914.png">
+<img src="docs/img/confronto_sxs_gw150914.png" alt="BBH comparison: simulation, Peters curve and SXS:BBH:0305 numerical relativity">
 
 **Figure: Overview of the last second of inspiral.** The red points from the simulator visually overlap with the green curve from the NR (SXS:BBH:0305) for almost the entire trace. Peters’ gray dashed curve lies consistently above both, because it neglects the higher-order contributions that NR includes and that the simulator implicitly captures through the combination of 2.5PN + Paczyński-Wiita + causal bypass.
 
-<IMG src="docs/img/confronto_sxs_gw150914_zoom.png" width="700" alt="Zoom on the final inspiral segment of GW150914">
+<img src="docs/img/confronto_sxs_gw150914_zoom.png" width="700" alt="Zoom on the final inspiral segment of GW150914">
 
 **The residual limit: the last millisecond.** The model’s agreement with NR is structurally good ( 1.27% on average) throughout the entire inspiral, and the model captures not only the dominant Peters term but also, implicitly, a significant portion of the higher-order contributions. There remains an uncrossed boundary, well within the last millisecond before the merger, where the dynamics enter the non-perturbative regime: here, no classical PN combination converges, and to describe it, one needs techniques of proper numerical relativity or surrogate models calibrated to NR. This is the stated boundary of the project and the point at which the collaboration of a relativity expert would be needed to understand whether the environment has the potential to become an alternative surrogate model in specific scenarios, with comparable masses and zero spin (see Roadmap in the README).
 
@@ -598,7 +598,7 @@ In the first case, the simulator converges to Peters, but both are about 18.8% a
 | 2.5PN radiation reaction | **Yes** | **Yes** | $v_{rel} > 0.1c$ and proximity ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)) |
 | 2nd-order dead reckoning | **Replaced by the present method** | **Replaced by the present method** | The residual numerical Taylor aberration would dissipate energy by mimicking the 2.5PN. The bypass enforces the exact position to avoid this spurious “double friction” ([§3.2](#32-compensation-hybrid-dead-reckoning)) |
 | Causal delay in force calculation | **Yes (Causality ON)** | **Yes (Causality ON)** | The *direction* uses the present perfect shortcut to circumvent the numerical aberration, but the **intensity** of gravitational friction (2.5PN) continues to read velocities at their time of emission |
-| Relativistic inertial braking ($\gamma^{-1}$ on net acceleration) | **No** (estimated absolute velocity ~0.14–0.18 c even at peak) | **No** (estimated absolute velocity ~0.23–0.29 c even at the peak) | threshold at $0{,}707c$ for the **absolute** velocity of the integrating body ([§3.4](#34-relativistic-compression-of-acceleration)) |
+| Relativistic inertial braking ($\gamma^{-1}$ on net acceleration) | **No** (estimated absolute velocity ~0.14–0.18 c even at peak) | **No** (estimated absolute velocity ~0.23–0.29 c even at the peak) | threshold at $0.707c$ for the **absolute** velocity of the integrating body ([§3.4](#34-relativistic-compression-of-acceleration)) |
 
 **In the BNS regime**, the Schwarzschild radii of the two neutron stars are small ( $r_s \approx 4.3$ and $3.8$ km for the preset masses) relative to a separation that decreases from hundreds of km during inspiral to a few tens of km at contact: in that regime, the PW potential remains very close to the pure Newtonian potential, and the simulator reproduces Peters’ results exactly. The **~18.8%** discrepancy between Peters/the simulator and the NR must therefore be sought elsewhere: in the **tidal effects** of the neutron stars’ matter and in higher-order PN terms, none of which are represented in the current model (neither in Peters nor in the PW potential, which describes the geometry of a vacuum, not the structure of matter).
 
@@ -617,7 +617,7 @@ All heatmaps calculate, for each pixel, a field derived from the sources. Here a
 The sum of the causal contributions of all bodies, with the Liénard-Wiechert correction from [§5](#5-liénard-wiechert-deformation) for fast sources. It visualizes the potential well and its deformations. As per the convention stated at the beginning, the physical value is $\Phi = -G\sum_k M_k/r_k$ (negative; this is what a double-click returns). The renderer maps the magnitude $\sum_k M_k/r_k$, without $G$ or the sign, because these factors are irrelevant for the color scale.
 
 <div align="center">
- <img src="docs/img/solar_system_1.png" width="600" alt="Media not found">
+ <img src="docs/img/solar_system_1.png" width="600" alt="Scalar gravitational potential heatmap of the Solar System">
 </div>
 
 The figure shows the classic topography of the inner planets of the solar system in $\Phi$ mode (“phi mode”). What makes this visualization special is its interaction with gravitational information traveling at finite speed $c$: in various scenarios or through in-game interactions, it is possible to observe wavefronts compressing or expanding, the 2D cross-section of the **[light cone from §2.1](#21-the-light-cone-and-the-minkowski-diagram)**, which becomes visible when a body suddenly appears or disappears. For a detailed analysis of this distortion, see Chapter [§5](#5-liénard-wiechert-deformation), dedicated to the Liénard-Wiechert deformation and Lorentz contraction.
@@ -637,7 +637,7 @@ These are the two visual patterns that $d\Phi/dt$ displays most clearly, and com
 
 | Single-body dipole in motion | Spirals of the binary pair |
 |:---:|:---:|
-| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media not found"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media not found"> |
+| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="dPhi/dt dipole of Jupiter moving alone: blue leading front, red trailing front"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Concentric dPhi/dt spirals emitted by a neutron star binary in inspiral"> |
 | The well moves with the source: the side approaching the pixel turns blue, the side moving away turns red. It is the **dipole that moves**, not radiation. In this example, Jupiter orbits at a constant speed (≈ 13 km/s) and its dipole accompanies the motion, rotating with it; surrounding it, in order, are the moons: Amalthea, Io, Europa, Ganymede, and Callisto. The larger moons also have their own dipoles that merge with Jupiter’s, but due to the highly zoomed-out view, they are not resolvable in the demonstration GIF. The sensitivity is calibrated to the maximum mass in the scenario (the Sun in this case), and a slider allows the user to adjust this ratio as desired, proportionally increasing or decreasing the brightness and size of the dipoles. | Scenario: *Binary Neutron Stars, Stable Orbit*, orbital velocity: 1580 km/s, camera field of view $\approx$ 2 AU $\times$ 2 AU, simulation speed: 40 s/s. Two moderately massive neutron stars (1.5 solar masses) orbit at a safe distance of 40,000 km (no imminent merger). It is precisely thanks to causality (the finite speed $c$ at which information propagates) that the dipoles of the two moving bodies do not cancel each other out at a distance, but are retarded relative to each pixel on the screen, spiraling into a fully emergent spiral pattern. |
 
 
@@ -691,17 +691,17 @@ proportional to the deviatoric part of the tensor and measures the maximum **she
 
 **Showcase: The Extreme White, a Pulsar**
 
-<img src="docs/img/extreme_tidal.png" width="700" alt="Media not found">
+<img src="docs/img/extreme_tidal.png" width="700" alt="Tidal stress map in an extreme gravitational field">
 
 A view spanning approximately 10,000 × 10,000 km around a pulsar: the shades range from the dense red of macroscale disruption to the blinding white of the microscale disruption band close to the compact body, the cyan dot at the center.
 
 **Showcase: Jupiter System (Europa and Io)**
 
-<img src="docs/img/tidal_stress_Io.png" width="800" alt="Media not found">
+<img src="docs/img/tidal_stress_Io.png" width="800" alt="Tidal stress along the orbit of Io around Jupiter">
 
 In the upper left is the Jovian moon **Europa**, immersed in the blue-to-cyan hues of Jupiter’s tidal map. In the center is **Io**, in full cyan: it is this same tidal force that explains why it is the most volcanically active rocky body in the entire solar system. Note how the heatmap also accounts for the tidal stress that each moon, in turn, generates, and how the moon itself is deformed by its immersion in Jupiter’s tide.
 
-<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Media not found">
+<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Close-up of the tidal stress gradient at Io">
 
 > **Author’s Note.** The two transverse black lobes visible around each moon are points where the visualized shear $\sigma$ vanishes, but for a **very different** reason than that of the dark blue areas far from the bodies. In the distant blue regions, $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ are all small because the field is flat. In the black lobes near the moon, on the other hand, the individual components of the Hessian are **large and substantial** and combine such that $\Phi_{xx} = \Phi_{yy}$ and $\Phi_{xy} = 0$: the sum of squares $(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2$ vanishes not because of the absence of a field, but because the eigenvalues of the Hessian coincide. The tide there is locally **isotropic**: it stretches equally in all directions within the plane. These two points arise from the geometric interference between the contribution from the moon itself (radial, symmetric) and the background contribution from Jupiter (anisotropic, oriented along the moon-Jupiter axis). Precisely at these two transverse positions, the two tensors combine in such a way as to balance out the principal directions.
 >
@@ -781,11 +781,11 @@ where $D_g$ is the total separation of the pair that would complete a circular o
 
 In a clean, isolated orbit, however, the ring remains stationary while the red/blue boundary of the Roche lobe expands and contracts around it: the **instantaneous divergence between the two** is the direct visual measure of the eccentricity.
 
-<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Media not found"></div>
+<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Roche topology of the Earth-Moon pair with the ideal circular orbit overlay"></div>
 
 Earth-Moon system: The Moon is at its apogee, more than 400,000 km from Earth, and has in fact crossed the ring of the ideal circular orbit. The other details that emerge will be discussed in the next chapter.
 
-<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Media not found"></div>
+<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Roche topology reacting to swapping the mass of the Earth for that of Jupiter"></div>
 
 The animation shows a *what-if* experiment: replacing Earth with Jupiter and observing the Moon’s behavior as a result. The Moon, retaining its original angular momentum (calibrated for Earth), finds itself in the worst-case scenario: its new ideal orbit, with that $h$, turns out to be close to the center of Jupiter. Furthermore, it finds itself immersed in and overwhelmed almost immediately by a strong tidal field that could break it apart, all while in free fall (*plunge*) toward the center of Jupiter.
 
@@ -812,7 +812,7 @@ In a single frame, therefore, you can intuit where the particles are going, wher
 
 **The Moon in the Earth-Moon system (quasi-circular / quiet regime).** Zoom on the Moon-Earth context shown earlier: focus on the Moon’s self-gravity in the co-rotating frame. Unlike Mercury at perihelion, the Moon’s red self-gravity pocket is well-defined and extensive, while the dark regions corresponding to the collinear Lagrange points L1 and L2 stand out clearly.
 
-<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Media not found"></div>
+<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Reference diagram of the effective potential and the five Lagrange points"></div>
 
 Image taken from Wikipedia that clearly shows an alternative 3D view of the effective potentials and the distribution of the Lagrange points, which is also useful for the Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinant-and-inverse-hessian)).
 
@@ -872,7 +872,7 @@ In summary: **local curvature acts as a compass** (it locates the critical point
 
 | Without overlay | With theoretical overlay [M] |
 |:---:|:---:|
-| <img src="docs/img/lagr.png" width="100%" alt="Media not found"> | <img src="docs/img/lagrM.png" width="100%" alt="Media not found"> |
+| <img src="docs/img/lagr.png" width="100%" alt="Lagrange Hunter: the L1-L5 points emerging numerically as bright blobs"> | <img src="docs/img/lagrM.png" width="100%" alt="Lagrange Hunter with the [M] overlay: analytical theoretical markers labelled L1-L5"> |
 
 *The Lagrange Hunter highlighting the stable L4/L5 points (blue) and unstable L1/L2/L3 points (red), showing how the theoretical overlay guides their rapid localization.*
 
@@ -988,7 +988,7 @@ A hypothetical scenario, constructed using the same logic as the EMRI in [§7.6.
 
 | Double precession (in real time) | Advanced stage: the shell pattern |
 |:---:|:---:|
-| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Media not found"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Media not found"> |
+| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Orbital trails of a BNS with extreme double eccentricity"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Shell pattern formed by the superposition of the orbital trails"> |
 
 On the left, the two twin neutron stars (cyan and magenta, ~1.5 solar masses each) precess simultaneously around their common center of mass: there are only two bodies, no third attractor at the center; the “center” of the image is simply the midpoint of the system. On the right is a later stage of the same simulation: the overlap of the historical trails of the two precessions draws a shell-like pattern that is unplanned and emerged simply by allowing the history of the two orbits to accumulate on the screen.
 
@@ -998,7 +998,7 @@ On the left, the two twin neutron stars (cyan and magenta, ~1.5 solar masses eac
 
 The first video shows a wavefront formation very similar to the one already seen for the EMRI. The second, covering the same interval but zoomed in, clearly reveals the two quadrupoles forming statically before and after the apocenter (the same “naked quadrupole” as in [§7.6.4](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter), here doubled) and then rotating and merging in the violent emission at the pericenter.
 
-As in the EMRI, but here more pronounced, the pair continuously alternates between **2nd-order dead reckoning** ([§3.2](#32-compensation-hybrid-dead-reckoning)) and the **2.5PN** bypass ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)): the latter is activated only when $v_{rel} > 0.1c$ **and** the distance falls below $1000\ R_s$ from the source body (the exact threshold of the `is_gw` gate, [§6.3](#63-how-the-25pn-is-used-in-the-simulator)). For this pair, the second condition is almost always satisfied (even at apocenter, 4,000 km remains below $1000\ R_s\approx4.456$ km for each star), so the relative velocity is the sole determining factor: $v_{rel}\approx0{,}0103c$ at apocenter (below the threshold) versus $v_{rel}\approx0{,}2060c$ at pericenter (above the threshold). The 2.5PN therefore activates at every passage through the pericenter (not just once, as in comparable BBHs) and outside that window, only dead reckoning remains active; its truncation residue produces a braking effect *similar* to that of the 2.5PN, but not quantitatively equivalent, as discussed (with all due caution) in [§3.3](#33-the-balance-between-braking-and-thrust). As coalescence approaches, the entire orbit contracts and $v_{rel}$ increases everywhere, until the threshold remains exceeded even far from the pericenter: the jerky alternation of the first cycles thus fades into a continuous 2.5PN regime in the last second. This scenario, in addition to being rare to observe, is visually rich for this very reason: it is likely the interplay of the two mechanisms (not just one) that shapes the pattern.
+As in the EMRI, but here more pronounced, the pair continuously alternates between **2nd-order dead reckoning** ([§3.2](#32-compensation-hybrid-dead-reckoning)) and the **2.5PN** bypass ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)): the latter is activated only when $v_{rel} > 0.1c$ **and** the distance falls below $1000\ R_s$ from the source body (the exact threshold of the `is_gw` gate, [§6.3](#63-how-the-25pn-is-used-in-the-simulator)). For this pair, the second condition is almost always satisfied (even at apocenter, 4,000 km remains below $1000\ R_s\approx4.456$ km for each star), so the relative velocity is the sole determining factor: $v_{rel}\approx0.0103c$ at apocenter (below the threshold) versus $v_{rel}\approx0.2060c$ at pericenter (above the threshold). The 2.5PN therefore activates at every passage through the pericenter (not just once, as in comparable BBHs) and outside that window, only dead reckoning remains active; its truncation residue produces a braking effect *similar* to that of the 2.5PN, but not quantitatively equivalent, as discussed (with all due caution) in [§3.3](#33-the-balance-between-braking-and-thrust). As coalescence approaches, the entire orbit contracts and $v_{rel}$ increases everywhere, until the threshold remains exceeded even far from the pericenter: the jerky alternation of the first cycles thus fades into a continuous 2.5PN regime in the last second. This scenario, in addition to being rare to observe, is visually rich for this very reason: it is likely the interplay of the two mechanisms (not just one) that shapes the pattern.
 
 
 
@@ -1065,11 +1065,11 @@ The simulator’s six heatmaps use normalization and color-mapping strategies th
 
 | 1. dΦ/dt | 2. Roche topology |
 |:---:|:---:|
-| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="Media not found"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Media not found"> |
+| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="dPhi/dt heatmap of the Alpha Centauri AB system"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Roche topology of the Alpha Centauri AB system"> |
 
 | 3. Lagrange Hunter | 4. Lagrange Hunter + overlay [M] |
 |:---:|:---:|
-| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Media not found"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Media not found"> |
+| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Lagrange Hunter applied to the Alpha Centauri AB pair"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Lagrange Hunter on Alpha Centauri AB with the theoretical marker overlay"> |
 
 Alpha Centauri is the closest star system to the Sun (4.37 light-years), a triple star system in which A and B (shown here) form the close pair (respectively, a Sun-like G-type star (1.1 solar masses) and an orange K-type dwarf (0.9 solar masses)) in mutual orbit with a semi-major axis of ~23 AU and a period of ~80 years.
 
@@ -1098,7 +1098,7 @@ The HUD appears at the bottom of the screen and is activated by:
 
 Once a body (referred to as the *target*) has been selected, the engine dynamically calculates its physical quantities both in absolute terms (referenced to the engine’s inertial origin) and in relative terms (referenced to the dominant gravitational attractor at that moment). The reference body is determined by calculating the local tidal force ($M/r^3$) to identify which mass exerts the predominant gravitational influence on the object (the same logic used to define the Hill sphere).
 
-<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media not found"></div>
+<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Orbital telemetry panel (HUD): absolute and relative position, velocity and acceleration of the locked body"></div>
 
 ##### Parameters and Displayed Quantities
 The telemetry panel is organized into columns that present the physical data calculated by the solver:
@@ -1203,13 +1203,13 @@ Quite simply: **the complete formula does not work numerically.**
 
 Although the term containing the accelerations correctly tracks the physical frequency of the wave, it introduces a serious numerical instability in the strain just before the moment of collision (*merger*). In this regime of extreme gravity ( $r \to 0$ ), even when using the true accelerations calculated directly by the physics engine (rather than estimated via finite differences), the explosion of gravitational forces diverging as $1/r^2$ at discrete time steps ( $dt$ ) produces inevitable spikes and very high-frequency fluctuations in the instantaneous acceleration. The result is a strain signal that diverges and oscillates violently (as shown in the analyzer graphs), compromising signal cleanliness.
 
-<img src="docs/img/strain_quadrupolo_reale.png" alt="Media not found">
+<img src="docs/img/strain_quadrupolo_reale.png" alt="Strain from the real second derivatives of the mass quadrupole, numerically unstable near the merger">
 
 *The strain calculated using the complete quadrupole formula (velocity + accelerations): the recorded scenario is the simulated GW170817 from [§6.6](#66-the-evidence-comparison-with-actual-data).*
 
 However, if we try eliminating the derivative of the accelerations and keeping only the velocity component ($v_x^2 - v_y^2$), we obtain an ideal strain: smooth, clean, and stable.
 
-<img src="docs/img/strain_proxy_velocita.png" alt="Media not found">
+<img src="docs/img/strain_proxy_velocita.png" alt="Stable strain obtained with the velocity-based kinematic proxy">
 
 *The same scenario (the simulated GW170817), using only the velocity proxy.*
 
@@ -1240,7 +1240,7 @@ Why does the strain stop abruptly in the model?
 * Consequently, the strain is **abruptly cut off** (cut-off) at the moment of contact, completely skipping the **ringdown** phase, which represents a relativistic post-merger signature.
 
 <div align="center">
- <img src="docs/img/ringdown_example.webp" width="450" alt="Media not found">
+ <img src="docs/img/ringdown_example.webp" width="450" alt="Reference example of a real post-merger ringdown">
 </div>
 
 ### 8.7 What Is a Spectrogram and How Is It Obtained
@@ -1270,11 +1270,11 @@ Here is a direct comparison between the simulated and real chirps:
 
 * **The simulated (clean) chirp**: This image shows the spectrogram of the strain recorded by the virtual probe in a neutron star binary scenario (GW170817), focused on the last **0.5 seconds** before the merger. Since this is pure simulation data, the spectral trace of the chirp is perfectly sharp and free of background noise.
 
- <img src="docs/img/sim_GW170817.png" alt="Media not found">
+ <img src="docs/img/sim_GW170817.png" alt="GW170817 strain recorded by the virtual LIGO probe of the simulator">
 
 * **The real (noisy) chirp from LIGO Hanford**: This image shows the real spectrogram obtained from public data from the LIGO Hanford (H1) detector for the same event (GW170817), focusing on the last **1.75 seconds** before the merger. Here, you can see how the real chirp (the rising frequency ramp) is embedded in the instrumental background noise but remains clearly identifiable thanks to the visual contrast of the spectrogram.
 
- <img src="docs/img/real_h1_GW170817.png" alt="Media not found">
+ <img src="docs/img/real_h1_GW170817.png" alt="Real GW170817 strain from the H1 detector (public GWOSC data)">
 
 
 #### How It’s Obtained: The STFT (Short-Time Fourier Transform)
@@ -1393,7 +1393,7 @@ These behaviors **are not explicitly programmed**: they emerge from the interact
 
 ### 10.1 Case Study: GW190814, Overdissipation in Deep Space
 
-The GW190814 scenario ( $q = 0{,}112$ : a 24.4-solar-mass black hole in the detector frame versus a 2.7-solar-mass *mass gap* object) is the engine’s most extreme test case: an initial separation of just 16 Schwarzschild radii from the primary, with the lighter body immersed for the *entire* inspiral in the companion’s Paczyński-Wiita well, in a regime nearly equivalent to that of a test particle.
+The GW190814 scenario ( $q = 0.112$ : a 24.4-solar-mass black hole in the detector frame versus a 2.7-solar-mass *mass gap* object) is the engine’s most extreme test case: an initial separation of just 16 Schwarzschild radii from the primary, with the lighter body immersed for the *entire* inspiral in the companion’s Paczyński-Wiita well, in a regime nearly equivalent to that of a test particle.
 
 **Objective observations.** The chirp is monotonic, smooth, and subluminal until capture: the signal shape is correct and “outperforms” Peters in a manner consistent with what was already observed for GW150914, where true numerical relativity also converges faster than Peters ([§6.6.2](#662-the-bbh-scenario-gw150914-comparison-with-sxs-numerical-relativity)). The time, however, does not: the merger occurs in **~13.9 seconds versus the 20.25 seconds expected by Peters**, with an excess that increases monotonically as it approaches the merger, not simply a wrong coefficient (which would yield a constant ratio):
 
@@ -1422,7 +1422,7 @@ Strain $h_+$ and STFT spectrogram of the scenario, during the last 0.5 seconds b
 
  | Venus and Mercury: dipoles embedded in the Sun’s dipole | Wide-angle view: Jupiter’s dipole rivals that of the Sun |
  |:---:|:---:|
- | <IMG src="docs/img/dphi_dt_sun.png" width="100%" alt="Venus and Mercury immersed in the Sun’s dipole"> | <IMG src="docs/img/dphi_sun_jupiter_comparison.png" width="100%" alt="Wide-angle comparison of the Sun and Jupiter"> |
+ | <img src="docs/img/dphi_dt_sun.png" width="100%" alt="Venus and Mercury immersed in the Sun’s dipole"> | <img src="docs/img/dphi_sun_jupiter_comparison.png" width="100%" alt="Wide-angle comparison of the Sun and Jupiter"> |
 
 - **The "slingshot" effect in chaotic clusters.** In dense clusters, the interplay between finite causal horizons and Dead Reckoning generates occasional **pseudo-relativistic ejections**: a body passing through a tight configuration receives an anomalous kick. This should be interpreted as a qualitative artifact of discrete causal dynamics, not as rigorous physics, and is related to the absence of tidal disruption (bodies do not shatter, so they survive encounters that would destroy them in reality).
 
@@ -1434,7 +1434,7 @@ Strain $h_+$ and STFT spectrogram of the scenario, during the last 0.5 seconds b
 
  This behavior cannot be attributed to a verifiable implementation error in the code. The exact cause remains unclear.
 
- <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Media not found"></div>
+ <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Anomalous behaviour of the L1 and L2 points in the Mars system"></div>
 
 - **Quasi-stable capture at L4/L5 (Earth-Sun).** When launching a satellite with a co-rotating boot guided by the simulation interface precisely to L4 or L5 in the Earth-Sun system, the body does not escape immediately: it orbits around the theoretical point for many orbital periods before gradually losing its lock.
 
@@ -1450,7 +1450,7 @@ In heliocentric scenarios, the Sun is initially set at rest at the origin ( $\ve
 
 **Because its dipole is still clearly visible.** The sensitivity of the dΦ/dt heatmap (as discussed in [§7.2](#72-time-derivative-dφdt) and in [ARCHITECTURE_DEEP_DIVE.md](ARCHITECTURE_DEEP_DIVE.md)) is calibrated to the largest mass present in the scene, namely the Sun itself. With a mass of that magnitude, even a minuscule reflection velocity is enough to generate a $M v_{rad}/r^2$ term that is far from negligible: the Sun does not have to move *that much* to be clearly visible; it only has to move *the small amount dictated by physics*.
 
-**What moves it and with what period.** Among the planets, Jupiter dominates the reflection: with a mass of $1{,}898\times10^{27}$ kg, it is more massive than all the other planets combined, and this is precisely why, in reality, the Sun-Jupiter center of mass lies outside the Sun’s surface. The resulting *wobble* inherits Jupiter’s orbital period: with the semi-major axis used by the preset (5.2044 AU), that period is **approximately 11.9 years (~4,333 days)**, not just a few hundred. It’s the same calculation Kepler used to launch Jupiter into orbit, applied on the scale of the Sun.
+**What moves it and with what period.** Among the planets, Jupiter dominates the reflection: with a mass of $1.898\times10^{27}$ kg, it is more massive than all the other planets combined, and this is precisely why, in reality, the Sun-Jupiter center of mass lies outside the Sun’s surface. The resulting *wobble* inherits Jupiter’s orbital period: with the semi-major axis used by the preset (5.2044 AU), that period is **approximately 11.9 years (~4,333 days)**, not just a few hundred. It’s the same calculation Kepler used to launch Jupiter into orbit, applied on the scale of the Sun.
 
 **The shape: arcs separated by cusps.** As seen in the screenshot below, the Sun’s path around the center of mass consists of smooth arcs separated by sharp cusps, the points where the direction of the reflection reverses abruptly. With the entire solar system active (not just Jupiter in isolation), the Sun’s reflection is the sum of multiple overlapping planetary contributions with different periods (Jupiter is dominant, but not the only one): it is this overlap (not a single periodic term) that produces the cusps. This is the same qualitative signature found in the classic diagrams of solar motion around the center of mass discussed in heliophysical literature.
 

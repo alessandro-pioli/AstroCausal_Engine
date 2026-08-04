@@ -225,7 +225,7 @@ Se la gravità punta verso la posizione **ritardata** della sorgente, in un'orbi
  <p>L'accelerazione storica $\vec{a}_{ret}$ non è memorizzata: è ricostruita al volo per <strong>differenze finite</strong> tra velocità consecutive.</p>
  </td>
  <td valign="top" align="center" width="40%">
- <img src="docs/gif/sagA_orbit.gif" width="320" alt="Media non trovato">
+ <img src="docs/gif/sagA_orbit.gif" width="320" alt="Sistema Solare in orbita attorno a Sagittarius A* con dead reckoning ibrido attivo">
  </td>
  </tr>
 </table>
@@ -249,7 +249,7 @@ Va segnalato dove l'analogia diventa fragile. Sul piano numerico, quel residuo �
 
 | Rosetta : inspiral | Rosetta : late inspiral |
 |:---:|:---:|
-| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Media non trovato"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Media non trovato"> |
+| <img src="docs/gif/EMRI_rosetta.gif" width="300" alt="Precessione absidale a rosetta di un'orbita EMRI"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="380" alt="Fase avanzata della rosetta EMRI, con l'orbita che si stringe verso il plunge"> |
 | Scala ≈ 7M × 4M km · 5 min/s · il BH viola è 100× quello verde · ~6 giorni dalla prima orbita, ~7 al merge | Scala 1,2M × 825.000 km · late inspiral · 13 giorni e 7 ore, ~4 ore al merge |
 
 **Showcase: EMRI / orbita a rosetta**: l'esempio appena descritto, ripreso in diretta. La scia del corpo leggero disegna una **rosetta**: l'orbita precessa (non si richiude) per la precessione apsidale di Paczyński-Wiita vista sopra e nel contempo si stringe, lentamente nei primi giorni (GIF a sinistra), sempre più in fretta verso il merger (a destra), man mano che i lampi 2.5PN al pericentro si fanno più fitti e il residuo del dead reckoning lavora su un'orbita sempre più corta.
@@ -370,7 +370,7 @@ Il Sole viene spinto da un'accelerazione artificiale (ART) costante da $0{,}7c$ 
 
 Moto della seguente dimostrazione: +x, ovvero da sinistra verso destra.
 
-<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/gif/07_to_c_fast.gif" width="100%" alt="Contrazione di Lienard-Wiechert delle isolinee del potenziale mentre la sorgente accelera da 0,7c verso c"></div>
 
 L'inquadratura è di circa **180 × 120 AU** (decine di miliardi di km per lato). A $0{,}7c$ (≈ 209.855 km/s) è già visibile l'effetto **Liénard-Wiechert**: il pozzo gravitazionale comincia a deformarsi rispetto alla simmetria sferica. Salendo verso $c$ (299.792,458 km/s) lo schiacciamento cresce in modo non lineare, finché (fittiziamente, oltre $c$ ) comincia a formarsi il **cono di Mach causale** descritto in [§5.1](#51-il-tempo-di-volo-per-sorgenti-in-moto-rettilineo-formula-chiusa).
 
@@ -512,13 +512,13 @@ Questa lunga lista di frequenze discrete viene rappresentata graficamente come p
 
 **Fase 1, la vecchia logica.** All'inizio non è stato implementato il 2.5PN completo, bensì un *frammento* della formula: un attrito viscoso $\vec{F} \propto -m_{src}^2 \vec{v}_{rel}/(r^3 c^5)$ , moltiplicato per un fattore euristico, `m_chirp_mult`, tarato a mano perché la coppia coalescesse nei tempi attesi. I tempi risultavano credibili, ma la dinamica aveva tre difetti. La massa al quadrato, al posto del prodotto reale delle due masse, sbilanciava la ripartizione della forza e faceva **oscillare il baricentro**. Il dead reckoning lineare, nel regime estremo, lasciava un'aberrazione residua. Il fattore correttivo, agendo come spinta aggiuntiva, aumentava l'eccentricità. Il risultato è la prima figura, con i punti che oscillano in modo marcato attorno alla curva di Peters.
 
-<img src="docs/img/chirp_fase1_old_logic.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase1_old_logic.png" alt="Fase 1: traccia del chirp con la vecchia logica m_chirp_mult, divergente dalla curva di Peters">
 
 **Figura: Fase 1 (vecchia logica)**: frammento di 2.5PN + fattore `m_chirp_mult` + dead reckoning lineare. I punti tracciati oscillano in modo incostante e la forma della curva non combacia del tutto.
 
 **Fase 2, il 2.5PN reale.** È stato sostituito il frammento con la **formula completa di Damour-Deruelle** ([§6.3](#63-come-viene-usato-il-25pn-nel-simulatore)), tenendo ancora il dead reckoning e un `m_chirp_mult` ridotto a correzione lieve. Effetto a doppia faccia: la **media** del chirp ricalca molto meglio Peters (la curva combacia), ma l'**oscillazione del baricentro peggiora**, addirittura più che in Fase 1. Meglio in media, peggio in stabilità.
 
-<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Fase 2: traccia del chirp con la reazione di radiazione 2.5PN reale implementata">
 
 **Figura: Fase 2 (2.5PN reale, correzione lieve)**: 2.5PN reale + dead reckoning + `m_chirp_mult` lieve.
 
@@ -544,7 +544,7 @@ Questa lunga lista di frequenze discrete viene rappresentata graficamente come p
 
 **Il risultato finale.** Con il modello parameter-free corretto, la massa chirp stimata dalla simulazione cade allo **0,97%** dall'analitica di Peters, un'aderenza quasi perfetta e guadagnata attraverso le correzioni descritte sopra. Contro lo strain reale osservato (H1) lo scarto è invece dell'**8,45%**.
 
-<img src="docs/img/chirp_fase3_finale.png" alt="Media non trovato">
+<img src="docs/img/chirp_fase3_finale.png" alt="Fase 3: modello finale parameter-free, punti simulati che seguono la curva analitica di Peters">
 
 **Figura: Fase 3 (risultato finale)**: il modello finale (parameter-free, fattore correttivo rimosso, bug della prima accelerazione corretto, dead reckoning lineare sostituito dal bypass a posizioni presenti, stima della massa chirp corretta). I punti tracciati aderiscono alla curva di Peters: l'oscillazione e con essa l'eccentricità residua, è pressoché scomparsa.
 
@@ -617,7 +617,7 @@ Tutte le heatmap calcolano, per ogni pixel, un campo derivato dalle sorgenti. Qu
 La somma dei contributi causali di tutti i corpi, con la correzione di Liénard-Wiechert del [§5](#5-deformazione-di-liénard-wiechert) per le sorgenti rapide. Visualizza il pozzo di potenziale e le sue deformazioni. Come da convenzione dichiarata in apertura, il valore fisico è $\Phi = -G\sum_k M_k/r_k$ (negativo, quello che restituisce il doppio-click). Il renderer mappa la magnitudine $\sum_k M_k/r_k$ , senza $G$ né segno, perché per la scala cromatica sono fattori ininfluenti.
 
 <div align="center">
- <img src="docs/img/solar_system_1.png" width="600" alt="Media non trovato">
+ <img src="docs/img/solar_system_1.png" width="600" alt="Heatmap del potenziale gravitazionale scalare del Sistema Solare">
 </div>
 
 Nella figura si osserva la classica topografia dei primi pianeti del sistema solare in modalità $\Phi$ ("phi mode"). A rendere speciale questa visualizzazione è la sua interazione con l'informazione gravitazionale a velocità finita $c$ : in vari scenari o tramite interazioni in-game è possibile visualizzare i fronti d'onda comprimersi o espandersi, la sezione 2D del **[cono di luce di §2.1](#21-il-cono-di-luce-e-il-diagramma-di-minkowski)** resa visibile quando un corpo appare o scompare di colpo. Per un'analisi dettagliata di questa distorsione si rimanda al capitolo [§5](#5-deformazione-di-liénard-wiechert), dedicato alla deformazione di Liénard-Wiechert e alla contrazione di Lorentz.
@@ -637,7 +637,7 @@ Sono i due pattern visivi che la $d\Phi/dt$ mostra più chiaramente e affiancarl
 
 | Dipolo del corpo singolo in moto | Spirali della coppia binaria |
 |:---:|:---:|
-| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Media non trovato"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Media non trovato"> |
+| <img src="docs/gif/dphi_dipolo_giove.gif" width="100%" alt="Dipolo dPhi/dt di Giove in moto isolato: fronte blu in testa, fronte rosso in coda"> | <img src="docs/gif/dphi_spirale_binaria.gif" width="100%" alt="Spirali concentriche dPhi/dt emesse da una binaria di stelle di neutroni in inspiral"> |
 | Il pozzo trasla con la sorgente: il lato in avvicinamento al pixel diventa blu, quello in allontanamento rosso. È il **dipolo che si sposta**, non radiazione. Nell'esempio Giove orbita a velocità stabile (≈ 13 km/s) e il suo dipolo accompagna il moto, ruotando con esso; attorno, in ordine le lune: Amaltea, Io, Europa, Ganimede, Callisto. Anche le lune maggiori possiedono il proprio dipolo che si fonde con quello di Giove, ma a causa dell'inquadratura di visualizzazione molto dezoomata non sono risolvibili nella GIF dimostrativa. La sensibilità è tarata sulla massa massima dello scenario (il Sole in questo caso) e un selettore (fader) permette all'utente di scalare questo rapporto a piacimento, estendendo e riducendo luminosità ed estensione dei dipoli in modo proporzionato. | Scenario: *Stelle di Neutroni Binarie, Orbita Stabile*, velocità orbitale: 1580 km/s, inquadratura camera $\approx$ 2 AU $\times$ 2 AU, velocità simulazione: 40 s/s. Due stelle di neutroni mediamente massicce (1,5 masse solari) orbitano a una distanza di sicurezza di 40.000 km (nessun merger imminente). È proprio grazie alla causalità (la velocità finita $c$ di propagazione dell'informazione) che i dipoli dei due corpi in moto non si cancellano a distanza, ma vengono ritardati rispetto a ciascun pixel dello schermo, avvitandosi in un pattern a spirale pienamente emergente. |
 
 
@@ -691,17 +691,17 @@ proporzionale alla parte deviatorica del tensore e misura il massimo **sforzo di
 
 **Showcase: l'estremo bianco, una Pulsar**
 
-<img src="docs/img/extreme_tidal.png" width="700" alt="Media non trovato">
+<img src="docs/img/extreme_tidal.png" width="700" alt="Mappa dello stress di marea in campo gravitazionale estremo">
 
 Inquadratura di circa 10.000 × 10.000 km attorno a una pulsar: le sfumature vanno dal rosso denso della disruption macro-scala fino al bianco accecante della fascia di disruption micro-scala a ridosso del corpo compatto, il puntino ciano al centro.
 
 **Showcase: Sistema di Giove (Europa e Io)**
 
-<img src="docs/img/tidal_stress_Io.png" width="800" alt="Media non trovato">
+<img src="docs/img/tidal_stress_Io.png" width="800" alt="Stress di marea lungo l'orbita di Io attorno a Giove">
 
 In alto a sinistra la luna gioviana **Europa**, immersa nel blu verso il ciano della mappa tidale di Giove. Al centro **Io**, in pieno ciano: è la stessa marea che spiega perché sia il corpo roccioso con maggior attività vulcanica dell'intero sistema solare. Da notare come la heatmap consideri anche lo stress mareale che ciascuna luna genera a sua volta e come essa stessa risulti deformata dall'immersione nella marea di Giove.
 
-<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Media non trovato">
+<img src="docs/img/tidal_Io_zoom.png" width="380" alt="Zoom sul gradiente di stress di marea su Io">
 
 > **NdA.** I due lobi neri trasversali che si vedono attorno a ciascuna luna sono punti in cui lo shear $\sigma$ visualizzato si annulla, ma per un motivo **molto diverso** da quello del blu scuro lontano dai corpi. Nel blu lontano, $\Phi_{xx}, \Phi_{yy}, \Phi_{xy}$ sono tutti piccoli perché il campo è piatto. Nei lobi neri vicini alla luna, al contrario, le singole componenti dell'Hessiana sono **grandi e consistenti** e si combinano in modo che $\Phi_{xx} = \Phi_{yy}$ e $\Phi_{xy} = 0$ : la somma di quadrati $(\Phi_{xx}-\Phi_{yy})^2 + 4\Phi_{xy}^2$ va a zero non per assenza di campo, ma perché gli autovalori dell'Hessiana coincidono. La marea lì è localmente **isotropa**: stira allo stesso modo in tutte le direzioni del piano. Questi due punti nascono dall'interferenza geometrica fra il contributo della luna stessa (radiale, simmetrico) e quello di sfondo di Giove (anisotropo, orientato lungo l'asse luna-Giove). Proprio nelle due posizioni trasverse i due tensori si combinano in modo da pareggiare le direzioni principali.
 >
@@ -737,7 +737,7 @@ Ed è qui che il centrifugo è protagonista. La sola gravità, vicino a un corpo
 
 > **Una precisazione sulla terminologia.** Quando in questa sezione parliamo di *sella* o *cupola* non intendiamo punti critici isolati (con gradiente zero), ma la **forma locale** della superficie potenziale in *ogni pixel* della regione: tutto il rosso ha curvatura **iperbolica** (forma di sella), tutto il blu ha curvatura **ellittica** (forma di cupola). Il gradiente però è non-nullo quasi ovunque e una particella lasciata ferma in quei pixel **cade o viene scagliata** lungo il gradiente. Solo nei 5 punti di Lagrange si combinano entrambe le proprietà (gradiente zero **e** forma iperbolica o ellittica) ed è questa caratteristica a farne veri *punti critici* (trattati in [§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)).
 
-#### 7.4.2 Mappatura cromatica (segno e intensità di $D$ )
+#### 7.4.2 Mappatura cromatica (segno e intensità di $D$)
 
 Ogni pixel porta due informazioni. La **tinta** dà il segno di $D$ , cioè la topologia locale. La **saturazione** ne dà l'intensità. Per rendere l'intensità confrontabile in ogni scenario, $D$ viene diviso per $\omega^4$ , la scala naturale del frame co-rotante che ne condivide le unità di misura. La quantità mappata è quindi $\log_{10}(|D|/\omega^4)$ , limitata a $[-3, +3]$ . La rampa parte spenta dove $D \approx 0$ e satura a ridosso dei corpi, dove i termini $1/r^3$ dell'Hessiana esplodono:
 
@@ -781,11 +781,11 @@ dove $D_g$ è la separazione totale della coppia che chiuderebbe un'orbita circo
 
 In un'orbita pulita e isolata, invece, l'anello resta immobile mentre la soglia rosso/blu del lobo di Roche respira dentro e fuori di esso: la **divergenza istantanea fra i due** è la misura visiva diretta dell'eccentricità.
 
-<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/moon_earth_roche.png" width="600" alt="Topologia di Roche della coppia Terra-Luna con overlay dell'orbita circolare ideale"></div>
 
 Sistema Luna-Terra: la Luna è al suo apogeo a più di 400.000 km dalla Terra e infatti ha superato l'anello dell'orbita circolare ideale. Gli altri dettagli che emergono verranno discussi nel capitolo successivo.
 
-<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/gif/earth_swap_jupiter.gif" width="70%" alt="Topologia di Roche che reagisce alla sostituzione della massa terrestre con quella di Giove"></div>
 
 L'animazione mostra un esperimento *what if*: sostituire la Terra con Giove e osservare il comportamento della Luna di conseguenza. Essa, conservando il momento angolare originario (tarato per la Terra), si trova nel peggior scenario possibile: la sua nuova orbita ideale, con quell'$h$ , risulta essere vicina al centro di Giove. Inoltre si ritrova immersa e sopraffatta quasi subito da un campo tidale forte che potrebbe frammentarla, il tutto in caduta libera (*plunge*) verso il centro di Giove.
 
@@ -800,7 +800,7 @@ Questa è l'unica heatmap del simulatore che codifica **tre quantità fisiche di
  * *Regime di plunge, gravità dominante.* Il campo è rosso e la saturazione verso il giallo neon segnala l'esplodere dei termini $1/r^3$ dell'Hessiana. Un corpo esteso che precipita qui subisce un forte stress tidale e, se abbastanza grande, può frammentarsi.
  * *Regime centrifugo, orbite eccentriche.* Lo stress si legge dalla compressione della nocciolina del punto 1. Quando la tasca rossa si contrae fin dentro il raggio solido del corpo, le estremità materiali sporgono nel dominio esterno e la centrifuga (o la gravità del compagno) le strappa via. È la disgregazione per *Roche Lobe Overflow*, lo stesso meccanismo che alimenta i dischi di accrescimento nelle binarie interagenti, attorno a buchi neri, nane bianche e stelle di neutroni.
 
-3. **Punti di Lagrange L1 e L2** *(dalla luminosità, già vista in [§7.4.2](#742-mappatura-cromatica-segno-e-intensità-di-d-))*. Sono i soli due punti di equilibrio che questa heatmap rende visibili da soli, ben nitidi nello zoom sulla Luna a fine sezione. Attenzione però a un caso limite. Un terzo corpo molto forte nell'area di influenza può impedirne l'emersione, come accade nel sistema Terra-Luna quando il Sole è attivo.
+3. **Punti di Lagrange L1 e L2** *(dalla luminosità, già vista in [§7.4.2](#742-mappatura-cromatica-segno-e-intensità-di-d))*. Sono i soli due punti di equilibrio che questa heatmap rende visibili da soli, ben nitidi nello zoom sulla Luna a fine sezione. Attenzione però a un caso limite. Un terzo corpo molto forte nell'area di influenza può impedirne l'emersione, come accade nel sistema Terra-Luna quando il Sole è attivo.
 
 In una sola inquadratura, dunque, si intuisce dove vanno le particelle, dove la marea distrugge e dove sono gli equilibri della coppia. È la mappa più densa di informazioni del simulatore.
 
@@ -812,7 +812,7 @@ In una sola inquadratura, dunque, si intuisce dove vanno le particelle, dove la 
 
 **La Luna nel sistema Terra-Luna (Regime quasi circolare / tranquillo).** Zoom sul contesto Luna-Terra prima mostrato: focus sull'autogravità della Luna nel sistema corotante. A differenza di Mercurio al perielio, la tasca di autogravità rossa della Luna è ben definita ed estesa, mentre le fosse scure corrispondenti ai punti di Lagrange collineari L1 e L2 emergono in modo nitido.
 
-<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/wiki_lagrange_Ueff.jpg" width="600" alt="Diagramma di riferimento del potenziale efficace e dei cinque punti di Lagrange"></div>
 
 Immagine presa da Wikipedia che mostra in modo chiaro una visione alternativa e 3D dei potenziali efficaci e della distribuzione dei punti di Lagrange, utile anche per il Lagrange Hunter ([§7.5](#75-lagrange-hunter-determinante-e-hessiana-inversa)).
 
@@ -872,7 +872,7 @@ In sintesi: la **curvatura locale fa da compasso** (localizza il punto critico t
 
 | Senza overlay | Con overlay teorico [M] |
 |:---:|:---:|
-| <img src="docs/img/lagr.png" width="100%" alt="Media non trovato"> | <img src="docs/img/lagrM.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/img/lagr.png" width="100%" alt="Lagrange Hunter: i punti L1-L5 che emergono numericamente come blob luminosi"> | <img src="docs/img/lagrM.png" width="100%" alt="Lagrange Hunter con overlay [M]: marker teorici analitici etichettati L1-L5"> |
 
 *Il Lagrange Hunter che illumina i punti stabili L4/L5 (blu) e instabili L1/L2/L3 (rossi), mostrando come l'overlay teorico guidi alla loro localizzazione rapida.*
 
@@ -988,7 +988,7 @@ Uno scenario fittizio, costruito con la stessa logica dell'EMRI di [§7.6.4](#76
 
 | Doppia precessione (in tempo reale) | Fase avanzata: il pattern a conchiglia |
 |:---:|:---:|
-| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Media non trovato"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/gif/extreme_eccentric_orbit_trails.gif" width="100%" alt="Scie orbitali di una BNS a doppia eccentricita estrema"> | <img src="docs/img/extreme_eccentric_orbit_pattern.png" width="100%" alt="Pattern a gusci formato dalla sovrapposizione delle scie orbitali"> |
 
 A sinistra le due stelle di neutroni gemelle (ciano e magenta, ~1,5 masse solari ciascuna) precessano simultaneamente attorno al comune baricentro: sono solo due corpi, nessun terzo attrattore al centro, il "centro" dell'immagine è semplicemente il punto medio del sistema. A destra una fase più avanzata della stessa simulazione: la sovrapposizione delle scie storiche delle due precessioni disegna uno schema a conchiglia, non programmato, emerso semplicemente lasciando accumulare la storia delle due orbite sullo schermo.
 
@@ -1065,11 +1065,11 @@ Le sei heatmap del simulatore usano strategie di normalizzazione e mapping croma
 
 | 1. dΦ/dt | 2. Topologia di Roche |
 |:---:|:---:|
-| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="Media non trovato"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Media non trovato"> |
+| <img src="docs/img/Alpha_dphi_dt.png" width="100%" alt="Heatmap dPhi/dt del sistema Alpha Centauri AB"> | <img src="docs/img/Alpha_Roche.png" width="90%" alt="Topologia di Roche del sistema Alpha Centauri AB"> |
 
 | 3. Lagrange Hunter | 4. Lagrange Hunter + overlay [M] |
 |:---:|:---:|
-| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Media non trovato"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Media non trovato"> |
+| <img src="docs/img/Alpha_lagrange_hunter.png" width="100%" alt="Lagrange Hunter applicato alla coppia Alpha Centauri AB"> | <img src="docs/img/Alpha_lagrange_hunter_overlay.png" width="100%" alt="Lagrange Hunter su Alpha Centauri AB con overlay dei marker teorici"> |
 
 Alpha Centauri è il sistema stellare più vicino al Sole (4,37 anni luce), un sistema triplo di cui A e B (qui inquadrate) formano la coppia stretta, rispettivamente una stella simile al Sole di tipo G (1,1 masse solari) e una nana arancione di tipo K (0,9 masse solari), in orbita reciproca con semiasse ~23 UA e periodo ~80 anni.
 
@@ -1098,7 +1098,7 @@ L'HUD appare nella parte inferiore dello schermo e si attiva:
 
 Una volta selezionato un corpo (denominato *target*), il motore calcola dinamicamente le sue grandezze fisiche sia in senso assoluto (riferite all'origine inerziale del motore) sia in senso relativo (riferite all'attrattore gravitazionale dominante in quel momento). La determinazione del corpo di riferimento avviene tramite il calcolo locale della forza di marea ( $M/r^3$ ), identificando quale massa eserciti l'influenza gravitazionale prevalente sull'oggetto (la stessa logica utilizzata per definire la sfera di Hill).
 
-<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Media non trovato"></div>
+<div align="center"><img src="docs/img/fly_stats.png" width="100%" alt="Pannello di telemetria orbitale (HUD): posizione, velocita e accelerazione assolute e relative del corpo agganciato"></div>
 
 ##### Parametri e grandezze visualizzate
 Il pannello di telemetria è strutturato in colonne che organizzano i dati fisici calcolati dal risolutore:
@@ -1203,13 +1203,13 @@ Molto banalmente: **la formula completa numericamente non funziona.**
 
 Sebbene il termine contenente le accelerazioni tracci correttamente la frequenza fisica dell'onda, esso introduce una grave instabilità numerica nello strain proprio vicino al momento della collisione (*merger*). In questo regime di gravità estrema ( $r \to 0$ ), anche utilizzando le accelerazioni reali calcolate direttamente dall'engine fisico (anziché stimate per differenze finite), l'esplosione delle forze gravitazionali divergenti come $1/r^2$ a passi temporali discreti ( $dt$ ) produce inevitabili sbalzi e fluttuazioni ad altissima frequenza nell'accelerazione istantanea. Il risultato è uno strain completo che diverge e oscilla violentemente (come mostrato nei grafici dell'analizzatore), compromettendo la pulizia del segnale.
 
-<img src="docs/img/strain_quadrupolo_reale.png" alt="Media non trovato">
+<img src="docs/img/strain_quadrupolo_reale.png" alt="Strain dalle derivate seconde reali del quadrupolo di massa, numericamente instabile vicino al merger">
 
 *Lo strain con la formula del quadrupolo completa (velocità + accelerazioni): lo scenario registrato è la GW170817 simulata di [§6.6](#66-le-prove-confronto-col-dato-reale).*
 
 Provando invece a eliminare la derivata delle accelerazioni e mantenendo solo il pezzo di velocità ( $v_x^2 - v_y^2$ ), si ottiene uno strain ideale: liscio, pulito e stabile.
 
-<img src="docs/img/strain_proxy_velocita.png" alt="Media non trovato">
+<img src="docs/img/strain_proxy_velocita.png" alt="Strain stabile ottenuto con il proxy cinematico basato sulle velocita">
 
 *Lo stesso scenario (la GW170817 simulata), tenendo il solo proxy di velocità.*
 
@@ -1240,7 +1240,7 @@ Perché nel modello lo strain si interrompe di colpo?
 * Di conseguenza lo strain viene **tagliato di netto** (cut-off) al momento del contatto, saltando completamente la fase di **ringdown** che rappresenta una firma post-merger relativistica.
 
 <div align="center">
- <img src="docs/img/ringdown_example.webp" width="450" alt="Media non trovato">
+ <img src="docs/img/ringdown_example.webp" width="450" alt="Esempio di riferimento di un ringdown reale post-merger">
 </div>
 
 ### 8.7 Cos'è uno spettrogramma e come si ottiene
@@ -1270,11 +1270,11 @@ Ecco un confronto diretto tra il chirp simulato e quello reale:
 
 * **Il chirp simulato (pulito)**: Questa immagine mostra lo spettrogramma dello strain registrato dalla sonda virtuale in uno scenario di binaria di stelle di neutroni (GW170817), focalizzato sugli ultimi **0.5 secondi** prima del merger. Trattandosi di dati di simulazione puri, la traccia spettrale del chirp risulta perfettamente nitida e priva di rumore di fondo.
 
- <img src="docs/img/sim_GW170817.png" alt="Media non trovato">
+ <img src="docs/img/sim_GW170817.png" alt="Strain di GW170817 registrato dalla sonda LIGO virtuale del simulatore">
 
 * **Il chirp reale di LIGO Hanford (rumoroso)**: Questa immagine mostra lo spettrogramma reale ottenuto dai dati pubblici del rivelatore LIGO Hanford (H1) per lo stesso evento (GW170817), focalizzato sugli ultimi **1.75 secondi** prima del merger. Qui si nota come il chirp reale (la rampa di frequenza ascendente) sia immerso nel rumore strumentale di fondo, ma rimanga chiaramente identificabile grazie al contrasto visivo dello spettrogramma.
 
- <img src="docs/img/real_h1_GW170817.png" alt="Media non trovato">
+ <img src="docs/img/real_h1_GW170817.png" alt="Strain reale di GW170817 dal rivelatore H1 (dati pubblici GWOSC)">
 
 
 #### Come si ottiene: la STFT (Short-Time Fourier Transform)
@@ -1434,7 +1434,7 @@ Strain $h_+$ e spettrogramma STFT dello scenario, negli ultimi 0,5 secondi prima
 
  Il comportamento non è riconducibile a un errore di implementazione verificabile nel codice. La causa esatta resta un dubbio aperto.
 
- <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Media non trovato"></div>
+ <div align="center"><img src="docs/gif/L1_L2_mars_anomaly.gif" width="500" alt="Comportamento anomalo dei punti L1 e L2 nel sistema di Marte"></div>
 
 - **Cattura quasi-stabile in L4/L5 (Terra-Sole).** Lanciando un satellite con il boot co-rotante guidato dall'interfaccia di simulazione esattamente su L4 o L5 nel sistema Terra-Sole, il corpo non fugge subito: orbita attorno al punto teorico per molti periodi orbitali prima di perdere gradualmente l'aggancio.
 
