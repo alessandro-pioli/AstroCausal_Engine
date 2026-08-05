@@ -484,7 +484,7 @@ where $f$ is the instantaneous frequency detected and $\dot{f} = df/dt$ is its t
 
 > [!WARNING]
 > ### Validation Disclaimer
-> The author is neither a physicist nor a mathematician by trade. The simulator explicitly calculates a small set of standard formulas (retarded-time gravity, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, Damour-Deruelle reaction $2.5\text{PN}$); there are no more free calibration coefficients and the engine runs **parameter-free**. The formalization was built with the help of language models and standard references and would greatly benefit from a review by professionals in the field, an aspect already outlined in the **Roadmap** below.
+> The author is neither a physicist nor a mathematician by trade. The engine, its architecture, the numerical choices and the validation work are the author's own. The simulator explicitly computes a small set of standard formulas (retarded-time gravity, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, Damour-Deruelle $2.5\text{PN}$ reaction), taken from standard references; no free calibration coefficients remain and the engine runs **parameter-free**. Language models were used as writing assistance for the documentation, and for a few implementation details that are flagged in the relevant sections. The formal treatment would still benefit a great deal from a look by professionals in the field, an aspect already outlined in the **Roadmap** below.
 
 ### Roadmap & To-Do List
 

@@ -484,7 +484,7 @@ dove $f$ è la frequenza istantanea rilevata e $\dot{f} = df/dt$ la sua derivata
 
 > [!WARNING]
 > ### Disclaimer di Validazione
-> L'autore non è né un fisico né un matematico di mestiere. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle); non ci sono più coefficienti liberi di taratura e il motore gira **parameter-free**. La formalizzazione è stata costruita con l'aiuto di modelli linguistici e di riferimenti standard e gioverebbe molto di uno sguardo da professionisti del settore, un aspetto già tracciato nella **Roadmap** qui sotto.
+> L'autore non è né un fisico né un matematico di mestiere. Il motore, l'architettura, le scelte numeriche e il lavoro di validazione sono opera dell'autore. Il simulatore calcola esplicitamente un piccolo insieme di formule standard (gravità a tempo ritardato, Velocity Verlet, Liénard-Wiechert, Paczyński-Wiita, reazione $2.5\text{PN}$ di Damour-Deruelle), tratte da riferimenti standard; non ci sono più coefficienti liberi di taratura e il motore gira **parameter-free**. I modelli linguistici sono stati usati come assistenza alla scrittura della documentazione e per alcuni dettagli implementativi, segnalati nelle rispettive sezioni. La formalizzazione gioverebbe comunque di uno sguardo da professionisti del settore, un aspetto già tracciato nella **Roadmap** qui sotto.
 
 ### Roadmap & To-Do List
 
