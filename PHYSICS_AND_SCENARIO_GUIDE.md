@@ -518,7 +518,7 @@ This long list of discrete frequencies is plotted as red points superimposed on 
 
 **Phase 2, the actual 2.5PN.** The fragment was replaced with the **complete Damour-Deruelle formula** ([§6.3](#63-how-the-25pn-is-used-in-the-simulator)), while still retaining dead reckoning and a reduced `m_chirp_mult` for slight correction. A double-edged sword: the **average** of the chirp matches Peters much better (the curve matches), but the **centroid oscillation worsens**, even more so than in Phase 1. Better on average, worse in terms of stability.
 
-<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Average not found">
+<img src="docs/img/chirp_fase2_2p5pn_reale.png" alt="Phase 2: chirp trace with the real 2.5PN radiation reaction implemented">
 
 **Figure: Phase 2 (actual 2.5PN, mild correction)**: actual 2.5PN + dead reckoning + mild `m_chirp_mult`.
 
@@ -1010,7 +1010,7 @@ Now that we’ve covered the six families, let’s take a conceptual step back: 
 
 | dΦ/dt Heatmap | GW Strain Heatmap |
 |:---:|:---:|
-| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
+| <img width="100%" alt="dPhi/dt heatmap: time variation of the retarded causal potential" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
 | **Temporal variation of the scalar potential ($d\Phi/dt$):** Maps the variation over time of the retarded causal gravitational potential: it indicates how much and where the scalar gravitational well of each body is shifting. The visible spiral fronts indicate the propagation at finite speed $c$ of these potential variations (the dipole induced by the motion of the sources). This visualization captures pure scalar radiation, which serves as a qualitative and visual analog for the chirp frequencies. | **Projected Strain (GW Quadrupole Strain):** Maps the tensor projection of the mass quadrupole’s gravitational strain. The alternating cyan and red lobes indicate the polarities of the quadrupole radiation projected along the observer’s line of sight, highlighting the actual spin-2 symmetry of the rotating binary system and eliminating spurious monopoles or gradients. |
 
 **Where these waves are seen and what they really are.** 

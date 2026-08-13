@@ -1010,7 +1010,7 @@ Chiuse le sei famiglie, un passo indietro concettuale: che cosa *sono*, fisicame
 
 | Heatmap dΦ/dt | Heatmap GW Strain |
 |:---:|:---:|
-| <img width="100%" alt="Image" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
+| <img width="100%" alt="Heatmap dPhi/dt: variazione nel tempo del potenziale causale ritardato" src="https://github.com/user-attachments/assets/d7102ce9-0da3-4c8f-a7c3-8b4e324957e6" /> | <video src="https://github.com/user-attachments/assets/e61bc2a5-c188-4add-8e5d-3aed2efc135d" controls="controls" width="100%"></video> |
 | **Variazione temporale del potenziale scalare ( $d\Phi/dt$ ):** Mappa la variazione nel tempo del potenziale gravitazionale causale ritardato: dice quanto e dove si sta spostando il pozzo gravitazionale scalare di ciascun corpo. I fronti a spirale visibili indicano la propagazione a velocità finita $c$ di queste variazioni del potenziale (il dipolo indotto dal moto delle sorgenti). Questa visualizzazione cattura una radiazione scalare pura, che funge da analogo qualitativo e visivo per le frequenze del chirp. | **Deformazione proiettata (GW Strain Quadrupolare):** Mappa la proiezione tensoriale dello strain gravitazionale del quadrupolo di massa. I lobi alternati ciano e rosso indicano le polarità della radiazione di quadrupolo proiettata lungo la direzione dell'osservatore, estraendo la reale simmetria di spin-2 del sistema binario in rotazione ed eliminando monopoli o gradienti spuri. |
 
 **Dove si vedono queste onde e cosa sono realmente.** 

@@ -257,7 +257,7 @@ The explicit calculation, with a source at 30 km/s and $DT = 0.1$ s, is evaluate
 
 The graph extends the calculation to all distances, up to the standard causal radius of 64 AU (DT = 0.1 s, chosen so that all three levels lie within the radius). The curve is a conservative upper bound because it assumes the worst-case geometry, with the sample shifted entirely along the line of sight.
 
-<div align="center"><img src="docs/img/lod_error_compensation.png" width="760" alt="Image not found"></div>
+<div align="center"><img src="docs/img/lod_error_compensation.png" width="760" alt="Quantification of the LOD level sampling error"></div>
 
 ### 2.2 How Physics Interacts with Buffers
 
