@@ -19,7 +19,7 @@ La scelta progettuale è rendere tutto rigorosamente **causale**: le forze viagg
 - le orbite fortemente eccentriche che precessano e si stringono in una **rosetta** (l'esempio più chiaro è l'**[EMRI](#764-caso-di-studio-il-quadrupolo-dinamico-nellemri-allapocentro)**, *Extreme Mass Ratio Inspiral*);
 - il **[cono di luce](#21-il-cono-di-luce-e-il-diagramma-di-minkowski) visibile a occhio**: se, grazie ai tool del simulatore, si fa apparire di colpo un corpo celeste, il suo campo (informazione, gravità) non si materializza ovunque all'istante, ma si propaga come un fronte sferico che viaggia a $c$ , perché i corpi oltre il fronte stanno ancora reagendo al passato in cui il nuovo corpo non c'era.
 
-In breve, molti degli effetti che si vedono non sono calcolati, ma conseguenze del sistema.
+In breve, molti degli effetti che si vedono non sono imposti, ma conseguenze del sistema.
 
 ### Convenzioni e unità
 

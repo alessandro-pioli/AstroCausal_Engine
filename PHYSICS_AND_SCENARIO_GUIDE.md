@@ -19,7 +19,7 @@ The design choice is to make everything strictly **causal**: forces travel at a 
 - the highly eccentric orbits that precess and converge into a **rosette** (the clearest example is the **[EMRI](#764-case-study-the-dynamic-quadrupole-in-emri-at-the-apocenter)**, *Extreme Mass Ratio Inspiral*);
 - the **[cone of light](#21-the-light-cone-and-the-minkowski-diagram) visible to the naked eye**: if, using the simulator’s tools, you suddenly make a celestial body appear, its field (information, gravity) does not materialize everywhere instantly, but propagates as a spherical front traveling at $c$, because bodies beyond the front are still reacting to the past when the new body was not there.
 
-In short, many of the effects you see are not calculated, but are consequences of the system.
+In short, many of the effects you see are not imposed, but are consequences of the system.
 
 ### Conventions and Units
 
