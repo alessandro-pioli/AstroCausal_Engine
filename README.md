@@ -2,7 +2,7 @@
 
 **🇬🇧 English** · [🇮🇹 Italiano](README.it.md)
 
-<sub>Canonical repository: **https://github.com/alessandro-pioli/AstroCausal_Engine** — read it there, where formulas, callouts and internal links render correctly. If you are reading this from a downloaded archive, some of them will not.</sub>
+<sub>Canonical repository: **https://github.com/alessandro-pioli/AstroCausal_Engine**</sub>
 
 > A real-time laboratory where gravity is recreated as a genuinely causal phenomenon: gravitational information always travels at a finite speed c. Around this core, you can observe scenarios ranging from the complete solar system to the merging of black holes to impacts between dwarf galaxies, with vectors and telemetry, an interactive orbital spawner for Keplerian orbits and Lagrange points, a complete suite of gravitational heatmaps, and the emerging visual manifestation of analogous gravitational waves.
 
