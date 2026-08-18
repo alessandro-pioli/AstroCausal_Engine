@@ -92,24 +92,24 @@ class LigoTelemetryReportWindow(tk.Toplevel):
         tk.Label(header, text="LIGO SIGNAL ANALYSIS REPORT", font=('Segoe UI', 14, 'bold'), fg="#00F0FF", bg="#111827", anchor='w').pack(fill=tk.X, padx=18, pady=10)
         
         # 2. Metadata Frame
-        meta = tk.LabelFrame(self, text=" INFO TELEMETRIA ", font=('Segoe UI', 11, 'bold'), bg="#0B0F19", fg="#00F0FF", bd=1, relief=tk.GROOVE)
+        meta = tk.LabelFrame(self, text=" TELEMETRY INFO ", font=('Segoe UI', 11, 'bold'), bg="#0B0F19", fg="#00F0FF", bd=1, relief=tk.GROOVE)
         meta.pack(fill=tk.X, padx=18, pady=6)
-        add_row(meta, "File Dump:", results['file_name'], 0)
-        add_row(meta, "F-Campione:", f"{results['fs']:.3f} Hz", 1)
-        add_row(meta, "Risoluzione DT:", f"{results['dt']:.3e} s", 2)
-        
+        add_row(meta, "Dump File:", results['file_name'], 0)
+        add_row(meta, "Sample Rate:", f"{results['fs']:.3f} Hz", 1)
+        add_row(meta, "DT Resolution:", f"{results['dt']:.3e} s", 2)
+
         mode_color = "#39FF14" if results['final_mode'] == 'SPECTRAL' else "#FF9900"
-        add_row(meta, "Modalità Finale:", results['final_mode'], 3, val_font=('Segoe UI', 11, 'bold'), val_fg=mode_color)
+        add_row(meta, "Final Mode:", results['final_mode'], 3, val_font=('Segoe UI', 11, 'bold'), val_fg=mode_color)
 
         # 3. Gatekeeper classifier
         gk = tk.LabelFrame(self, text=" SIGNAL CLASSIFIER — GATEKEEPER ", font=('Segoe UI', 11, 'bold'), bg="#0B0F19", fg="#39FF14", bd=1, relief=tk.GROOVE)
         gk.pack(fill=tk.X, padx=18, pady=6)
-        add_row(gk, "Decisione:", results['gatekeeper_decision'], 0, val_font=('Segoe UI', 11, 'bold'))
-        reason = results['gatekeeper_reason'] or "Nessuna fluttuazione (scelta manuale/ottimale)"
-        add_row(gk, "Motivazione:", reason, 1, val_font=('Segoe UI', 11, 'italic'), val_fg="#D1D5DB")
+        add_row(gk, "Decision:", results['gatekeeper_decision'], 0, val_font=('Segoe UI', 11, 'bold'))
+        reason = results['gatekeeper_reason'] or "No fluctuation detected (manual/optimal choice)"
+        add_row(gk, "Rationale:", reason, 1, val_font=('Segoe UI', 11, 'italic'), val_fg="#D1D5DB")
 
         # 4. Mode-specific results
-        res_frame = tk.LabelFrame(self, text=" REPORT DELLE METRICHE DI SEGNALE ", font=('Segoe UI', 11, 'bold'), bg="#0B0F19", fg="#00F0FF", bd=1, relief=tk.GROOVE)
+        res_frame = tk.LabelFrame(self, text=" SIGNAL METRICS REPORT ", font=('Segoe UI', 11, 'bold'), bg="#0B0F19", fg="#00F0FF", bd=1, relief=tk.GROOVE)
         res_frame.pack(fill=tk.X, padx=18, pady=6)
         
         if results['final_mode'] == 'SPECTRAL':
@@ -117,19 +117,19 @@ class LigoTelemetryReportWindow(tk.Toplevel):
             m_frame.pack(fill=tk.X, padx=12, pady=6)
             
             est = results['estimated_m_chirp_solar']
-            est_str = f"{est:.4f} M_sol" if est is not None else "N/D (df/dt non valido)"
-            add_row(m_frame, "Massa Chirp Stimata:", est_str, 0, val_font=('Segoe UI', 12, 'bold'), val_fg="#39FF14")
-            
-            exp = results['expected_m_chirp_solar']
-            exp_str = f"{exp:.4f} M_sol" if exp is not None else "Non inserita"
-            add_row(m_frame, "Massa Chirp Attesa:", exp_str, 1, val_fg="#D1D5DB")
-            
-            err = results['error_pct']
-            err_str = f"{err:.2f}%" if err is not None else "Nessun confronto"
-            err_color = "#39FF14" if err is not None and err < 5 else ("#FF9900" if err is not None else "#9CA3AF")
-            add_row(m_frame, "Errore Relativo:", err_str, 2, val_font=('Segoe UI', 11, 'bold'), val_fg=err_color)
+            est_str = f"{est:.4f} M_sol" if est is not None else "N/A (df/dt unreliable)"
+            add_row(m_frame, "Estimated Chirp Mass:", est_str, 0, val_font=('Segoe UI', 12, 'bold'), val_fg="#39FF14")
 
-            tk.Label(res_frame, text="Punti di Controllo Frequenza (Hilbert Chirp Tracker):", font=('Segoe UI', 11, 'bold'), fg="#9CA3AF", bg="#0B0F19", anchor='w').pack(fill=tk.X, padx=12, pady=(6, 3))
+            exp = results['expected_m_chirp_solar']
+            exp_str = f"{exp:.4f} M_sol" if exp is not None else "Not provided"
+            add_row(m_frame, "Expected Chirp Mass:", exp_str, 1, val_fg="#D1D5DB")
+
+            err = results['error_pct']
+            err_str = f"{err:.2f}%" if err is not None else "No comparison"
+            err_color = "#39FF14" if err is not None and err < 5 else ("#FF9900" if err is not None else "#9CA3AF")
+            add_row(m_frame, "Relative Error:", err_str, 2, val_font=('Segoe UI', 11, 'bold'), val_fg=err_color)
+
+            tk.Label(res_frame, text="Frequency Checkpoints (Hilbert Chirp Tracker):", font=('Segoe UI', 11, 'bold'), fg="#9CA3AF", bg="#0B0F19", anchor='w').pack(fill=tk.X, padx=12, pady=(6, 3))
             cp_frame = tk.Frame(res_frame, bg="#111827", bd=1, relief=tk.SUNKEN)
             cp_frame.pack(fill=tk.X, padx=12, pady=(0, 6))
             
@@ -140,11 +140,11 @@ class LigoTelemetryReportWindow(tk.Toplevel):
                 for t, f in results['checkpoints']:
                     cp_area.insert(tk.END, f"  T: {t:+.4f} s    ->    f_inst: {f:.1f} Hz\n")
             else:
-                cp_area.insert(tk.END, "  Nessun punto di controllo rilevato in questa finestra.\n")
+                cp_area.insert(tk.END, "  No checkpoint detected in this window.\n")
             cp_area.configure(state=tk.DISABLED)
-            
+
         else:  # RADIOMETRIC
-            tk.Label(res_frame, text="Soglie critiche dell'Integrazione Energetica Raggiunte:", font=('Segoe UI', 11, 'bold'), fg="#9CA3AF", bg="#0B0F19", anchor='w').pack(fill=tk.X, padx=12, pady=6)
+            tk.Label(res_frame, text="Critical thresholds reached by the energy integration:", font=('Segoe UI', 11, 'bold'), fg="#9CA3AF", bg="#0B0F19", anchor='w').pack(fill=tk.X, padx=12, pady=6)
             e_frame = tk.Frame(res_frame, bg="#111827", bd=1, relief=tk.SUNKEN)
             e_frame.pack(fill=tk.X, padx=12, pady=6)
             
@@ -155,7 +155,7 @@ class LigoTelemetryReportWindow(tk.Toplevel):
                 for label, t in results['slow_energies']:
                     e_area.insert(tk.END, f"  Threshold {label} reached at: {t:+.4f} s\n")
             else:
-                e_area.insert(tk.END, "  Nessuna transizione registrata.\n")
+                e_area.insert(tk.END, "  No transition recorded.\n")
             e_area.configure(state=tk.DISABLED)
 
         # 5. Raw Code / Receipt Log area
@@ -172,8 +172,8 @@ class LigoTelemetryReportWindow(tk.Toplevel):
         btn_panel = tk.Frame(self, bg="#111827", height=60)
         btn_panel.pack(fill=tk.X, side=tk.BOTTOM)
         
-        tk.Button(btn_panel, text="SALVA REGISTRO (.txt)", bg="#007ACC", fg="white", font=('Segoe UI', 11, 'bold'), bd=0, padx=18, pady=8, command=self.save_receipt_log).pack(side=tk.LEFT, padx=18, pady=12)
-        tk.Button(btn_panel, text="CHIUDI", bg="#4B5563", fg="white", font=('Segoe UI', 11), bd=0, padx=18, pady=8, command=self.destroy).pack(side=tk.RIGHT, padx=18, pady=12)
+        tk.Button(btn_panel, text="SAVE LOG (.txt)", bg="#007ACC", fg="white", font=('Segoe UI', 11, 'bold'), bd=0, padx=18, pady=8, command=self.save_receipt_log).pack(side=tk.LEFT, padx=18, pady=12)
+        tk.Button(btn_panel, text="CLOSE", bg="#4B5563", fg="white", font=('Segoe UI', 11), bd=0, padx=18, pady=8, command=self.destroy).pack(side=tk.RIGHT, padx=18, pady=12)
 
     def generate_receipt(self, results, raw_logs):
         """Compone lo "scontrino" testuale monospace della telemetria: la sezione
@@ -186,58 +186,59 @@ class LigoTelemetryReportWindow(tk.Toplevel):
             "           LIGO POST-PROCESSING SUITE        ",
             "        --- TELEMETRY REPORT ---            ",
             "============================================",
-            f"DATA/ORA : {now}",
-            f"FILE     : {results['file_name']}",
-            f"DT       : {results['dt']:.3e} s",
-            f"F-CAMP   : {results['fs']:.3f} Hz",
-            f"ANALISI  : {results['final_mode']}",
+            f"DATE/TIME : {now}",
+            f"FILE      : {results['file_name']}",
+            f"DT        : {results['dt']:.3e} s",
+            f"SAMPLE-F  : {results['fs']:.3f} Hz",
+            f"ANALYSIS  : {results['final_mode']}",
             "============================================"
         ]
-        
-        if results['gatekeeper_decision'] != "N/D":
+
+        if results['gatekeeper_decision'] != "N/A":
             lines.extend([
-                "CRITERIO GATEKEEPER:",
-                f"  Decisione: {results['gatekeeper_decision']}"
+                "GATEKEEPER CRITERION:",
+                f"  Decision: {results['gatekeeper_decision']}"
             ])
             if results['gatekeeper_reason']:
-                lines.append(f"  Dettaglio: {results['gatekeeper_reason']}")
+                lines.append(f"  Detail:   {results['gatekeeper_reason']}")
             lines.append("--------------------------------------------")
-            
+
         if results['final_mode'] == 'SPECTRAL':
             lines.extend([
                 "  [CHIRP TRACKER V4 HILBERT ENVELOPE]",
-                f"  {'T-MERGER (s)':<15} | {'FREQ STIMATA (Hz)':<15}",
+                f"  {'T-MERGER (s)':<15} | {'EST. FREQ (Hz)':<15}",
                 "  " + "-" * 35
             ])
             for t, f in results['checkpoints']:
                 lines.append(f"  {t:+.4f} s{' ': <5} | {f:.2f} Hz")
             lines.extend([
                 "--------------------------------------------",
-                "ESTRAPOLAZIONE MASSA CHIRP:"
+                "CHIRP MASS EXTRAPOLATION:"
             ])
             est = results['estimated_m_chirp_solar']
             if est is not None:
-                lines.append(f"  M_chirp Stimata : {est:.4f} M_sol")
+                lines.append(f"  M_chirp estimated : {est:.4f} M_sol")
                 exp = results['expected_m_chirp_solar']
                 if exp is not None:
-                    lines.append(f"  M_chirp Attesa  : {exp:.4f} M_sol")
+                    lines.append(f"  M_chirp expected  : {exp:.4f} M_sol")
                     err = results.get('error_pct')
                     if err is not None:
-                        lines.append(f"  Errore Relativo : {err:.2f} %")
+                        lines.append(f"  Relative error    : {err:.2f} %")
                 else:
-                    lines.append("  M_chirp Attesa  : Non definita/confrontata")
+                    lines.append("  M_chirp expected  : not provided / not compared")
             else:
-                lines.append("  M_chirp Stimata : N/D (df/dt non affidabile)")
-                
+                lines.append("  M_chirp estimated : N/A (df/dt unreliable)")
+
         elif results['final_mode'] == 'RADIOMETRIC':
             lines.extend([
                 "  [RADIOMETRIC MODE — CUMULATIVE ENERGY MAPPING]",
-                "  Registrazione fluttuazione temporale:",
+                "  Cumulative energy threshold crossings:",
                 "  " + "-" * 35
             ])
             for label, t in results['slow_energies']:
-                lines.append(f"  Soglia {label:<8}: raggiunta a {t:+.4f} s")
-                
+                lines.append(f"  Threshold {label:<8}: reached at {t:+.4f} s")
+
+
         lines.extend([
             "============================================",
             "             LOG DETAILS DUMP               ",
@@ -256,15 +257,15 @@ class LigoTelemetryReportWindow(tk.Toplevel):
     def save_receipt_log(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".txt",
                                                  filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-                                                 title="Salva Scontrino Telemetria",
+                                                 title="Save Telemetry Report",
                                                  initialfile="ligo_telem_receipt.txt")
         if file_path:
             try:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(self.receipt_text)
-                messagebox.showinfo("Successo", "Scontrino salvato con successo!")
+                messagebox.showinfo("Success", "Telemetry report saved successfully.")
             except Exception as e:
-                messagebox.showerror("Errore", f"Impossibile salvare il file:\n{e}")
+                messagebox.showerror("Error", f"Could not save the file:\n{e}")
 
 
 # MAIN ANALYSIS PIPELINE
@@ -272,12 +273,12 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     """Pipeline di analisi del segnale LIGO: filtraggio, spettrogrammi, tracciamento Hilbert della frequenza e stima della massa chirp."""
     base_name = os.path.basename(filename)
     if 'DT_' not in base_name:
-        raise ValueError(f"'{base_name}' non contiene il pattern 'DT_<valore>' nel nome: impossibile risalire al passo di campionamento. Rinominare il file preservando quella parte, o riesportarlo dal simulatore.")
+        raise ValueError(f"'{base_name}' does not contain the 'DT_<value>' pattern in its name, so the sampling step cannot be recovered. Rename the file preserving that part, or re-export it from the simulator.")
     try:
         dt_str = base_name.split('DT_')[1].replace('.npy', '').split('_')[0]
         dt = float(dt_str)
     except (IndexError, ValueError):
-        raise ValueError(f"'{base_name}' ha un pattern 'DT_' non valido: impossibile leggere il passo di campionamento.")
+        raise ValueError(f"'{base_name}' has an invalid 'DT_' pattern: the sampling step cannot be read.")
     fs = 1.0 / dt
 
     log_lines = []
@@ -285,22 +286,22 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         print(msg)
         log_lines.append(msg)
 
-    log(f"\n[ANALISI INIZIATA - MODALITÀ: {system_type}]")
+    log(f"\n[ANALYSIS STARTED - MODE: {system_type}]")
     log(f"File: {base_name} | DT: {dt} | FS: {fs} Hz")
 
     # Carica i dati e rimuove gli zeri iniziali
     try:
         data = np.load(filename)
     except Exception as e:
-        raise ValueError(f"'{base_name}' non e' un file .npy leggibile: {e}")
+        raise ValueError(f"'{base_name}' is not a readable .npy file: {e}")
     if data.ndim != 1 or not np.issubdtype(data.dtype, np.floating):
-        raise ValueError(f"'{base_name}' ha una struttura non compatibile (atteso un array 1D di float, trovato shape={data.shape} dtype={data.dtype}): non sembra un dump della sonda LIGO.")
+        raise ValueError(f"'{base_name}' has an incompatible structure (expected a 1D float array, found shape={data.shape} dtype={data.dtype}): this does not look like a LIGO probe dump.")
     first_valid = np.argmax(data != 0.0)
     if first_valid > 0 or data[0] != 0.0:
         data = data[first_valid:]
 
     if len(data) < 1000:
-        log("Errore: Dati insufficienti. Fai girare la simulazione un po' di più.")
+        log("Error: not enough data. Let the simulation run a little longer.")
         return
 
     # Detrend data
@@ -312,7 +313,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         "fs": fs,
         "requested_mode": system_type,
         "final_mode": None,
-        "gatekeeper_decision": "Bypassato (Scelta Manuale)",
+        "gatekeeper_decision": "Bypassed (manual choice)",
         "gatekeeper_reason": "",
         "checkpoints": [],
         "estimated_m_chirp_solar": None,
@@ -336,7 +337,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         reason = ""
         if peak_amp < 1e-15:
             is_casual = True
-            reason = "Potenza Insufficiente"
+            reason = "Insufficient power"
         elif len(local_data) > 10:
             local_peak = np.max(np.abs(local_data))
             safe_local = local_data / (local_peak + 1e-30)
@@ -344,35 +345,35 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
             local_crest = 1.0 / (local_rms + 1e-30)
             if local_crest > 10.0:
                 is_casual = True
-                reason = f"Impatto Verticale (Crest: {local_crest:.1f})"
+                reason = f"Vertical impact (crest factor: {local_crest:.1f})"
         else:
             is_casual = True
-            reason = "Array troppo corto"
-            
+            reason = "Array too short"
+
         if is_casual:
-            log(f"\n[GATEKEEPER] Rilevato segnale impulsivo o fluttuazione: {reason}")
-            log("[GATEKEEPER] -> Modalità RADIOMETRIC (Energia Irradiata Cumulativa) forzata automaticamente.")
+            log(f"\n[GATEKEEPER] Impulsive signal or fluctuation detected: {reason}")
+            log("[GATEKEEPER] -> RADIOMETRIC mode (cumulative radiated energy) selected automatically.")
             system_type = 'RADIOMETRIC'
-            results["gatekeeper_decision"] = 'FORZAMENTO RADIOMETRIC (Energia)'
-            results["gatekeeper_reason"] = f"Segnale impulsivo / transitorio di rumore: {reason}"
+            results["gatekeeper_decision"] = 'Forced to RADIOMETRIC (energy)'
+            results["gatekeeper_reason"] = f"Impulsive signal / noise transient: {reason}"
         else:
-            log("\n[GATEKEEPER] Rilevato probabile Chirp/Merger.")
-            log("[GATEKEEPER] -> Modalità SPECTRAL (Strain + Spettrogramma) forzata automaticamente.")
+            log("\n[GATEKEEPER] Probable chirp/merger detected.")
+            log("[GATEKEEPER] -> SPECTRAL mode (strain + spectrogram) selected automatically.")
             system_type = 'SPECTRAL'
-            results["gatekeeper_decision"] = 'FORZAMENTO SPECTRAL (Spettrogramma)'
-            results["gatekeeper_reason"] = "Rivelato probabile chirp coerente"
+            results["gatekeeper_decision"] = 'Forced to SPECTRAL (spectrogram)'
+            results["gatekeeper_reason"] = "Probable coherent chirp detected"
     else:
-        results["gatekeeper_reason"] = f"Analisi forzata direttamente in modalita {system_type}"
+        results["gatekeeper_reason"] = f"Analysis forced directly into {system_type} mode"
 
     results["final_mode"] = system_type
 
     # --- FILTERING & SMOOTHING WINDOWS ---
     if system_type == 'SPECTRAL':
-        log("[PULIZIA] Applicazione Filtro Passa-Alto (Cutoff: 5 Hz)...")
+        log("[CLEANUP] Applying high-pass filter (cutoff: 5 Hz)...")
         data = apply_high_pass_filter(data, fs, cutoff=5.0, order=4)
         window = signal.windows.tukey(len(data), alpha=0.05)
     else:
-        log("[PULIZIA] Filtro disattivato. Lettura dati RAW.")
+        log("[CLEANUP] Filter disabled. Reading RAW data.")
         window = signal.windows.tukey(len(data), alpha=0.01)
 
     # Il picco va individuato PRIMA di applicare la finestra: se il merger cade
@@ -385,20 +386,20 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
 
     if system_type == 'SPECTRAL':
         time_axis = (np.arange(len(data)) - merger_idx) * dt
-        x_label = "Tempo Relativo al Merger [s]"
-        merger_label = "Merger (picco)"
+        x_label = "Time relative to merger [s]"
+        merger_label = "Merger (peak)"
         vline_idx = 0
     else:
         time_axis = time_absolute
-        x_label = "Tempo di Registrazione [s]"
-        merger_label = "Picco Energetico"
+        x_label = "Recording time [s]"
+        merger_label = "Energy peak"
         vline_idx = time_absolute[merger_idx]
 
     # --- PLOT LAYOUT CONFIGURATION ---
     fig_bg = '#050510'
     ax_bg = '#0a0a1a'
     if system_type == 'SPECTRAL':
-        log("[VISUALIZZAZIONE] Generazione Strain + Spettrogramma (senza confronti se non inserito expected_m_chirp_solar)...")
+        log("[RENDER] Generating strain + spectrogram (no comparison unless expected_m_chirp_solar was provided)...")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 9), gridspec_kw={'height_ratios': [1, 2]})
     else:
         log("[RENDER] Generating Strain + Radiated Energy map (RADIOMETRIC)...")
@@ -407,7 +408,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     # Pannello 1: Strain (Comune a entrambe le modalità)
     ax1.plot(time_axis, data, color='cyan', linewidth=0.8)
     title_suffix = "High-pass filtered > 5 Hz" if system_type == 'SPECTRAL' else "Unfiltered RAW"
-    ax1.set_title(f"Strain Gravitazionale ($h_+$) — {title_suffix}", color='white')
+    ax1.set_title(f"Gravitational Strain ($h_+$) — {title_suffix}", color='white')
     ax1.set_ylabel(r"Amplitude ($h_+$)", color='white')
     ax1.grid(True, alpha=0.2)
     ax1.set_facecolor(ax_bg)
@@ -422,7 +423,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         energy_cumulative /= (energy_cumulative[-1] + 1e-30)
 
         ax_energy.plot(time_axis, energy_cumulative, color='#ff9900', linewidth=1.2)
-        ax_energy.set_title("Energia Irradiata Cumulativa (Fluttuazione Energetica)", color='white')
+        ax_energy.set_title("Cumulative Radiated Energy (energy build-up)", color='white')
         ax_energy.set_ylabel("E_cum / E_tot", color='white')
         ax_energy.set_xlabel(x_label, color='white')
         ax_energy.set_facecolor(ax_bg)
@@ -438,7 +439,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
                 ax_energy.axvline(t_frac, color='#aaaaff', linestyle=':', linewidth=1.0, alpha=0.7)
                 ax_energy.text(t_frac, frac + 0.03, f'{label}\n{t_frac:.2f}s', color='#aaaaff', fontsize=8, ha='center')
                 results["slow_energies"].append((label, t_frac))
-                print(f"[ENERGIA] Raggiunta soglia {label} al tempo {t_frac:.4f} s")
+                print(f"[ENERGY] Threshold {label} reached at t = {t_frac:.4f} s")
 
         zoom_start, zoom_end = time_axis[0], time_axis[-1]
         ax1.set_xlim(zoom_start, zoom_end)
@@ -461,7 +462,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
         Sxx_dB = 10 * np.log10(Sxx + 1e-20)
 
         # Hilbert Instantaneous Frequency Tracking
-        log("\n[CHIRP TRACKER V4] Frequenza Istantanea (Hilbert) pre-impatto:")
+        log("\n[CHIRP TRACKER V4] Instantaneous frequency (Hilbert) before impact:")
         hilb_t_start = max(time_axis[0], -20.0)
         mask = (time_axis >= hilb_t_start) & (time_axis <= 0.10)
         t_hilb = time_axis[mask]
@@ -486,7 +487,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
                 if abs(t_freq[idx_t] - t_target) < tol:
                     t_val = t_freq[idx_t]
                     f_val = inst_freq_clean[idx_t]
-                    print(f"  -> Tempo: {t_val:.4f} s | Freq: {f_val:.1f} Hz")
+                    print(f"  -> Time: {t_val:.4f} s | Freq: {f_val:.1f} Hz")
                     results["checkpoints"].append((t_val, f_val))
 
             # Finestra di fit per la massa chirp: per le BNS gli ultimi istanti sono
@@ -510,15 +511,15 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
             if est_m_kg is not None:
                 m_chirp_solar = est_m_kg / M_SUN
                 results["estimated_m_chirp_solar"] = m_chirp_solar
-                print(f"\n[MASSA CHIRP STIMATA] {m_chirp_solar:.2f} M_sol  (da fit power-law f(tau) di Peters)")
+                print(f"\n[ESTIMATED CHIRP MASS] {m_chirp_solar:.2f} M_sol  (from the Peters f(tau) power-law fit)")
                 if expected_m_chirp_solar is not None:
                     err_pct = abs(m_chirp_solar - expected_m_chirp_solar) / expected_m_chirp_solar * 100
                     results["error_pct"] = err_pct
-                    print(f"[CONFRONTO]  Attesa: {expected_m_chirp_solar:.2f} M_sol  |  Errore: {err_pct:.1f}%")
+                    print(f"[COMPARISON]  Expected: {expected_m_chirp_solar:.2f} M_sol  |  Error: {err_pct:.1f}%")
             else:
-                print("[MASSA CHIRP] Impossibile stimare (df/dt non affidabile)")
+                print("[CHIRP MASS] Cannot estimate (df/dt unreliable)")
 
-        log("[CHIRP TRACKER V4] Analisi completata.")
+        log("[CHIRP TRACKER V4] Analysis complete.")
         log("-" * 50)
 
         # Ridimensionamento automatico dell'asse delle frequenze dello spettrogramma in base al picco del segnale
@@ -555,26 +556,26 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
             valid = (f_peters >= 0) & (f_peters <= plot_max_freq) & np.isfinite(f_peters)
             
             ax2.plot(t_peters[valid], f_peters[valid], color='#00ff99', linewidth=1.8, linestyle='--', alpha=0.85,
-                     label=f"Peters teorico ({expected_m_chirp_solar:.1f} M_sol)")
+                     label=f"Peters prediction ({expected_m_chirp_solar:.1f} M_sol)")
             ax2.legend(loc='upper left', fontsize=9, facecolor=ax_bg, edgecolor='#444444', labelcolor='white')
 
             if results["estimated_m_chirp_solar"] is not None:
                 comparison_text = (
-                    f"M_chirp Attesa: {expected_m_chirp_solar:.2f} M_sol\n"
-                    f"M_chirp Stimata: {results['estimated_m_chirp_solar']:.2f} M_sol\n"
-                    f"Errore: {results['error_pct']:.1f}%"
+                    f"M_chirp expected: {expected_m_chirp_solar:.2f} M_sol\n"
+                    f"M_chirp estimated: {results['estimated_m_chirp_solar']:.2f} M_sol\n"
+                    f"Error: {results['error_pct']:.1f}%"
                 )
                 ax2.text(zoom_start + 0.05, plot_max_freq * 0.82, comparison_text, color='#00ff99', fontsize=9, fontweight='bold',
                          bbox=dict(facecolor=ax_bg, alpha=0.85, edgecolor='#444444'))
 
-        title_suffix = " — Peters overlay attivo" if expected_m_chirp_solar is not None else ""
-        ax2.set_title(f"Spettrogramma LIGO (Max: {plot_max_freq:.1f} Hz){title_suffix}", color='white')
-        ax2.set_ylabel("Frequenza [Hz]", color='white')
-        ax2.set_xlabel("Tempo Relativo al Merger [s]", color='white')
+        title_suffix = " — Peters overlay active" if expected_m_chirp_solar is not None else ""
+        ax2.set_title(f"LIGO Spectrogram (max: {plot_max_freq:.1f} Hz){title_suffix}", color='white')
+        ax2.set_ylabel("Frequency [Hz]", color='white')
+        ax2.set_xlabel("Time relative to merger [s]", color='white')
         ax2.tick_params(colors='white')
 
         cbar = fig.colorbar(pcm, ax=ax2)
-        cbar.set_label("Potenza [dB]", color='white')
+        cbar.set_label("Power [dB]", color='white')
         cbar.ax.yaxis.set_tick_params(color='white')
         plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='white')
 
@@ -586,8 +587,8 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
     os.makedirs(output_dir, exist_ok=True)
     output_png = os.path.join(output_dir, base_name.replace('.npy', f'_HD_{system_type}.png'))
     plt.savefig(output_png, facecolor=fig.get_facecolor(), edgecolor='none')
-    log(f"[SUCCESSO] Analisi {system_type} salvata in {output_png}\n")
-    
+    log(f"[SUCCESS] {system_type} analysis saved to {output_png}\n")
+
     # Genera la finestra GUI per il resoconto di telemetria
     try:
         raw_logs_text = "\n".join(log_lines)
@@ -596,7 +597,7 @@ def analyze_ligo_dump(filename, system_type='AUTO', expected_m_chirp_solar=None)
             receipt_win.deiconify()
             receipt_win.focus_force()
     except Exception as tk_err:
-        print(f"[ATTENZIONE] Impossibile mostrare la telemetria Tkinter: {tk_err}")
+        print(f"[WARNING] Could not display the Tkinter telemetry window: {tk_err}")
 
     plt.show()
 
@@ -636,7 +637,7 @@ class LigoLauncherApp(tk.Tk):
         ttk.Label(main_frame, text="LIGO Post-Processing", style='Header.TLabel').pack(pady=(0, 5))
         
         # File selector
-        file_frame = tk.LabelFrame(main_frame, text=" Selezione Sim-Dump (.npy) ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
+        file_frame = tk.LabelFrame(main_frame, text=" Sim-Dump Selection (.npy) ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
         file_frame.pack(fill=tk.X, pady=(10, 10))
         
         search_path = os.path.join("ligo_output", "data_npy", "*.npy")
@@ -647,36 +648,36 @@ class LigoLauncherApp(tk.Tk):
             file_names = [os.path.basename(f) for f in self.file_list]
             self.file_var = tk.StringVar(value=file_names[0])
         else:
-            file_names = ["Nessun DUMP trovato"]
+            file_names = ["No dump found"]
             self.file_var = tk.StringVar(value=file_names[0])
-            
+
         self.file_combo = ttk.Combobox(file_frame, textvariable=self.file_var, state='readonly', values=file_names)
         self.file_combo.pack(fill=tk.X, ipady=4)
-        
+
         # Mode selector
-        mode_frame = tk.LabelFrame(main_frame, text=" Modalità di Analisi ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
+        mode_frame = tk.LabelFrame(main_frame, text=" Analysis Mode ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
         mode_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        self.mode_var = tk.StringVar(value="1) AUTO  — Rilevamento automatico (Gatekeeper)")
+
         modes = [
-            "1) AUTO  — Rilevamento automatico (Gatekeeper)",
-            "2) FORZA SPECTRAL (Spettrogramma + Peters)",
-            "3) FORZA RADIOMETRIC (Fluttuazione Energia)"
+            "1) AUTO  — automatic detection (Gatekeeper)",
+            "2) FORCE SPECTRAL (spectrogram + Peters)",
+            "3) FORCE RADIOMETRIC (energy build-up)"
         ]
+        self.mode_var = tk.StringVar(value=modes[0])
         self.mode_combo = ttk.Combobox(mode_frame, textvariable=self.mode_var, state='readonly', values=modes)
         self.mode_combo.pack(fill=tk.X, ipady=4)
-        
+
         # Theoretical Overlay input
-        overlay_frame = tk.LabelFrame(main_frame, text=" Overlay Teorico Peters (Opzionale) ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
+        overlay_frame = tk.LabelFrame(main_frame, text=" Peters Theoretical Overlay (optional) ", bg=bg_col, fg=accent_col, font=('Segoe UI', 11, 'bold'), padx=15, pady=15)
         overlay_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        ttk.Label(overlay_frame, text="Massa Chirp attesa in M_sol:").pack(side=tk.LEFT)
+
+        ttk.Label(overlay_frame, text="Expected chirp mass in M_sol:").pack(side=tk.LEFT)
         self.chirp_var = tk.StringVar(value="")
         self.chirp_entry = tk.Entry(overlay_frame, textvariable=self.chirp_var, bg="#2D2D2D", fg="#FFFFFF", font=('Segoe UI', 10), justify='right')
         self.chirp_entry.pack(side=tk.RIGHT, ipadx=5, ipady=3)
         
         # Pulsante Esegui
-        ttk.Button(main_frame, text="ESEGUI ANALISI LIGO", style='Launch.TButton', command=self.on_launch).pack(fill=tk.X, ipady=15)
+        ttk.Button(main_frame, text="RUN LIGO ANALYSIS", style='Launch.TButton', command=self.on_launch).pack(fill=tk.X, ipady=15)
         
     def on_launch(self):
         """Avvia `analyze_ligo_dump` nello stesso processo (non isolato via
@@ -684,7 +685,7 @@ class LigoLauncherApp(tk.Tk):
         vedi §12 di ARCHITECTURE_DEEP_DIVE.md): nasconde solo la finestra durante
         l'analisi bloccante e la ripristina sempre, anche in caso di eccezione."""
         if not self.file_list:
-            messagebox.showerror("Errore", "Nessun file LIGO presente in ligo_output/data_npy.")
+            messagebox.showerror("Error", "No LIGO dump found in ligo_output/data_npy.")
             return
         
         sel_file = self.file_var.get()
@@ -707,18 +708,18 @@ class LigoLauncherApp(tk.Tk):
                 try:
                     expected_m = float(raw_chirp.replace(',', '.'))
                 except ValueError:
-                    messagebox.showwarning("Attenzione", "Massa Chirp non valida. L'analisi procederà senza confronto teorico.")
+                    messagebox.showwarning("Warning", "Invalid chirp mass. The analysis will proceed without the theoretical comparison.")
                     self.chirp_var.set("")
-                
-        print(f"Lancio: File={sel_file}, Mode={sys_type}, Chirp={expected_m}")
-        
+
+        print(f"Launching: File={sel_file}, Mode={sys_type}, Chirp={expected_m}")
+
         self.withdraw()
         try:
             analyze_ligo_dump(file_path, system_type=sys_type, expected_m_chirp_solar=expected_m)
         except Exception as e:
             import traceback
             traceback.print_exc()
-            messagebox.showerror("Errore di Analisi", f"L'analisi è fallita con errore:\n{e}")
+            messagebox.showerror("Analysis Error", f"The analysis failed with an error:\n{e}")
         finally:
             self.deiconify()
 

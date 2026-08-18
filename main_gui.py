@@ -209,8 +209,8 @@ def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
             dead_indices = gc_worker.get_and_clear_results()
             if dead_indices:
                 bodies_to_keep = [b for b in ui_state.bodies if b.idx not in dead_indices]
-                print(f"[GC] Corpi svaniti causalmente {dead_indices}. Rimozione definitiva.")
-                print(f"[GC] Ricostruzione Universo... ({len(ui_state.bodies)} -> {len(bodies_to_keep)})")
+                print(f"[GC] Bodies causally faded away {dead_indices}. Removing permanently.")
+                print(f"[GC] Rebuilding the universe... ({len(ui_state.bodies)} -> {len(bodies_to_keep)})")
                 
                 locked_name = ui_state.bodies[ui_state.locked_body_idx].name if ui_state.locked_body_idx is not None and ui_state.locked_body_idx < len(ui_state.bodies) else None
                 tgt_name = ui_state.bodies[ui_state.lagrange_target_idx].name if ui_state.lagrange_target_idx != -1 and ui_state.lagrange_target_idx < len(ui_state.bodies) else None
@@ -318,13 +318,13 @@ def main(preset_name="solar_system", w=1200, h=800, dt_val=None):
 
     # --- SALVATAGGIO FINALE LIGO (ALL'USCITA) ---
     if ui_state.ligo_probe.active:
-        print("\n[SHUTDOWN] Salvataggio dati LIGO in corso prima della chiusura...")
+        print("\n[SHUTDOWN] Saving LIGO data before closing...")
         ui_state.ligo_probe.dump_session(filename="ligo_dump_EXIT", dt_used=data.DT)
         
         # Diamo al thread in background 1 secondo per finire di scrivere sul disco
         # prima che Python termini definitivamente il processo principale.
         time.sleep(1.0)
-        print("[SHUTDOWN] Chiusura completata.")
+        print("[SHUTDOWN] Shutdown complete.")
 
 
 if __name__ == "__main__":

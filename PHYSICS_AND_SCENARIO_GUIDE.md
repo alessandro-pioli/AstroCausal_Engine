@@ -975,8 +975,6 @@ As the light compact object travels along its highly eccentric orbit around the 
 
 *Complete orbital cycle of the EMRI (apocenter → pericenter → apocenter) rendered in GW Strain mode. The video clearly shows the dynamic transition between the stationary, weak emission at apocenter (where the naked quadrupole of the light body oriented along the orbital axis stands out) and the violent concentric wave discharge released during the close passage at pericenter, which propagates through space.*
 
-*(It is also available as a real-time looping GIF at `docs/gif/GWH_EMRI_LOOP.gif`.)*
-
 | Macro view: Early Inspiral (tens of AU) | Macro view: Late Inspiral (tens of AU) |
 |:---:|:---:|
 | <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Rosette orbit (early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern) early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Rosette orbit during late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern during late inspiral"> |

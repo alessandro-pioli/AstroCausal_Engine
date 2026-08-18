@@ -2,6 +2,8 @@
 
 **🇮🇹 Italiano** · [🇬🇧 English](README.md)
 
+<sub>Repository canonico: **https://github.com/alessandro-pioli/AstroCausal_Engine** — conviene leggerlo lì, dove formule, riquadri e link interni vengono resi correttamente. Se stai leggendo da un archivio scaricato, alcuni di questi non funzioneranno.</sub>
+
 > Un laboratorio in tempo reale dove la gravità è ricreata come fenomeno genuinamente causale: l'informazione gravitazionale viaggia sempre a velocità finita c. Attorno a questo nucleo si osservano scenari che spaziano dal sistema solare completo al merge di buchi neri fino agli impatti tra galassie nane, con vettori e telemetria, spawner orbitale interattivo per orbite kepleriane e punti di Lagrange, suite completa di heatmap gravitazionali e la manifestazione visiva emergente di onde gravitazionali analoghe.
 
 **Come orientarsi nella documentazione.** Il progetto è raccontato da tre documenti complementari, ciascuno per un lettore diverso:
@@ -95,29 +97,31 @@ Questi comportamenti dinamici **non sono programmati esplicitamente**, ma emergo
 
 *Come leggere la tabella*: il **DT** è il passo temporale, cioè quanto tempo simulato avanza a ogni tick (più piccolo = più preciso e più "lento" nel tempo reale). Il **Raggio Causale** ($D_{max}$) è la distanza entro cui le forze viaggiano a velocità finita $c$ interrogando i buffer storici; oltre quel raggio l'interazione torna newtoniana istantanea. Unità: $1\text{ AU}$ (Unità Astronomica) $= 149.597.870,7\text{ km}$, la distanza media Terra-Sole.
 
+> **Nota sui nomi.** L'interfaccia del simulatore è in inglese: la colonna *Scenario* riporta l'etichetta **esattamente come compare nel menu del launcher**, così è immediato ritrovarla. Le descrizioni restano in italiano.
+
 | Scenario | Corpi | DT | Raggio Causale | Descrizione |
 |---|:---:|:---:|:---:|---|
-| **Sistema Solare Completo** | 36 | 150 s | 64 AU | Sole, 8 pianeti, Plutone e 26 lune principali |
-| **Sistema Solare (Leggero)** | 10 | 512 s | 64 AU | Solo Sole e 9 pianeti, senza lune: DT più alto senza perdere fedeltà kepleriana, orbite esterne osservabili in tempi ragionevoli |
-| **Orbita Galattica (Sgr A\*)** | 11 | 512 s | 64 AU | Sistema Solare in orbita a 230 km/s attorno a Sagittarius A\* |
-| **Ammasso Caotico** | 100 | 64 s | 64 AU | Stress-test N-body con BH centrale da 1000 M☉ |
-| **Terra - Luna - ISS - Hubble** | 4 | 1 s | 1 AU | Regime geocentrico con ISS e Hubble in orbita LEO |
-| **Sole - Terra - Luna - Artemis II** | 4 | 0.16 s | 1 AU | Crociera translunare passiva di Orion su vettori reali JPL Horizons, fino al flyby free-return |
-| **Sistema Gioviano Completo** | 14 | 60 s | 1 AU | Giove e 13 lune (interne, galileiane, irregolari) |
-| **Approccio a *c* (0.999c)** | 1 | 0.16 s | 320 LY (~20M AU) | Sole a 0.999c: distorsione Liénard-Wiechert (20 GB RAM) |
-| **Approccio a *c* (0.9c)** | 1 | 1.6 s | 1742 LY (~110M AU) | Versione alleggerita (10 GB RAM) |
-| **Approccio a *c* (0.7c)** | 1 | 16 s | 8710 LY (~550M AU) | Versione ultra-light (5 GB RAM) |
-| **NS Binarie: Orbita Stabile** | 2 | 1 ms | 640 AU | Due stelle di neutroni ~1.5 M☉ a 40.000 km |
-| **NS Binarie: Eccentricità Estrema** | 2 | 1 μs | 3 AU | Orbite gemelle altamente eccentriche (apocentro 4000 km, pericentro 200 km) |
-| **NS Binarie: Pre-Collisione** | 2 | 1 μs | 2 AU | Late inspiral, merger in ~59,7 s simulati |
+| **Complete Solar System** | 36 | 150 s | 64 AU | Sole, 8 pianeti, Plutone e 26 lune principali |
+| **Solar System (Light)** | 10 | 512 s | 64 AU | Solo Sole e 9 pianeti, senza lune: DT più alto senza perdere fedeltà kepleriana, orbite esterne osservabili in tempi ragionevoli |
+| **Galactic Orbit (Sgr A\*)** | 11 | 512 s | 64 AU | Sistema Solare in orbita a 230 km/s attorno a Sagittarius A\* |
+| **Chaotic Cluster** | 100 | 64 s | 64 AU | Stress-test N-body con BH centrale da 1000 M☉ |
+| **Earth - Moon - ISS - Hubble** | 4 | 1 s | 1 AU | Regime geocentrico con ISS e Hubble in orbita LEO |
+| **Sun - Earth - Moon - Artemis II** | 4 | 0.16 s | 1 AU | Crociera translunare passiva di Orion su vettori reali JPL Horizons, fino al flyby free-return |
+| **Complete Jovian System** | 14 | 60 s | 1 AU | Giove e 13 lune (interne, galileiane, irregolari) |
+| **Approach to *c* (0.999c)** | 1 | 0.16 s | 320 LY (~20M AU) | Sole a 0.999c: distorsione Liénard-Wiechert (20 GB RAM) |
+| **Approach to *c* (0.9c)** | 1 | 1.6 s | 1742 LY (~110M AU) | Versione alleggerita (10 GB RAM) |
+| **Approach to *c* (0.7c)** | 1 | 16 s | 8710 LY (~550M AU) | Versione ultra-light (5 GB RAM) |
+| **NS Binary: Stable Orbit** | 2 | 1 ms | 640 AU | Due stelle di neutroni ~1.5 M☉ a 40.000 km |
+| **NS Binary: Extreme Eccentricity** | 2 | 1 μs | 3 AU | Orbite gemelle altamente eccentriche (apocentro 4000 km, pericentro 200 km) |
+| **NS Binary: Pre-Collision** | 2 | 1 μs | 2 AU | Late inspiral, merger in ~59,7 s simulati |
 | **GW170817** | 2 | 1 μs | 3 AU | Replica del primo evento multi-messaggero (merger in ~13,9 s simulati) |
 | **GW150914** | 2 | 1 μs | 3 AU | Primo evento GW rilevato da LIGO (merger in 52,034 s simulati, inizializzato teoricamente a T-60s) |
 | **GW190814** | 2 | 1 μs | 3 AU | Il merger più asimmetrico (q = 0,112): BH da 23 M☉ e oggetto del mass gap da 2,6 M☉ (inizializzato a T-20s via Peters) |
 | **Alpha Centauri + Polyphemus** | 9 | 150 s | 32 AU | Sistema triplo reale + sistema fittizio da *Avatar* |
-| **Laboratorio Orbite Estreme** | 6 | 0.2 s | 2 AU | BH centrale + 5 particelle test (e=0 → iperbolica) |
-| **EMRI: Plunge Relativistico** | 2 | 0.05 s | 1200 AU | Extreme Mass Ratio Inspiral: un buco nero leggero spiraleggia in uno molto più massiccio (rapporto 1:100) |
-| **Scontro fra Galassie Nane** | 202 | 150 s | 64 AU | Collisione quasi-frontale di due galassie da 100 stelle |
-| **Scenario Vuoto** | 0 | 1 s | Da astro_settings.ini | Universo vuoto per costruzione libera (impostabile tramite file .ini) |
+| **Extreme Orbits Laboratory** | 6 | 0.2 s | 2 AU | BH centrale + 5 particelle test (e=0 → iperbolica) |
+| **EMRI: Relativistic Plunge** | 2 | 0.05 s | 1200 AU | Extreme Mass Ratio Inspiral: un buco nero leggero spiraleggia in uno molto più massiccio (rapporto 1:100) |
+| **Collision between Dwarf Galaxies** | 202 | 150 s | 64 AU | Collisione quasi-frontale di due galassie da 100 stelle |
+| **Empty Scenario** | 0 | 1 s | Da astro_settings.ini | Universo vuoto per costruzione libera (impostabile tramite file .ini) |
 
 ---
 

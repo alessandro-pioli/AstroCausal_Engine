@@ -60,7 +60,7 @@ class InputController:
                     if math.sqrt(dist_sq) <= (b.radius + s_rad):
                         b.set_dying()
                         b.void_causal_history()
-                        print(f"[SPAWN] Corpo {b.name} marcato per la morte prima dell'inserimento.")
+                        print(f"[SPAWN] Body {b.name} marked for death before insertion.")
  
             locked_name = None
             if ui_state.locked_body_idx is not None and ui_state.locked_body_idx < len(ui_state.bodies):
@@ -87,7 +87,7 @@ class InputController:
             ui_state.engine.bodies = new_bodies
             ui_state.engine.refresh_kernel()
             ui_state.renderer = GravityRenderer(data.WIDTH, data.HEIGHT, ui_state.resolution_div)
-            print(f"Spawn eseguito via OrbitalSpawner. Corpi attivi: {len(new_bodies)}")
+            print(f"Spawn completed via OrbitalSpawner. Active bodies: {len(new_bodies)}")
             return True
         return False
  
@@ -235,7 +235,7 @@ class InputController:
             tidal_str, log_str = graphics_kernel.probe_tidal_stress_at_point(
                 wx, wy, data.POS, data.MASS, active_indices, data.G, 0.0
             )
-            print(f"[SONDA] Pixel: ({mx},{my}) -> World: ({wx/AU_IN_KM:.2f} AU, {wy/AU_IN_KM:.2f} AU)")
+            print(f"[PROBE] Pixel: ({mx},{my}) -> World: ({wx/AU_IN_KM:.2f} AU, {wy/AU_IN_KM:.2f} AU)")
             print(f"        Phi  : {phi_val:.6e} km²/s²")
             print(f"        DPhi : {dphi_val * 1e3:.6e} kW/kg  (km²/s³)")
             print(f"        Tidal: {tidal_str:.4e} s^-2  (log10: {log_str:.2f})")
@@ -290,7 +290,7 @@ class InputController:
                     victim = next((b for b in ui_state.bodies if b.idx == ui_state.kill_target_idx), None)
                     if victim:
                         victim.set_dying()
-                        print(f"KILL COMMAND: Corpo {victim.name} marcato per la morte causale.")
+                        print(f"KILL COMMAND: Body {victim.name} marked for causal death.")
                 ui_state.kill_confirm_active = False
                 ui_state.kill_target_idx = None
                 if ui_state.gstate.paused:
@@ -307,11 +307,11 @@ class InputController:
             if event.key in (pygame.K_y, pygame.K_RETURN):
                 # Eseguiamo il ricalcolo e flaggiamo state
                 ui_state.gstate.show_info_causality = not ui_state.gstate.show_info_causality
-                mode_str = "CAUSALE (RELATIVISTICO)" if ui_state.gstate.show_info_causality else "NEWTONIANO (PURO)"
-                print(f"[REBUILD] Switch in corso alla modalità: {mode_str}")
-                
+                mode_str = "CAUSAL (RELATIVISTIC)" if ui_state.gstate.show_info_causality else "NEWTONIAN (PURE)"
+                print(f"[REBUILD] Switching to mode: {mode_str}")
+
                 # Innesca la ricostruzione come in self._rebuild_dt passando data.DT come parametro dt
-                self._rebuild_dt(data.DT, f"cambio modalità in {mode_str}")
+                self._rebuild_dt(data.DT, f"mode switch to {mode_str}")
                 
                 ui_state.causality_confirm_active = False
                 if ui_state.gstate.paused:
@@ -348,7 +348,7 @@ class InputController:
  
         elif event.key == pygame.K_BACKSPACE:
             ui_state.running = False
-            print("[GUI] Chiusura Pygame richiesta. Ritorno al Launcher...")
+            print("[GUI] Pygame shutdown requested. Returning to the launcher...")
  
         elif event.key == pygame.K_1: ui_state.speed_multiplier = 1
         elif event.key == pygame.K_2: ui_state.speed_multiplier = 10
@@ -491,10 +491,10 @@ class InputController:
                 ui_state.gstate.toggle_pause()
  
         elif event.key == pygame.K_t:
-            self._rebuild_dt(data.DT / 2.0, "aumento precisione")
- 
+            self._rebuild_dt(data.DT / 2.0, "precision increase")
+
         elif event.key == pygame.K_y:
-            self._rebuild_dt(data.DT * 2.0, "riduzione precisione")
+            self._rebuild_dt(data.DT * 2.0, "precision decrease")
  
     def _update_lagrange_target_on_lock(self, new_locked_idx):
         """Quando la camera si aggancia a un nuovo corpo in Lagrange Hunter o Roche DU,
@@ -526,7 +526,7 @@ class InputController:
                         if alternative_tgt != -1:
                             ui_state.lagrange_target_idx = alternative_tgt
                             ui_state.lagrange_attr_idx = attr_idx
-                            print(f"L-SYSTEM (Roche DU): Target spacecraft rilevato. Coppia impostata su: {ui_state.bodies[alternative_tgt].name} - {ui_state.bodies[attr_idx].name}")
+                            print(f"L-SYSTEM (Roche DU): Spacecraft target detected. Pair set to: {ui_state.bodies[alternative_tgt].name} - {ui_state.bodies[attr_idx].name}")
                             return
                         else:
                             # In assenza, usiamo la coppia: attrattore - attrattore dell'attrattore
@@ -534,7 +534,7 @@ class InputController:
                             if parent_attr_idx != -1:
                                 ui_state.lagrange_target_idx = attr_idx
                                 ui_state.lagrange_attr_idx = parent_attr_idx
-                                print(f"L-SYSTEM (Roche DU): Target spacecraft rilevato. Coppia impostata su parent: {ui_state.bodies[attr_idx].name} - {ui_state.bodies[parent_attr_idx].name}")
+                                print(f"L-SYSTEM (Roche DU): Spacecraft target detected. Pair set to parent: {ui_state.bodies[attr_idx].name} - {ui_state.bodies[parent_attr_idx].name}")
                                 return
                 
                 # Regola standard per corpi celesti normali
@@ -542,14 +542,14 @@ class InputController:
                 if mass_ok and attr_idx != -1:
                     ui_state.lagrange_target_idx = new_locked_idx
                     ui_state.lagrange_attr_idx = attr_idx
-                    print(f"L-SYSTEM: target aggiornato a: {ui_state.bodies[new_locked_idx].name}")
+                    print(f"L-SYSTEM: target updated to: {ui_state.bodies[new_locked_idx].name}")
                     return
             
             # Coppia non valida (in Roche DU solo se manca l'attrattore): teniamo la precedente
             prev_target_name = "None"
             if ui_state.lagrange_target_idx != -1 and ui_state.lagrange_target_idx < len(ui_state.bodies):
                 prev_target_name = ui_state.bodies[ui_state.lagrange_target_idx].name
-            print(f"L-SYSTEM: lock non compatibile. Heatmap mantenuta su: {prev_target_name}")
+            print(f"L-SYSTEM: incompatible lock. Heatmap kept on: {prev_target_name}")
 
     # ------------------------------------------------------------------
     # HELPER PRIVATO
@@ -558,7 +558,7 @@ class InputController:
     def _rebuild_dt(self, new_target_dt, label):
         """Ricostruisce la simulazione con un nuovo DT. Usato da T e Y."""
         ui_state.spawner.deactivate()
-        print(f"[INPUT] Richiesto {label}. DT: {data.DT} -> {new_target_dt}")
+        print(f"[INPUT] Requested {label}. DT: {data.DT} -> {new_target_dt}")
  
         locked_name = None
         if ui_state.locked_body_idx is not None and ui_state.locked_body_idx < len(ui_state.bodies):

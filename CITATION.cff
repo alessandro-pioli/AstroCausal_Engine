@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "AstroCausal Engine"
+abstract: >-
+  A real-time 2D simulator in which gravitational interaction propagates at the
+  finite speed c, implemented through per-body multi-resolution history ring
+  buffers. It integrates retarded Newtonian gravity, the Paczynski-Wiita
+  pseudo-potential, 2.5PN radiation reaction in the Damour-Deruelle form, and a
+  Velocity Verlet integrator, and renders gravitational field heatmaps whose
+  value at every pixel is read back at that pixel's own retarded time. It is an
+  educational and visualization tool, not numerical relativity: it does not
+  solve the Einstein field equations.
+authors:
+  - family-names: Pioli
+    given-names: Alessandro
+    orcid: "https://orcid.org/0009-0002-8876-1113"
+repository-code: "https://github.com/alessandro-pioli/AstroCausal_Engine"
+license: GPL-3.0-or-later
+version: 1.0.0
+date-released: "2026-08-18"
+keywords:
+  - retarded potentials
+  - N-body simulation
+  - post-Newtonian approximation
+  - gravitational waves
+  - computational physics
+  - scientific visualization
+  - physics education
+  - Numba
+  - Python

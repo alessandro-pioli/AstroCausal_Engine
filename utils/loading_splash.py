@@ -44,14 +44,18 @@ def _loading_worker(preset_name, gstate, dt_val, progress_q, result_holder):
         print_buffer.append(msg.rstrip('\n'))
 
         # Aggiornamenti di progresso basati sul contenuto del messaggio
+        # I marcatori devono combaciare letteralmente con i print di
+        # simulation_manager: "LINEAR INTERPOLATION" e "Reconstruction completed"
+        # sono le stringhe realmente emesse (prima si cercavano le vecchie diciture
+        # italiane, e le ultime due tappe della barra non scattavano mai).
         if "L2 BUDGET" in msg or "DATA ALLOC" in msg:
-            progress_q.put(("status", "Allocazione buffer storici...", 35))
-        elif "SMART COPY" in msg or "INTERPOLAZIONE" in msg:
-            progress_q.put(("status", "Ripristino storia causale...", 65))
+            progress_q.put(("status", "Allocating history buffers...", 35))
+        elif "SMART COPY" in msg or "LINEAR INTERPOLATION" in msg:
+            progress_q.put(("status", "Restoring causal history...", 65))
         elif "MEM CHECK" in msg:
-            progress_q.put(("status", "Verifica memoria...", 80))
-        elif "Ricostruzione completata" in msg:
-            progress_q.put(("status", "Avvio motore grafico...", 95))
+            progress_q.put(("status", "Checking memory...", 80))
+        elif "Reconstruction completed" in msg:
+            progress_q.put(("status", "Starting the graphics engine...", 95))
 
     builtins.print = _thread_local_print
     try:
@@ -60,12 +64,12 @@ def _loading_worker(preset_name, gstate, dt_val, progress_q, result_holder):
         from core import presets
         from core.simulation_manager import rebuild_simulation
 
-        progress_q.put(("status", "Caricamento preset...", 5))
+        progress_q.put(("status", "Loading scenario...", 5))
         bodies_raw, new_dt_raw, new_sim_rad, step = presets.get_preset(preset_name)
         if dt_val is not None:
             new_dt_raw = dt_val
 
-        progress_q.put(("status", "Calcolo architettura memoria...", 15))
+        progress_q.put(("status", "Planning memory architecture...", 15))
         bodies_out, dt_out = rebuild_simulation(
             bodies_raw, gstate.show_info_causality, new_dt_raw, new_sim_rad
         )
@@ -112,7 +116,7 @@ def show_splash_and_load(preset_name, gstate, dt_val):
 
     # --- Finestra ---
     root = tk.Tk()
-    root.title("AstroCausal Engine — Inizializzazione")
+    root.title("AstroCausal Engine — Initialization")
     root.geometry("520x240")
     root.configure(bg="#0D0D1A")
     root.resizable(False, False)
@@ -128,11 +132,11 @@ def show_splash_and_load(preset_name, gstate, dt_val):
     tk.Label(root, text="CAUSAL PHYSICS ENGINE",
              bg="#0D0D1A", fg="#4FC3F7",
              font=("Segoe UI", 15, "bold")).pack(pady=(28, 4))
-    tk.Label(root, text="Inizializzazione kernel causale...",
+    tk.Label(root, text="Initializing the causal kernel...",
              bg="#0D0D1A", fg="#888888",
              font=("Segoe UI", 10)).pack(pady=(0, 18))
 
-    status_var = tk.StringVar(value="Avvio...")
+    status_var = tk.StringVar(value="Starting...")
     tk.Label(root, textvariable=status_var,
              bg="#0D0D1A", fg="#CFD8DC",
              font=("Segoe UI", 10)).pack()
@@ -167,7 +171,7 @@ def show_splash_and_load(preset_name, gstate, dt_val):
                     _update_bar(pct)
                 elif kind == "done":
                     _update_bar(100)
-                    status_var.set("Pronto.")
+                    status_var.set("Ready.")
                     root.after(200, root.destroy)
                     return
                 elif kind == "error":
@@ -191,10 +195,10 @@ def show_splash_and_load(preset_name, gstate, dt_val):
 
     if error_holder[0]:
         # Stampa il traceback completo sul terminale per debug immediato
-        builtins.print("\n[LOADING ERROR] Traceback completo:\n" + error_holder[0])
+        builtins.print("\n[LOADING ERROR] Full traceback:\n" + error_holder[0])
         raise RuntimeError(
-            "Il thread di caricamento è fallito. "
-            "Vedi il traceback completo sopra (o nella GameConsole dopo il boot)."
+            "The loading thread failed. "
+            "See the full traceback above (or in the GameConsole after boot)."
         )
 
     return (

@@ -20,17 +20,17 @@ def _show_oom_error(total_mb: float, n_bodies: int) -> None:
     root = tk.Tk()
     root.withdraw()  # nasconde la finestra radice vuota
     messagebox.showerror(
-        "Memoria Insufficiente — Allocazione Buffer Fallita",
-        f"Il simulatore non ha trovato RAM sufficiente per allocare\n"
-        f"i buffer storici causali e/o le scie.\n\n"
-        f"RAM stimata richiesta: {total_mb / 1024:.2f} GB\n"
-        f"Corpi nello scenario:  {n_bodies}\n\n"
-        "Come risolvere:\n"
-        "  1. Aumenta il DT nel Launcher prima di avviare\n"
-        "     (raddoppiare il DT dimezza gli slot L0/L1/L2).\n"
-        "  2. Se sei a runtime: evita di abbassare troppo il DT\n"
-        "     con il tasto T in scenari con molti corpi.\n"
-        "  3. Scegli un preset con raggio simulativo (Sim Radius) minore."
+        "Out of Memory — Buffer Allocation Failed",
+        f"The simulator could not find enough RAM to allocate\n"
+        f"the causal history buffers and/or the orbital trails.\n\n"
+        f"Estimated RAM required: {total_mb / 1024:.2f} GB\n"
+        f"Bodies in the scenario: {n_bodies}\n\n"
+        "How to fix it:\n"
+        "  1. Raise DT in the launcher before starting\n"
+        "     (doubling DT halves the L0/L1/L2 slot count).\n"
+        "  2. At runtime: avoid pushing DT too low with the\n"
+        "     T key in scenarios with many bodies.\n"
+        "  3. Pick a scenario with a smaller Sim Radius."
     )
     root.destroy()
     os._exit(1)
@@ -312,8 +312,8 @@ def _print_cpu_info_once() -> None:
     """Stampa le specifiche CPU rilevate, solo al primo avvio."""
     global _CPU_INFO_PRINTED
     if not _CPU_INFO_PRINTED:
-        print(f"[CPU INFO] CPU Rilevata: {CPU_FORMAL_NAME}")
-        print(f"[CPU INFO] Cache CPU Rilevate — L1: {L1_CACHE_KB:.1f} KB | L2: {L2_CACHE_MB:.1f} MB | CACHE L3: {L3_PHYSICAL_CACHE_MB:.1f} MB (Soglia limite 70%: {L3_CACHE_LIMIT:.1f} MB)")
+        print(f"[CPU INFO] Detected CPU: {CPU_FORMAL_NAME}")
+        print(f"[CPU INFO] Detected caches — L1: {L1_CACHE_KB:.1f} KB | L2: {L2_CACHE_MB:.1f} MB | L3 CACHE: {L3_PHYSICAL_CACHE_MB:.1f} MB (70% limit threshold: {L3_CACHE_LIMIT:.1f} MB)")
         _CPU_INFO_PRINTED = True
 
 
@@ -849,7 +849,7 @@ def rebuild_simulation(current_bodies, is_causal_info_on, new_dt=None, new_sim_r
       8. Attractors — calcola TOP_ATTRACTOR per ogni corpo
       9. Priming    — accelerazioni iniziali per il warm-start del Verlet
     """
-    print("\n[SIM MANAGER] --- INIZIO RICOSTRUZIONE (PRESERVAZIONE MORTE, NASCITA, SCIE & ART) ---")
+    print("\n[SIM MANAGER] --- REBUILD START (PRESERVING DEATH, BIRTH, TRAILS & ART) ---")
     _print_cpu_info_once()
 
     old_dt = data.DT

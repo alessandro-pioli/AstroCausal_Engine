@@ -23,7 +23,7 @@ class Engine:
         # Recuperiamo il verdetto fresco da data.py
         current_method = data.METHOD
         check = data.MAX_BODIES >= 35 # Dato ideale di Switch ricavato empiricamente (calibrato un un i5 13400f)
-        print(f"[ENGINE] Kernel Refresh richiesto. Nuovo metodo attivo: {current_method}")
+        print(f"[ENGINE] Kernel refresh requested. New active method: {current_method}")
 
         if current_method == "SINGLE":
             # Caso Base: Buffer singolo (L0)

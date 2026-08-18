@@ -975,8 +975,6 @@ Quando l'oggetto compatto leggero percorre la sua orbita fortemente eccentrica a
 
 *Ciclo orbitale completo dell'EMRI (apocentro → pericentro → apocentro) renderizzato in modalità GW Strain. Il video mostra chiaramente la transizione dinamica tra l'emissione stazionaria e debole all'apocentro (in cui spicca il quadrupolo nudo del corpo leggero orientato lungo l'asse orbitale) e la violenta scarica ondulatoria concentrica rilasciata durante il passaggio ravvicinato al pericentro, che si propaga nello spazio.*
 
-*(È disponibile anche come GIF in loop reale in `docs/gif/GWH_EMRI_LOOP.gif`.)*
-
 | Vista macro: Early Inspiral (decine di AU) | Vista macro: Late Inspiral (decine di AU) |
 |:---:|:---:|
 | <img src="docs/gif/EMRI_rosetta.gif" width="180" alt="Orbita rosetta early inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_early_pattern.png" width="100%" alt="Macro pattern early inspiral"> | <img src="docs/gif/EMRI_rosetta_late.gif" width="220" alt="Orbita rosetta late inspiral"><br><br><img src="docs/img/GWH_EMRI_dezoom_late_pattern.png" width="100%" alt="Macro pattern late inspiral"> |

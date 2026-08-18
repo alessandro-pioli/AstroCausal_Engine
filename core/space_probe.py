@@ -21,13 +21,13 @@ class SpaceProbeController:
         data.PROBE_POS[:] = np.array(position[:2], dtype=np.float64)
         data.PROBE_ACTIVE[0] = True
         self.clear_buffer()
-        print(f"[LIGO] Sonda attivata alle coordinate {position}")
+        print(f"[LIGO] Probe activated at coordinates {position}")
 
     def deactivate(self):
         """Spegne la sonda e la spedisce nel VOID geometrico per sicurezza."""
         data.PROBE_ACTIVE[0] = False
         data.PROBE_POS[:] = data.VOID_VAL
-        print("[LIGO] Sonda disattivata (Inviata nel VOID).")
+        print("[LIGO] Probe deactivated (sent to the VOID).")
 
     def clear_buffer(self):
         """Pulisce la memoria e azzera la testina."""
@@ -74,6 +74,6 @@ class SpaceProbeController:
         # 3. Salvataggio sincrono (Evita file da 0KB se l'app si chiude)
         try:
             np.save(final_filename, ordered_data)
-            print(f"[LIGO PROBE] Dati salvati con successo in {final_filename}")
+            print(f"[LIGO PROBE] Data saved successfully to {final_filename}")
         except Exception as e:
-            print(f"[LIGO PROBE] Errore salvataggio: {e}")
+            print(f"[LIGO PROBE] Save error: {e}")

@@ -76,7 +76,7 @@ class PerformanceManager:
                         new_div = target_div
                         self.stability_streak = 0
                         self.last_canceled_signature = None
-                        print(f"[AUTO-TUNE] Upgrade approvato verso div={target_div} in mode={gstate.view_mode}.")
+                        print(f"[AUTO-TUNE] Upgrade approved to div={target_div} in mode={gstate.view_mode}.")
             else:
                 self.stability_streak = 0 
         else:
@@ -90,7 +90,7 @@ class PerformanceManager:
             changed = (new_div != resolution_div)
             
         if changed:
-            print(f"[AUTO-GPU] FPS: {current_fps:.1f} -> Cambio Res: 1/{resolution_div} -> 1/{new_div}")
+            print(f"[AUTO-GPU] FPS: {current_fps:.1f} -> Res change: 1/{resolution_div} -> 1/{new_div}")
             
         return new_div, changed
 

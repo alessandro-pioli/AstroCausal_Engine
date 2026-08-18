@@ -100,19 +100,19 @@ if __name__ == "__main__":
     # Definiamo alcune funzioni di callback
     def quit_game(event):
         global running
-        print("Fine simulazione...")
+        print("Simulation ended...")
         running = False
 
     def handle_keys(event):
         if event.key == pygame.K_ESCAPE:
-            print("Premuto ESC, uscita...")
+            print("ESC pressed, exiting...")
             global running
             running = False
         elif event.key == pygame.K_SPACE:
-            print("Premuto SPAZIO!")
+            print("SPACE pressed!")
 
     def handle_mouse_click(event):
-        print(f"Click del mouse nella posizione: {event.pos}")
+        print(f"Mouse click at position: {event.pos}")
 
     # Registriamo le callback assegnandole ai tipi di evento di Pygame
     event_handler.register(pygame.QUIT, quit_game)

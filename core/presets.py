@@ -19,58 +19,35 @@ RED = (255, 50, 50)
 # Helper matematici orbitali 
 from utils.orbital_math import solve_pw_circular_velocity, solve_pair_circular_velocity, solve_velocity_from_apocenter, solve_velocity_from_pericenter, solve_escape_velocity
 
-def get_preset(name="Sistema Solare Completo"):
+DEFAULT_PRESET_ID = "solar_system"
+
+
+def get_preset(name=DEFAULT_PRESET_ID):
     """
     WRAPPER (Factory).
-    Seleziona lo scenario in base al nome stringa leggibile.
+    Risolve uno scenario a partire dal suo ID stabile (snake_case ASCII, la chiave
+    di PRESET_REGISTRY in fondo al file). L'ID è quello che viaggia sulla riga di
+    comando fra launcher e main_gui: le etichette leggibili restano dati di sola
+    presentazione, quindi tradurle non tocca il dispatch.
     Ritorna la tupla: (bodies, ideal_dt, ideal_sim_radius, ideal_step)
     """
-    if name == "Sistema Solare Completo":
-        return _make_solar_system()
-    elif name == "Sistema Solare (Leggero)":
-        return _make_solar_system_light()
-    elif name == "Sistema Solare: Orbita Galattica (Sgr A*)":
-        return _make_galactic_solar_system()
-    elif name == "Ammasso Caotico (100 Corpi)":
-        return _make_random_cluster(100)
-    elif name == "Terra - Luna - ISS - Hubble":
-        return _make_earth_moon_iss_hubble()
-    elif name == "Sole - Terra - Luna - Artemis II (Motors Off)":
-        return _make_sun_earth_moon_artemis2()
-    elif name == "Sistema Gioviano Completo":
-        return _make_jovian_system()
-    elif name == "Approccio alla Velocità della Luce (ART) [0.999c -> c] - 20 gb RAM ver":
-        return _make_Rspeed_test()
-    elif name == "Approccio alla Velocità della Luce (ART) [0.9c -> c] - LIGHT 10 gb RAM ver":
-        return _make_Rspeed_test_light()
-    elif name == "Approccio alla Velocità della Luce (ART) [0.7c -> c] - ULTRA-LIGHT 5 gb RAM ver":
-        return _make_Rspeed_test_ultralight()
-    elif name == "Stelle di Neutroni Binarie: Orbita Stabile":
-        return _make_binary_neutron_stars_stable()
-    elif name == "Stelle di Neutroni Binarie: Eccentricità Estrema":
-        return _make_extreme_eccentric_binary_ns()
-    elif name == "Stelle di Neutroni Binarie: Pre-Collisione":
-        return _make_binary_neutron_stars_pre_collision()
-    elif name == "GW170817: Merger Stelle di Neutroni":
-        return _make_GW170817_merger()
-    elif name == "Alpha Centauri + Sistema Polyphemus (Avatar)":
-        return _make_alpha_centauri_avatar()
-    elif name == "GW150914: Merger Buchi Neri":
-        return _make_GW150914_merger()
-    elif name == "GW190814: Merger Asimmetrico (Mass Gap)":
-        return _make_GW190814_merger()
-    elif name == "Laboratorio Orbite Estreme":
-        return _make_extreme_eccentricity_test()
-    elif name == "EMRI: Plunge Relativistico":
-        return _make_relativistic_plunge_test()
-    elif name == "Scontro fra Galassie Nane":
-        return _make_dual_cluster_collision()
-    elif name == "Scenario Vuoto (Blank)":
-        return _make_blank()
-    else:
-        print(f"[WARNING] Preset '{name}' non trovato. Carico Sistema Solare Completo.")
-        return _make_solar_system()
-    
+    entry = PRESET_REGISTRY.get(name)
+    if entry is None:
+        print(f"[WARNING] Preset '{name}' not found. Falling back to '{DEFAULT_PRESET_ID}'.")
+        entry = PRESET_REGISTRY[DEFAULT_PRESET_ID]
+    return entry["factory"]()
+
+
+def get_preset_ids():
+    """Restituisce gli ID dei preset nell'ordine di presentazione del registro."""
+    return list(PRESET_REGISTRY.keys())
+
+
+def get_preset_label(preset_id):
+    """Etichetta leggibile di un preset; ricade sull'ID stesso se sconosciuto."""
+    entry = PRESET_REGISTRY.get(preset_id)
+    return entry["label"] if entry else preset_id
+
 
 # --- GENERATORI SPECIFICI ---
 def _make_Rspeed_test():
@@ -1264,7 +1241,124 @@ def _make_blank():
     spawnando corpi manualmente durante la simulazione.
     """
     bodies = []
-    ideal_dt = DEFAULT_DT          
-    ideal_sim_radius = config.SIMULATION_RADIUS_KM   
-    ideal_step = DEFAULT_STEP          
+    ideal_dt = DEFAULT_DT
+    ideal_sim_radius = config.SIMULATION_RADIUS_KM
+    ideal_step = DEFAULT_STEP
     return bodies, ideal_dt, ideal_sim_radius, ideal_step
+
+
+# --- REGISTRO DEI PRESET ---
+# Unica fonte di verità per gli scenari. La chiave è l'ID stabile (snake_case
+# ASCII) su cui fa dispatch get_preset() e che viaggia sul flag --preset fra
+# launcher e main_gui; 'label' e 'desc' sono soli dati di presentazione, quindi
+# si possono tradurre o riscrivere senza toccare la logica.
+# Le 'label' coincidono letteralmente con la colonna Scenario della tabella nel
+# README.md inglese: chi legge la documentazione ritrova lo stesso nome nel menu.
+# L'ordine del dizionario è l'ordine del menu a tendina nel launcher.
+PRESET_REGISTRY = {
+    "solar_system": {
+        "factory": _make_solar_system,
+        "label": "Complete Solar System",
+        "desc": "Our complete planetary ecosystem: the Sun, the 8 major planets, Pluto and the largest moons. Orbits are initialized at pericenter, with the Keplerian velocity solved numerically on the Paczyński-Wiita pseudo-potential for maximum physical stability.",
+    },
+    "solar_system_light": {
+        "factory": _make_solar_system_light,
+        "label": "Solar System (Light)",
+        "desc": "The simplified Solar System: only the Sun and the 9 major planets, without natural satellites. Lets you watch long-term Keplerian stability on any hardware thanks to a larger time step (512 s/step).",
+    },
+    "galactic_orbit": {
+        "factory": _make_galactic_solar_system,
+        "label": "Galactic Orbit (Sgr A*)",
+        "desc": "The Solar System travels at 230 km/s on a galactic orbit around Sagittarius A*, the central supermassive black hole of 4.1 million M☉. A test of how the gravitational field and orbital stability behave under a global high-speed translation (a 230 km/s boost).",
+    },
+    "chaotic_cluster": {
+        "factory": lambda: _make_random_cluster(100),
+        "label": "Chaotic Cluster",
+        "desc": "Extreme N-body stress test: 100 massive bodies orbiting chaotically around a central black hole of 1000 M☉.\nPERFORMANCE NOTES: given the computational load, use T (halve DT, more precision) and Y (double DT, less precision) to control speed while keeping usable FPS. Avoid the highest engine multipliers (keys 1-5). Pressing H until the heatmaps are off gives the largest FPS gain.",
+    },
+    "earth_moon_iss_hubble": {
+        "factory": _make_earth_moon_iss_hubble,
+        "label": "Earth - Moon - ISS - Hubble",
+        "desc": "A real multi-body problem in the geocentric regime. Includes the Moon's actual elliptical orbit, the International Space Station and the Hubble Space Telescope, passive on a stable circular orbit.",
+    },
+    "artemis_ii": {
+        "factory": _make_sun_earth_moon_artemis2,
+        "label": "Sun - Earth - Moon - Artemis II",
+        "desc": "The Artemis II spacecraft (Orion plus service module, about 26 metric tons) on a passive translunar cruise, motors off. A real heliocentric scenario with the Sun at the cartesian origin and the Earth and Moon orbiting it: ideal for showing the handover between effective spheres of gravitational influence.",
+    },
+    "jovian_system": {
+        "factory": _make_jovian_system,
+        "label": "Complete Jovian System",
+        "desc": "Jupiter and its 13 main moons, split between the inner moons, the Galilean moons in resonance, and the outer irregular moons.",
+    },
+    "approach_c_0999": {
+        "factory": _make_Rspeed_test,
+        "label": "Approach to c (0.999c)",
+        "desc": "The Sun launched at 0.999c with an Artificial Relativistic Acceleration (ART) that deliberately overrides the engine's physical brake. As v approaches c the field flattens and the causal tail L0->L1->L2 collapses into an optical singularity. Requires 20 GB of peak RAM while building (10 GB operational), because of the enormous history buffer needed to cover 320 light years of causal history. ONLY the Phi heatmap (scalar potential) has the relativistic branch that handles this distortion.\nSUGGESTED: use keys 1 to 5 freely to tune simulation speed. Press TAB or double-click the Sun to watch its velocity live. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "approach_c_09": {
+        "factory": _make_Rspeed_test_light,
+        "label": "Approach to c (0.9c)",
+        "desc": "Lighter version of the relativistic scenario, starting from a lower speed (0.9c) so the field distortion builds up gradually. Requires 10 GB of peak RAM while building (5 GB operational), covering 1742 light years of causal history at DT=1.6. ONLY the Phi heatmap has the relativistic branch that handles this distortion.\nSUGGESTED: use keys 1 to 5 freely to tune simulation speed. Press TAB or double-click the Sun to watch its velocity live. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "approach_c_07": {
+        "factory": _make_Rspeed_test_ultralight,
+        "label": "Approach to c (0.7c)",
+        "desc": "Ultra-light version of the relativistic scenario. Starting from 0.7c, it shows the dynamic transition from a spherical gravitational field to the flat Liénard-Wiechert disc as v approaches c. Requires only 5 GB of peak RAM while building (2.5 GB operational), covering 8710 light years of causal history at DT=16.0. ONLY the Phi heatmap handles this relativistic branch.\nSUGGESTED: use keys 1 to 5 freely to tune simulation speed. Press TAB or double-click the Sun to watch its velocity live. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "ns_binary_stable": {
+        "factory": _make_binary_neutron_stars_stable,
+        "label": "NS Binary: Stable Orbit",
+        "desc": "Two neutron stars of about 1.5 M☉ on a stable circular orbit at 40,000 km: the pre-inspiral reference state. Gravitational-wave emission at this separation produces a real but slow orbital decay, with coalescence expected on a scale of centuries.\nSUGGESTED: dPhi/dt or GW Strain for the pure quadrupole wave of the binary. Roche Topology is also very informative. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "ns_binary_eccentric": {
+        "factory": _make_extreme_eccentric_binary_ns,
+        "label": "NS Binary: Extreme Eccentricity",
+        "desc": "Two twin neutron stars of about 1.5 M☉ on extremely eccentric orbits around their common barycenter. The barycenter sits exactly halfway along their pericenter separation (200 km), and the orbits weave rapidly around each other.\nSUGGESTED: dPhi/dt or GW Strain, to watch the impulsive quadrupole wave released at each pericenter. Roche Topology is also very informative. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "ns_binary_precollision": {
+        "factory": _make_binary_neutron_stars_pre_collision,
+        "label": "NS Binary: Pre-Collision",
+        "desc": "Late inspiral of two neutron stars separated by only 375 km. The final collapse and merger happen within about 60 seconds of simulated time.\nOPERATING NOTES: the dPhi/dt heatmap (gravitational waves) is essential here. Press P to place the LIGO probe on screen, not too close to the center or it will be destroyed early. To save the NPY data dump before the collision, press P again to deactivate the probe, or close the simulation back to the launcher. Use keys 1 to 5 to speed the simulation up, but DO NOT PRESS T or Y: the 2.5PN relativistic physics is tuned on the initial DT of 1e-6, and changing it would irreversibly ruin the chirp. Roche Topology is also very informative. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "gw170817": {
+        "factory": _make_GW170817_merger,
+        "label": "GW170817",
+        "desc": "Replica of the GW170817 event at f_GW = 50 Hz. The gravitational collapse and the kilonova that follows happen within about 14 seconds of simulated time.\nOPERATING NOTES: the dPhi/dt view is essential. Press P to place the LIGO probe at a safe distance from the orbital barycenter to capture its strain. Save the data dump by deactivating the probe with P before impact, or by closing the simulation back to the launcher. Tune speed with keys 1-5, but strictly avoid T and Y so the relativistic corrections calibrated on the initial DT stay valid. Roche Topology is also very informative. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "gw150914": {
+        "factory": _make_GW150914_merger,
+        "label": "GW150914",
+        "desc": "The first gravitational-wave signal ever detected by LIGO. Two black holes of 36 and 29 M☉ (source frame) merge in about 52 seconds of simulated time: 52.034 s measured, against the roughly 55 s expected from both Peters and SXS numerical relativity, for a mean chirp error against NR of 1.27%.\nOPERATING NOTES: use the dPhi/dt map (key H) to follow the concentric wavefronts. Place the LIGO probe with P at a reasonable distance, not too close. Save by pressing P again, or by closing the simulation back to the launcher, then run the spectral analysis in the LIGO Analyzer. Tune the engine steps with keys 1-5, but DO NOT change DT with T or Y: it would break the relativistic chirp calibration. Roche Topology is also very informative. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "gw190814": {
+        "factory": _make_GW190814_merger,
+        "label": "GW190814",
+        "desc": "The most asymmetric merger observed at the time (q = 0.112): a black hole of 23 M☉ swallows a mysterious 2.6 M☉ object in the 'mass gap', either the heaviest neutron star or the lightest black hole ever detected, with no electromagnetic counterpart. Coalescence happens within about 20 seconds of simulated time (Peters initialization at T-20s, initial f_GW around 15 Hz, ISCO at about 162 Hz).\nOPERATING NOTES: use dPhi/dt (key H) or GW Strain (key L with a locked body) for the asymmetric chirp. Press P to place the LIGO probe at a safe distance; save the dump by pressing P again before impact, or by closing the simulation back to the launcher. Tune speed with keys 1-5, but DO NOT use T or Y: the 2.5PN physics is tuned on the initial DT of 1e-6.",
+    },
+    "alpha_centauri": {
+        "factory": _make_alpha_centauri_avatar,
+        "label": "Alpha Centauri + Polyphemus",
+        "desc": "The real triple system (α Cen A + B + Proxima) together with the fictional Polyphemus system from Avatar: a gas giant, Pandora and 4 tidally locked moons. Angular offsets are forced to multiples of 45° to guarantee stability.",
+    },
+    "extreme_orbits_lab": {
+        "factory": _make_extreme_eccentricity_test,
+        "label": "Extreme Orbits Laboratory",
+        "desc": "A teaching laboratory with a central black hole of 1000 M☉ and 5 test particles on separate lanes: circular (e=0), elliptical (e=0.6), high eccentricity (e=0.95), hyperbolic (escape) and retrograde circular.",
+    },
+    "emri_plunge": {
+        "factory": _make_relativistic_plunge_test,
+        "label": "EMRI: Relativistic Plunge",
+        "desc": "Extreme Mass Ratio Inspiral: a black hole of 10 M☉ spirals into one of 1000 M☉, a 1:100 ratio. The collapse and final plunge happen after exactly 13 days and 10 hours of simulated time. Were the smaller body an ordinary star instead of a black hole, extreme tidal forces would tear it apart on its very first revolution.\nSUGGESTED: use dPhi/dt or GW Strain to follow the concentric waves, or Roche Topology. Speed the simulation up with keys 4 and 5. Note: if the orbital trails get in the way, hide them with R.",
+    },
+    "dwarf_galaxy_collision": {
+        "factory": _make_dual_cluster_collision,
+        "label": "Collision between Dwarf Galaxies",
+        "desc": "Two dwarf galaxies (65,000 M☉ plus 100 stars each) in a near head-on collision. Cyan against magenta, to track how the stars mix during the merger.\nPERFORMANCE NOTES: with 202 bodies the interaction count is very high, so press H to switch the heatmaps off and recover frame rate. Use T (lower DT) and Y (higher DT) sparingly to keep the engine stable, and treat the 1-5 speed multipliers with care to avoid stutter during the collision. Note: if the star trails get too intrusive, hide them with R.",
+    },
+    "blank": {
+        "factory": _make_blank,
+        "label": "Empty Scenario",
+        "desc": "A completely empty universe with default parameters and no pre-existing bodies. Ideal for building custom scenarios. The causal simulation radius can be set in astro_settings.ini.\nBUILDING NOTES: press N to open the Orbital Spawner. Use keys 0 and 5 to browse the categories of celestial bodies and 1-4 to pick the object. Then choose the orbit mode: stationary, circular or eccentric around the most massive body or around the nearest one, or the Lagrange Points mode to insert the body stably co-rotating on L1-L5.",
+    },
+}

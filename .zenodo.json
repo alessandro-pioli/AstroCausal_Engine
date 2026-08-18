@@ -1,0 +1,31 @@
+{
+  "title": "AstroCausal Engine: an interactive simulator of retarded-potential gravity",
+  "upload_type": "software",
+  "license": "GPL-3.0-or-later",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "Pioli, Alessandro",
+      "orcid": "0009-0002-8876-1113"
+    }
+  ],
+  "keywords": [
+    "retarded potentials",
+    "N-body simulation",
+    "post-Newtonian approximation",
+    "gravitational waves",
+    "computational physics",
+    "scientific visualization",
+    "physics education",
+    "Numba",
+    "Python"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/alessandro-pioli/AstroCausal_Engine",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
+  "description": "<p>A real-time 2D simulator in which the gravitational interaction propagates at the finite speed <em>c</em>, rather than instantaneously. Each body writes its own history into multi-resolution ring buffers, and every force evaluation reads the source state back at its retarded time. The engine implements retarded Newtonian gravity, the Pacz&#121;nski-Wiita pseudo-potential, 2.5PN radiation reaction in the Damour-Deruelle form, and a Velocity Verlet integrator, and it runs in real time on a consumer CPU through Numba JIT kernels in double precision.</p><p>Its field heatmaps are causal as well as its dynamics: the value drawn at each pixel is reconstructed from the source states at that pixel's own retarded time, so the picture shows the field as it would actually arrive there. Included visualizations cover the scalar potential, its time derivative, tidal shear, co-rotating Roche topology, Lagrange-point detection, and a projected quadrupole strain map. A virtual probe records a strain time series that a companion pipeline analyses spectrally to estimate the chirp mass.</p><p><strong>Scope and declared limits.</strong> This is an educational and visualization tool, not numerical relativity: it does not solve the Einstein field equations, and spacetime is flat and Euclidean with a single absolute time coordinate corresponding to a distant observer. The wave visualizations are a 2D scalar analog and a weak-field projected quadrupole, not tensor waves: there is no independent pair of polarizations. The engine runs parameter-free, with no free calibration coefficients, and has been compared against public GWOSC strain data and SXS numerical-relativity waveforms. That comparison is made on instantaneous-frequency tracks, not on accumulated waveform phase, and the agreement is not of gravitational-wave template quality. The final pre-merger regime, where the dynamics become non-perturbative, is outside what the model can describe.</p><p>Full documentation, including the physics guide and the architecture notes, is kept with the source repository, where the equations and internal links render correctly: <a href=\"https://github.com/alessandro-pioli/AstroCausal_Engine\">https://github.com/alessandro-pioli/AstroCausal_Engine</a></p>"
+}
