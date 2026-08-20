@@ -2,6 +2,8 @@
 
 **🇮🇹 Italiano** · [🇬🇧 English](README.md)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22004663.svg)](https://doi.org/10.5281/zenodo.22004663)
+
 <sub>Repository canonico: **https://github.com/alessandro-pioli/AstroCausal_Engine**</sub>
 
 > Un laboratorio in tempo reale dove la gravità è ricreata come fenomeno genuinamente causale: l'informazione gravitazionale viaggia sempre a velocità finita c. Attorno a questo nucleo si osservano scenari che spaziano dal sistema solare completo al merge di buchi neri fino agli impatti tra galassie nane, con vettori e telemetria, spawner orbitale interattivo per orbite kepleriane e punti di Lagrange, suite completa di heatmap gravitazionali e la manifestazione visiva emergente di onde gravitazionali analoghe.

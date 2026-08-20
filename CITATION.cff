@@ -16,9 +16,10 @@ authors:
     given-names: Alessandro
     orcid: "https://orcid.org/0009-0002-8876-1113"
 repository-code: "https://github.com/alessandro-pioli/AstroCausal_Engine"
+doi: "10.5281/zenodo.22004663"
 license: GPL-3.0-or-later
 version: 1.0.0
-date-released: "2026-08-18"
+date-released: "2026-08-19"
 keywords:
   - retarded potentials
   - N-body simulation
