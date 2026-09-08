@@ -154,7 +154,7 @@ These dynamic behaviors **are not explicitly programmed**, but emerge naturally 
 | Key | Action |
 |:---:|---|
 | `H` | Cycle heatmap mode: OFF → Φ Scalar [Causal] → dΦ/dt [Causal] → Tidal Stress [Newtonian] → OFF |
-| `L` | Cycle pair heatmaps: Lagrange Hunter → Roche Topology [Newtonian] → GW Strain [Causal] → Φ (requires body with lock and dominant attractor) |
+| `L` | Cycle pair heatmaps: Lagrange Hunter → Roche Topology [Newtonian] → GW Strain [Causal] → Φ (requires a locked body and a dominant attractor) |
 | `R` | Show/hide orbital trails |
 | `G` | Cycle heatmap resolution: AUTO → 1/1 → 1/2 → 1/4 → ... → AUTO |
 | `M` | Toggle legend (in Tidal) or theoretical Lagrange markers (in Lagrange Hunter) or ideal circular orbit (in Roche Topology) |
@@ -166,7 +166,7 @@ These dynamic behaviors **are not explicitly programmed**, but emerge naturally 
 |:---:|---|
 | `P` | Place/remove LIGO probe at cursor position |
 | `N` | Open the Orbital Spawner at the cursor position |
-| `K` | Request the destruction of the body with lock (confirm Y/N) |
+| `K` | Destroy the locked body (confirm Y/N) |
 
 ---
 
