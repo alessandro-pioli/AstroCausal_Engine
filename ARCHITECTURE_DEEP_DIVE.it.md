@@ -66,7 +66,7 @@ Il loop del **[Velocity Verlet (§4.1 della Guida Fisica)](PHYSICS_AND_SCENARIO_
 | **2** | Forze gravitazionali causali tra tutti i corpi | $O(N^2)$ | `prange` (se $N > 35$ ) |
 | **2.5** | Secondo half-kick velocità | $O(N)$ | accodata nel `prange` di Fase 2 |
 
-All'inizio `prange` era applicato su tutte le fasi. Non era la soluzione più performante. Le fasi a complessità lineare ($O(N)$) sono talmente rapide che il tempo speso a lanciare e sincronizzare i thread supera il calcolo stesso su un singolo core. Il parallelismo ha senso solo per la Fase 2 ($O(N^2)$, il collo di bottiglia reale), con la Fase 2.5 che si accoda dentro lo stesso `prange` senza costi aggiuntivi di lancio. La Fase 1 resta sempre sequenziale: oltre a essere $O(N)$, è imperativo che le sue scritture nei buffer siano completate prima delle letture causali della Fase 2 (barriera read-after-write). Ma anche la parallelizzazione della Fase 2 non è incondizionata: sotto i ~35 corpi (soglia ricavata empiricamente e valutata sulla capacità dello scenario al momento del rebuild) l'overhead dei thread domina ancora sull'$O(N^2)$ stesso, quindi `engine.py` reindirizza l'intera fisica verso una versione interamente sequenziale.
+All'inizio `prange` era applicato su tutte le fasi. Non era la soluzione più performante. Le fasi a complessità lineare, $O(N)$, sono talmente rapide che il tempo speso a lanciare e sincronizzare i thread supera il calcolo stesso su un singolo core. Il parallelismo ha senso solo per la Fase 2 ($O(N^2)$, il collo di bottiglia reale), con la Fase 2.5 che si accoda dentro lo stesso `prange` senza costi aggiuntivi di lancio. La Fase 1 resta sempre sequenziale: oltre a essere $O(N)$, è imperativo che le sue scritture nei buffer siano completate prima delle letture causali della Fase 2 (barriera read-after-write). Ma anche la parallelizzazione della Fase 2 non è incondizionata: sotto i ~35 corpi (soglia ricavata empiricamente e valutata sulla capacità dello scenario al momento del rebuild) l'overhead dei thread domina ancora sull'ordine $O(N^2)$ stesso, quindi `engine.py` reindirizza l'intera fisica verso una versione interamente sequenziale.
 
 I file con i loop caldi e pesanti del progetto, rinominati come *kernel fisici*, non lavorano con classi o oggetti. Leggono e scrivono direttamente su `data.py` che contiene principalmente array 1D contigui dove l'indice rappresenta l'identità del corpo celeste. Questo layout piatto è la condizione ideale per il compilatore LLVM: elimina l'allocazione di oggetti NumPy temporanei dentro i loop caldi.
 
@@ -167,7 +167,7 @@ Il dimensionamento di partenza deriva strettamente dal raggio causale dello scen
 raw_len = SIMULATION_RADIUS_KM / (c · DT)
 ```
 
-La tabella sottostante schematizza la matrice logico-decisionale con cui `simulation_manager.py` risolve in frazioni di millisecondo il suo problema cardine: *"Quanti buffer circolari mi servono, e con quali limiti di slot, dato il budget della Cache L3 fisica del computer, il numero di corpi $N$ presenti e il raggio causale spaziotemporale $R$ da raggiungere?"*
+La tabella sottostante schematizza la matrice logico-decisionale con cui `simulation_manager.py` risolve in frazioni di millisecondo il suo problema cardine: *"Quanti buffer circolari mi servono, e con quali limiti di slot, dato il budget della Cache L3 fisica del computer, il numero di corpi N presenti e il raggio causale spaziotemporale R da raggiungere?"*
 
 | Modalità | Quando scatta | L0 | L1 | L2 |
 |---|---|---|---|---|
@@ -482,7 +482,7 @@ Il ragionamento iniziale era: prendere due frame di Φ consecutivi e confrontarl
 
 Qui un fisico sarebbe arrivato subito alla risposta; l'autore ci è arrivato passo passo, ragionando sull'intorno matematico di $\Phi$ diviso l'intorno del tempo, cioè la derivata parziale $\partial\Phi/\partial t$ in ogni punto dello spazio (la lettura fisica della mappa risultante è nel [§7.2 della Guida Fisica](PHYSICS_AND_SCENARIO_GUIDE.it.md#72-variazione-temporale-dφdt)). Da questo percorso a tratti empirico sono stati formulati la struttura e il metodo per tutte le altre [heatmap del campo](PHYSICS_AND_SCENARIO_GUIDE.it.md#7-la-matematica-delle-heatmap).
 
-Concretamente: $\Phi = GM/r$ e quando la sorgente si muove la distanza $r$ cambia nel tempo. La derivata si riduce, per ogni sorgente, a $\partial\Phi/\partial t = G M v_{rad} / r^2$ , dove $v_{rad}$ è la componente della velocità lungo la linea che congiunge la sorgente al punto osservato. Il risultato è il "contributo $d\Phi$" di ciascun corpo a ciascun pixel, sommato su tutti i corpi, calcolato nei kernel helper con `inline='always'` e parallelizzato su tutta la griglia.
+Concretamente: $\Phi = GM/r$ e quando la sorgente si muove la distanza $r$ cambia nel tempo. La derivata si riduce, per ogni sorgente, a $\partial\Phi/\partial t = G M v_{rad} / r^2$ , dove $v_{rad}$ è la componente della velocità lungo la linea che congiunge la sorgente al punto osservato. Il risultato è il contributo $d\Phi$ di ciascun corpo a ciascun pixel, sommato su tutti i corpi, calcolato nei kernel helper con `inline='always'` e parallelizzato su tutta la griglia.
 
 ```mermaid
 flowchart TD
@@ -624,7 +624,7 @@ La guardia vive solo a DT piccolo; a DT grande il bersaglio è già abbastanza l
 
 **Livello 2: Continuous Collision Detection (CCD).** Sensore aggiuntivo che vale per tutti i contesti ma nel pratico tende ad attivarsi principalmente in situazioni di campo forte. Per ogni coppia di corpi attivi nel ciclo $O(N^2)$ :
 
-1. Si calcola il vettore di spostamento relativo nel tick corrente: $\Delta r = (\vec{v}_i - \vec{v}_j) \cdot dt$ .
+1. Si calcola il vettore di spostamento relativo nel tick corrente: $\Delta r = (\vec v_i - \vec v_j) \cdot dt$ .
 2. Si lancia un **ray cast lineare** lungo questa traiettoria: se il segmento da `pos_current` a `pos_next` interseca la sfera di cattura, il tunneling è in corso.
 3. Si calcola $t_{min} \in [0, 1]$ (un numero tra 0 e 1: la frazione del tick in cui avviene il minimo approccio, dove 0 è l'inizio del tick e 1 la fine) e la fusione viene gestita a quella posizione interpolata, non alla fine del tick.
 

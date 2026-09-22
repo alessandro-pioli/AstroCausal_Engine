@@ -66,7 +66,7 @@ The loop for the **[Velocity Verlet (§4.1 of the Physics Guide)](PHYSICS_AND_SC
 | **2** | Causal gravitational forces between all bodies | $O(N^2)$ | `prange` (if $N > 35$) |
 | **2.5** | Second velocity half-kick | $O(N)$ | queued in the `prange` of Phase 2 |
 
-Initially, `prange` was applied to all phases. It was not the most efficient solution. Phases with linear complexity ($O(N)$) are so fast that the time spent launching and synchronizing threads exceeds the computation itself on a single core. Parallelism only makes sense for Phase 2 ($O(N^2)$, the actual bottleneck), with Phase 2.5 queued within the same `prange` without additional launch costs. Phase 1 always remains sequential: in addition to being $O(N)$, it is imperative that its writes to the buffers be completed before the causal reads of Phase 2 (read-after-write barrier). But even the parallelization of Phase 2 is not unconditional: below ~35 bodies (a threshold derived empirically and evaluated based on the scenario’s capacity at the time of the rebuild), the thread overhead still dominates the $O(N^2)$ itself, so `engine.py` redirects the entire physics to a fully sequential version.
+Initially, `prange` was applied to all phases. It was not the most efficient solution. Phases with linear complexity, $O(N)$, are so fast that the time spent launching and synchronizing threads exceeds the computation itself on a single core. Parallelism only makes sense for Phase 2 ($O(N^2)$, the actual bottleneck), with Phase 2.5 queued within the same `prange` without additional launch costs. Phase 1 always remains sequential: in addition to being $O(N)$, it is imperative that its writes to the buffers be completed before the causal reads of Phase 2 (read-after-write barrier). But even the parallelization of Phase 2 is not unconditional: below ~35 bodies (a threshold derived empirically and evaluated based on the scenario’s capacity at the time of the rebuild), the thread overhead still dominates the $O(N^2)$ itself, so `engine.py` redirects the entire physics to a fully sequential version.
 
 The files containing the project’s hot and heavy loops (renamed *physics kernels*) do not work with classes or objects. They read and write directly to `data.py`, which primarily contains contiguous 1D arrays where the index represents the celestial body’s ID. This flat layout is ideal for the LLVM compiler: it eliminates the allocation of temporary NumPy objects within the hot loops.
 
@@ -167,7 +167,7 @@ The initial sizing is strictly derived from the causal radius of the scenario. I
 raw_len = SIMULATION_RADIUS_KM / (c · DT)
 ```
 
-The table below outlines the logical decision matrix that `simulation_manager.py` uses to solve its core problem in fractions of a millisecond: *"How many circular buffers do I need, and with what slot limits, given the computer’s physical L3 cache budget, the number of bodies $N$ present, and the spacetime causal radius $R$ to be achieved?"*
+The table below outlines the logical decision matrix that `simulation_manager.py` uses to solve its core problem in fractions of a millisecond: *"How many circular buffers do I need, and with what slot limits, given the computer’s physical L3 cache budget, the number of bodies N present, and the spacetime causal radius R to be achieved?"*
 
 | Mode | When triggered | L0 | L1 | L2 |
 |---|---|---|---|---|
@@ -482,7 +482,7 @@ The initial reasoning was: take two consecutive frames of $\Phi$ and compare the
 
 Here, a physicist would have arrived at the answer immediately; the author arrived at it step by step, reasoning about the mathematical neighborhood of $\Phi$ divided by the neighborhood of time, that is, the partial derivative $\partial\Phi/\partial t$ at every point in space (the physical interpretation of the resulting map is in [§7.2 of the Physics Guide](PHYSICS_AND_SCENARIO_GUIDE.md#72-time-derivative-dφdt)). From this sometimes empirical approach, the structure and method for all other [field heatmaps](PHYSICS_AND_SCENARIO_GUIDE.md#7-the-mathematics-of-heatmaps) were formulated.
 
-Specifically: $\Phi = GM/r$, and when the source moves, the distance $r$ changes over time. The derivative reduces, for each source, to $\partial\Phi/\partial t = G M v_{rad} / r^2$, where $v_{rad}$ is the component of velocity along the line connecting the source to the observation point. The result is the “$d\Phi$ contribution” of each body to each pixel, summed over all bodies, calculated in the helper kernels with `inline='always'` and parallelized across the entire grid.
+Specifically: $\Phi = GM/r$, and when the source moves, the distance $r$ changes over time. The derivative reduces, for each source, to $\partial\Phi/\partial t = G M v_{rad} / r^2$, where $v_{rad}$ is the component of velocity along the line connecting the source to the observation point. The result is the $d\Phi$ contribution of each body to each pixel, summed over all bodies, calculated in the helper kernels with `inline='always'` and parallelized across the entire grid.
 
 ```mermaid
 flowchart TD
@@ -624,7 +624,7 @@ The guard is only effective at small DT; at large DT, the target is already wide
 
 **Level 2: Continuous Collision Detection (CCD).** An additional sensor that applies to all contexts but, in practice, tends to be triggered mainly in strong-field situations. For each pair of active bodies in the $O(N^2)$ cycle:
 
-1. Calculate the relative displacement vector in the current tick: $\Delta r = (\vec{v}_i - \vec{v}_j) \cdot dt$.
+1. Calculate the relative displacement vector in the current tick: $\Delta r = (\vec v_i - \vec v_j) \cdot dt$.
 2. Cast a **linear ray** along this trajectory: if the segment from `pos_current` to `pos_next` intersects the capture sphere, tunneling is in progress.
 3. Calculate $t_{min} \in [0, 1]$ (a number between 0 and 1: the fraction of the tick at which the closest approach occurs, where 0 is the start of the tick and 1 is the end), and the merge is handled at that interpolated position, not at the end of the tick.
 
